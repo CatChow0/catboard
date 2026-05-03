@@ -1,0 +1,27 @@
+services:
+  dashboard:
+    image: catchow/catboard:latest
+    container_name: catboard
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent config storage (use named volume or bind mount)
+      - dashboard-config:/app/config
+      # Docker socket for container monitoring integration (optional)
+      # - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Host disk monitoring (optional, mount paths you want to track)
+      # - /:/host:ro
+      # Temperature sensors (optional, Linux only)
+      # - /sys/class/thermal:/sys/class/thermal:ro
+      # - /sys/class/hwmon:/sys/class/hwmon:ro
+    environment:
+      - SESSION_SECRET=change-me-to-a-random-string
+      - CONFIG_DIR=/app/config
+    restart: unless-stopped
+    # Uncomment for host network access (needed for some disk monitoring setups)
+    # network_mode: host
+    # Uncomment for full host access (use with caution)
+    # privileged: true
+
+volumes:
+  dashboard-config:

@@ -1,0 +1,12 @@
+node_modules
+.svelte-kit
+build
+config
+.env
+.env.*
+*.log
+.git
+.gitignore
+.claude
+README.md
+DOCKER.md

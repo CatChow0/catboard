@@ -1,0 +1,10 @@
+node_modules
+.svelte-kit
+build
+config/*.json
+!.gitkeep
+.claude/
+
+config/
+
+CLAUDE.md
