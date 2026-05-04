@@ -99,7 +99,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem;
+export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem;
 
 // --- Weather ---
 
@@ -156,7 +156,7 @@ export interface NavbarUptimeKumaStatusPageItem extends NavbarItemBase {
 	config: UptimeKumaStatusPageConfig;
 }
 
-export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem;
+export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem;
 
 export interface NavbarLayout {
 	columns: number;
@@ -249,6 +249,7 @@ export interface IntegrationsConfig {
 	radarr?: ArrConnection;
 	sonarr?: ArrConnection;
 	lidarr?: ArrConnection;
+	adguardHome?: { url: string; username: string; password: string };
 }
 
 export interface DockerEnvironment {
@@ -299,4 +300,43 @@ export interface DockerItem extends DashboardItemBase {
 export interface NavbarDockerItem extends NavbarItemBase {
 	type: 'navbar-docker';
 	config: DockerWidgetConfig;
+}
+
+// --- AdGuard Home ---
+
+export interface AdGuardHomeConfig {
+	instanceId: string;
+	align?: 'left' | 'center' | 'right';
+}
+
+export interface AdGuardHomeData {
+	instanceId: string;
+	protectionEnabled: boolean;
+	pausedUntil?: number;
+	stats: {
+		dnsQueries: number;
+		blockedQueries: number;
+		blockedDomains: number;
+		avgProcessingTime: number;
+	};
+}
+
+export interface AdGuardHomeItem extends DashboardItemBase {
+	type: 'adguard-home';
+	config: AdGuardHomeConfig;
+}
+
+export interface AdGuardHomeControlItem extends DashboardItemBase {
+	type: 'adguard-home-control';
+	config: AdGuardHomeConfig;
+}
+
+export interface NavbarAdGuardHomeItem extends NavbarItemBase {
+	type: 'navbar-adguard-home';
+	config: AdGuardHomeConfig;
+}
+
+export interface NavbarAdGuardHomeControlItem extends NavbarItemBase {
+	type: 'navbar-adguard-home-control';
+	config: AdGuardHomeConfig;
 }

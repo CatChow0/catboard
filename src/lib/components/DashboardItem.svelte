@@ -9,6 +9,8 @@
 	import Weather from './Weather.svelte';
 	import UptimeKumaStatusPage from './UptimeKumaStatusPage.svelte';
 	import Docker from './Docker.svelte';
+	import AdGuardStats from './AdGuardStats.svelte';
+	import AdGuardControl from './AdGuardControl.svelte';
 
 	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild }: {
 		item: DashboardItemType;
@@ -54,8 +56,12 @@
 		<Weather config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'docker'}
 		<Docker config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-		{:else if item.type === 'uptime-kuma-status-page'}
+	{:else if item.type === 'uptime-kuma-status-page'}
 		<UptimeKumaStatusPage config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'adguard-home'}
+		<AdGuardStats config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'adguard-home-control'}
+		<AdGuardControl config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'service' && !service}
 		<div class="missing-service">Service not found</div>
 	{/if}

@@ -8,6 +8,9 @@ interface ArrConnection {
 	apiKey: string;
 }
 
+const CACHE_TTL = 300_000; // 5 minutes
+const cache = new Map<string, { entries: ArrCalendarEntry[]; error?: string; expires: number }>();
+
 function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
 }
@@ -18,6 +21,10 @@ function resolveUrl(base: string, maybeRelative: string, apiKey: string): string
 	const url = normalizeUrl(base) + '/' + maybeRelative.replace(/^\/+/, '');
 	const sep = url.includes('?') ? '&' : '?';
 	return `${url}${sep}apikey=${encodeURIComponent(apiKey)}`;
+}
+
+function getCacheKey(source: string, start: string, end: string): string {
+	return `${source}:${start}:${end}`;
 }
 
 async function fetchRadarrCalendar(conn: ArrConnection, start: string, end: string): Promise<{ entries: ArrCalendarEntry[]; error?: string }> {
@@ -103,7 +110,7 @@ async function fetchSonarrCalendar(conn: ArrConnection, start: string, end: stri
 async function fetchLidarrCalendar(conn: ArrConnection, start: string, end: string): Promise<{ entries: ArrCalendarEntry[]; error?: string }> {
 	try {
 		const base = normalizeUrl(conn.url);
-		const res = await fetch(`${base}/api/v1/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`, {
+		const res = await fetch(`${base}/api/v1/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&unmonitored=true&includeArtist=true`, {
 			headers: { 'X-Api-Key': conn.apiKey, 'Accept': 'application/json' },
 			signal: AbortSignal.timeout(10000)
 		});
@@ -156,32 +163,43 @@ export const GET: RequestHandler = async ({ url }) => {
 	const allEntries: ArrCalendarEntry[] = [];
 	const errors: { source: string; message: string }[] = [];
 
-	for (const source of sources) {
+	// Build parallel fetch tasks with cache check
+	const tasks = sources.map(async (source) => {
+		const cacheKey = getCacheKey(source, start, end);
+		const cached = cache.get(cacheKey);
+		if (cached && cached.expires > Date.now()) {
+			return { source, entries: cached.entries, error: cached.error };
+		}
+
+		let result: { entries: ArrCalendarEntry[]; error?: string };
 		if (source === 'radarr') {
 			if (!integrations.radarr) {
-				errors.push({ source: 'radarr', message: 'Not configured' });
-				continue;
+				return { source, entries: [], error: 'Not configured' };
 			}
-			const result = await fetchRadarrCalendar(integrations.radarr, start, end);
-			allEntries.push(...result.entries);
-			if (result.error) errors.push({ source: 'radarr', message: result.error });
+			result = await fetchRadarrCalendar(integrations.radarr, start, end);
 		} else if (source === 'sonarr') {
 			if (!integrations.sonarr) {
-				errors.push({ source: 'sonarr', message: 'Not configured' });
-				continue;
+				return { source, entries: [], error: 'Not configured' };
 			}
-			const result = await fetchSonarrCalendar(integrations.sonarr, start, end);
-			allEntries.push(...result.entries);
-			if (result.error) errors.push({ source: 'sonarr', message: result.error });
+			result = await fetchSonarrCalendar(integrations.sonarr, start, end);
 		} else if (source === 'lidarr') {
 			if (!integrations.lidarr) {
-				errors.push({ source: 'lidarr', message: 'Not configured' });
-				continue;
+				return { source, entries: [], error: 'Not configured' };
 			}
-			const result = await fetchLidarrCalendar(integrations.lidarr, start, end);
-			allEntries.push(...result.entries);
-			if (result.error) errors.push({ source: 'lidarr', message: result.error });
+			result = await fetchLidarrCalendar(integrations.lidarr, start, end);
+		} else {
+			return { source, entries: [], error: 'Unknown source' };
 		}
+
+		cache.set(cacheKey, { ...result, expires: Date.now() + CACHE_TTL });
+		return { source, entries: result.entries, error: result.error };
+	});
+
+	const results = await Promise.all(tasks);
+
+	for (const res of results) {
+		allEntries.push(...res.entries);
+		if (res.error) errors.push({ source: res.source, message: res.error });
 	}
 
 	return json({

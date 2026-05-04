@@ -12,6 +12,7 @@
 	let ukSlug = $state(item.type === 'navbar-uptime-kuma-status-page' ? (item.config?.slug || '') : '');
 	let dockerEnvId = $state(item.type === 'navbar-docker' ? (item.config?.environmentId || '') : '');
 	let dockerEnvironments = $state<{ id: string; name: string }[]>([]);
+	let align = $state<'left' | 'center' | 'right'>(item.type === 'navbar-adguard-home-control' ? (item.config?.align || 'center') : 'center');
 	let colSpan = $state(item.colSpan);
 	let availableDisks = $state<string[]>([]);
 	let tempSensors = $state<string[]>([]);
@@ -69,6 +70,8 @@
 			updates.config = { slug: ukSlug };
 		} else if (item.type === 'navbar-search') {
 			updates.placeholder = placeholder;
+		} else if (item.type === 'navbar-adguard-home-control') {
+			updates.config = { instanceId: item.config?.instanceId || 'default', align };
 		}
 
 		await updateNavbarItem(item.id, updates);
@@ -94,25 +97,34 @@
 		</div>
 
 		<div class="modal-body">
-			{#if item.type === 'navbar-cpu'}
-				<div class="field">
-					<label>Temperature sensor</label>
-					{#if tempSensorsLoading}
-						<div class="detect-status">Detecting...</div>
-					{:else if tempSensorsDetected && tempSensors.length > 0}
-						<select bind:value={tempSensor}>
-							<option value="">Auto (Main)</option>
-							{#each tempSensors as sensor}
-								<option value={sensor}>{sensor}</option>
-							{/each}
-						</select>
-					{:else if tempSensorsDetected && tempSensors.length === 0}
-						<div class="detect-status no-sensors">No temperature sensors found on this system</div>
-					{:else}
-						<button class="btn-detect" onclick={loadTempSensors}>Detect sensors</button>
-					{/if}
+		{#if item.type === 'navbar-cpu'}
+			<div class="field">
+				<label>Temperature sensor</label>
+				{#if tempSensorsLoading}
+					<div class="detect-status">Detecting...</div>
+				{:else if tempSensorsDetected && tempSensors.length > 0}
+					<select bind:value={tempSensor}>
+						<option value="">Auto (Main)</option>
+						{#each tempSensors as sensor}
+							<option value={sensor}>{sensor}</option>
+						{/each}
+					</select>
+				{:else if tempSensorsDetected && tempSensors.length === 0}
+					<div class="detect-status no-sensors">No temperature sensors found on this system</div>
+				{:else}
+					<button class="btn-detect" onclick={loadTempSensors}>Detect sensors</button>
+				{/if}
+			</div>
+		{:else if item.type === 'navbar-adguard-home-control'}
+			<div class="field">
+				<label>Alignment</label>
+				<div class="side-toggle">
+					<button class="side-btn" class:active={align === 'left'} onclick={() => (align = 'left')}>Left</button>
+					<button class="side-btn" class:active={align === 'center'} onclick={() => (align = 'center')}>Center</button>
+					<button class="side-btn" class:active={align === 'right'} onclick={() => (align = 'right')}>Right</button>
 				</div>
-			{:else if item.type === 'navbar-disk'}
+			</div>
+		{:else if item.type === 'navbar-disk'}
 				<div class="field">
 					<label>Select disks to monitor</label>
 					{#if disksLoading}

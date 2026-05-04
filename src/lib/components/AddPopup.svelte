@@ -14,6 +14,16 @@
 	let widgetType = $state<'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather'>('group-collapsible');
 	let widgetTitle = $state('');
 	let widgetColSpan = $state(6);
+	let adguardHomeUrl = $state('');
+	let adguardHomeUsername = $state('');
+	let adguardHomePassword = $state('');
+	let adguardHomeSaving = $state(false);
+	let adguardWidgetType = $state<'stats' | 'control'>('stats');
+	let adguardWidgetVersion = $state<'standard' | 'navbar'>('standard');
+	let adguardWidgetColSpan = $state(4);
+	let adguardWidgetRowSpan = $state(2);
+	let adguardWidgetAlign = $state<'left' | 'center' | 'right'>('center');
+
 
 	$effect(() => {
 		if (widgetType === 'clock') widgetColSpan = 2;
@@ -100,6 +110,11 @@
 			}
 			dockerEnvironments = config.docker?.environments || [];
 			radarrUrl = config.radarr?.url || '';
+		if (config.adguardHome) {
+			adguardHomeUrl = config.adguardHome.url || '';
+			adguardHomeUsername = config.adguardHome.username || '';
+			adguardHomePassword = config.adguardHome.password || '';
+		}
 			radarrApiKey = config.radarr?.apiKey || '';
 			sonarrUrl = config.sonarr?.url || '';
 			sonarrApiKey = config.sonarr?.apiKey || '';
@@ -265,6 +280,31 @@
 			// ignore
 		} finally {
 			lidarrSaving = false;
+		}
+	}
+
+	async function handleSaveAdGuard() {
+		adguardHomeSaving = true;
+		try {
+			await setIntegrations({
+				adguardHome: adguardHomeUrl
+					? { url: adguardHomeUrl.trim(), username: adguardHomeUsername.trim(), password: adguardHomePassword.trim() }
+					: undefined
+			});
+		} catch {
+			// ignore
+		} finally {
+			adguardHomeSaving = false;
+		}
+	}
+
+	async function handleAddAdGuardWidget() {
+		close();
+		if (adguardWidgetVersion === 'standard') {
+			const type = adguardWidgetType === 'stats' ? 'adguard-home' : 'adguard-home-control';
+			await addWidgetToDashboard(type, '', adguardWidgetColSpan, adguardWidgetRowSpan, getMaxCols(), { instanceId: 'default' });
+		} else {
+			await addNavbarItem('navbar-adguard-home-control', adguardWidgetColSpan, { instanceId: 'default', align: adguardWidgetAlign });
 		}
 	}
 
@@ -671,6 +711,39 @@
 						</div>
 					</div>
 
+					<div class="integration-card">
+						<div class="integration-header">
+							<div class="integration-icon">
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+									<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+									<path d="M12 6v6l4 2" />
+									<circle cx="12" cy="12" r="3" />
+								</svg>
+							</div>
+							<div class="integration-info">
+								<span class="integration-name">AdGuard Home</span>
+								<span class="integration-desc">Monitor and control DNS filtering</span>
+							</div>
+						</div>
+						<div class="field">
+							<label>Instance URL</label>
+							<input type="url" bind:value={adguardHomeUrl} placeholder="http://adguard.home.local" />
+						</div>
+						<div class="field">
+							<label>Username</label>
+							<input type="text" bind:value={adguardHomeUsername} placeholder="Admin username" />
+						</div>
+						<div class="field">
+							<label>Password</label>
+							<input type="password" bind:value={adguardHomePassword} placeholder="Admin password" />
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleSaveAdGuard} disabled={adguardHomeSaving}>
+								{adguardHomeSaving ? 'Saving...' : 'Save'}
+							</button>
+						</div>
+					</div>
+
 					{:else}
 					<div class="integration-card">
 						<div class="integration-header">
@@ -775,6 +848,71 @@
 						</div>
 					{/if}
 				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+								<path d="M12 6v6l4 2" />
+								<circle cx="12" cy="12" r="3" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">AdGuard Home</span>
+							<span class="integration-desc">Display stats or control DNS filtering</span>
+						</div>
+					</div>
+					{#if !adguardHomeUrl}
+						<p class="hint">Configure the AdGuard Home connection first.</p>
+					{:else}
+							{#if adguardWidgetVersion === 'standard'}
+						<div class="field">
+							<label>Widget Type</label>
+							<div class="side-toggle">
+								<button class="side-btn" class:active={adguardWidgetType === 'stats'} onclick={() => (adguardWidgetType = 'stats')}>Stats</button>
+								<button class="side-btn" class:active={adguardWidgetType === 'control'} onclick={() => (adguardWidgetType = 'control')}>Control</button>
+							</div>
+						</div>
+							{/if}
+						<div class="field">
+							<label>Version</label>
+							<div class="side-toggle">
+								<button class="side-btn" class:active={adguardWidgetVersion === 'standard'} onclick={() => (adguardWidgetVersion = 'standard')}>Standard</button>
+								<button class="side-btn" class:active={adguardWidgetVersion === 'navbar'} onclick={() => (adguardWidgetVersion = 'navbar')}>Navbar</button>
+							</div>
+						</div>
+						{#if adguardWidgetVersion === 'standard'}
+							<div class="size-row">
+								<div class="field">
+									<label>Width (columns)</label>
+									<input type="number" bind:value={adguardWidgetColSpan} min="1" max="12" />
+								</div>
+								<div class="field">
+									<label>Height (rows)</label>
+									<input type="number" bind:value={adguardWidgetRowSpan} min="1" max="12" />
+								</div>
+							</div>
+						{:else}
+							<div class="field">
+								<label>Width (columns)</label>
+								<input type="number" bind:value={adguardWidgetColSpan} min="1" max="6" />
+							</div>
+							<div class="field">
+								<label>Alignment</label>
+								<div class="side-toggle">
+									<button class="side-btn" class:active={adguardWidgetAlign === 'left'} onclick={() => (adguardWidgetAlign = 'left')}>Left</button>
+									<button class="side-btn" class:active={adguardWidgetAlign === 'center'} onclick={() => (adguardWidgetAlign = 'center')}>Center</button>
+									<button class="side-btn" class:active={adguardWidgetAlign === 'right'} onclick={() => (adguardWidgetAlign = 'right')}>Right</button>
+								</div>
+							</div>
+						{/if}
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleAddAdGuardWidget}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
 				{/if}
 			</div>
 		{/if}

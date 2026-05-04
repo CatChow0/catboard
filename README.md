@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 
 ## Features
 
@@ -12,10 +12,11 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Dynamic navbar** -- Customizable navbar with draggable/resizable widgets: title, search, CPU, RAM, disk monitors, Uptime Kuma status, and Docker container status
 - **System monitoring** -- Real-time CPU usage/temperature, RAM/swap usage, and disk utilization via SSE
 - **Clock & Weather widgets** -- Configurable clock with seconds/date options and weather display with location search
-- **Calendar widget** -- Month view with today highlighted, responsive to widget size
+- **Calendar widget** -- Month view with today highlighted; optional *Arr integration shows upcoming movie/TV/music releases from Radarr, Sonarr, and Lidarr
+- **AdGuard Home integration** -- Monitor DNS queries, blocked requests, and filter statistics; toggle protection and set temporary pauses directly from the dashboard
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP)
-- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, and more to come)
+- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
@@ -104,6 +105,7 @@ Add widgets to the navbar via Add > Navbar tab:
 | **Disk** | Disk usage bars with click-to-cycle pagination |
 | **Uptime Kuma** | Compact status page monitor (active/inactive counts + uptime %) |
 | **Docker** | Container counts (running/stopped) with status dots |
+| **AdGuard Home** | Toggle protection status with colored state pill |
 
 Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, or Docker environment.
 
@@ -120,6 +122,8 @@ Add widgets via Add > Widgets tab:
 | **Weather** | Current weather with location search via Open-Meteo |
 | **Uptime Kuma** | Status page with monitor list and uptime bar |
 | **Docker** | Environment name, running/stopped counts, and container list |
+| **AdGuard Home Stats** | DNS queries, blocked requests, blocked domains, and latency |
+| **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 
 ### Integrations
 
@@ -128,6 +132,8 @@ Add integrations via Add > Integrations tab:
 1. **Connections** sub-tab -- Configure external services:
    - **Uptime Kuma:** Enter your instance URL
    - **Docker:** Add environments (name + socket path or TCP URL)
+   - **AdGuard Home:** Enter your instance URL, username, and password
+   - **Radarr / Sonarr / Lidarr:** Enter instance URL and API key for each
 2. **Widgets** sub-tab -- Add widgets that use configured integrations
 
 ### Export & Import
@@ -176,6 +182,9 @@ Backup and restore your dashboard:
 | `GET/PUT` | `/api/integrations` | Integration configurations |
 | `GET` | `/api/integrations/uptime-kuma/heartbeat` | SSE stream for Uptime Kuma status |
 | `GET` | `/api/integrations/docker/heartbeat` | SSE stream for Docker container status |
+| `GET` | `/api/integrations/adguard-home/heartbeat` | SSE stream for AdGuard Home stats and status |
+| `POST` | `/api/integrations/adguard-home/protection` | Toggle AdGuard Home protection (with optional pause duration) |
+| `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |
 | `GET` | `/api/version` | Current vs latest Docker image version |

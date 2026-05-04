@@ -8,6 +8,7 @@
 	import NavbarDiskWidget from './navbar/NavbarDiskWidget.svelte';
 	import NavbarUptimeKumaStatusPage from './navbar/NavbarUptimeKumaStatusPage.svelte';
 	import NavbarDocker from './navbar/NavbarDocker.svelte';
+	import NavbarAdGuardControl from './navbar/NavbarAdGuardControl.svelte';
 	import NavbarEditModal from './NavbarEditModal.svelte';
 	import OptionsDropdown from './OptionsDropdown.svelte';
 
@@ -155,6 +156,8 @@
 					<NavbarUptimeKumaStatusPage config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
 				{:else if item.type === 'navbar-docker'}
 					<NavbarDocker config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
+				{:else if item.type === 'navbar-adguard-home-control'}
+					<NavbarAdGuardControl config={item.config} />
 				{/if}
 				{#if $isEditing}
 					<button class="navbar-delete-btn" onclick={() => handleDelete(item.id)} title="Remove">

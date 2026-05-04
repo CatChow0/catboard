@@ -190,6 +190,43 @@ You can add multiple environments by using different Docker socket URLs or HTTP 
 - Local socket: `/var/run/docker.sock`
 - Remote socket via TCP: `tcp://192.168.1.10:2375`
 
+### AdGuard Home
+
+To connect CatBoard to an AdGuard Home instance:
+
+1. Open **Add > Integrations > Connections**
+2. Under **AdGuard Home**, enter:
+   - **URL:** Your AdGuard Home web interface URL (e.g. `http://192.168.1.10:3000`)
+   - **Username:** Your AdGuard Home admin username
+   - **Password:** Your AdGuard Home admin password
+3. Go to **Add > Integrations > Widgets** to add AdGuard widgets (stats or control, standard or navbar)
+
+If AdGuard Home is running on the Docker host:
+```
+http://host.docker.internal:3000
+```
+
+On Linux hosts without Docker Desktop, add `--add-host=host.docker.internal:host-gateway` to the container or use `network_mode: host`.
+
+**Note:** The AdGuard Home API uses Basic Auth. Ensure your credentials are correct.
+
+### Radarr, Sonarr, and Lidarr
+
+To connect CatBoard to your *Arr services:
+
+1. Open **Add > Integrations > Connections**
+2. Under each service, enter:
+   - **URL:** Your instance URL (e.g. `http://192.168.1.10:7878` for Radarr)
+   - **API Key:** Found in Settings > General of the respective app
+3. Go to **Add > Widgets** to add a Calendar widget, then enable the desired *Arr integrations in its config
+
+If the services run on the Docker host:
+```
+http://host.docker.internal:7878   # Radarr
+http://host.docker.internal:8989   # Sonarr
+http://host.docker.internal:8686   # Lidarr
+```
+
 ### Uptime Kuma
 
 To connect CatBoard to an Uptime Kuma instance:
@@ -385,6 +422,19 @@ The container may not be able to reach the service URLs. Ensure:
 - Ensure the Docker socket is mounted correctly (`/var/run/docker.sock:/var/run/docker.sock:ro`)
 - The socket path in the integration settings must match the mounted path (`/var/run/docker.sock`)
 - Check container logs for permission errors
+
+### AdGuard Home integration not working
+
+- Ensure the AdGuard Home URL is reachable from inside the container (use `host.docker.internal` for host services)
+- Verify your username and password are correct (the API uses Basic Auth)
+- Check that the AdGuard Home API is enabled in AdGuard Home settings
+- Check container logs for authentication or connection errors
+
+### Radarr / Sonarr / Lidarr integration not working
+
+- Ensure the instance URL is reachable from inside the container
+- Verify the API key is correct (found in Settings > General of each app)
+- Check container logs for connection or authentication errors
 
 ### Uptime Kuma integration not working
 

@@ -1,55 +1,44 @@
 import type { RequestHandler } from './$types';
+import { json } from '@sveltejs/kit';
 import { getServices } from '$lib/server/config';
 
-export const GET: RequestHandler = async ({ request }) => {
+interface CachedStatus {
+	data: Record<string, string>;
+	expires: number;
+}
+
+let cache: CachedStatus | null = null;
+const CACHE_TTL = 300_000; // 5 minutes
+
+async function checkService(url: string, method: string): Promise<string> {
+	try {
+		const response = await fetch(url, { method, signal: AbortSignal.timeout(5000) });
+		return response.ok ? 'online' : 'error';
+	} catch {
+		return 'offline';
+	}
+}
+
+export const GET: RequestHandler = async () => {
+	if (cache && cache.expires > Date.now()) {
+		return json(cache.data);
+	}
+
 	const data = await getServices();
 	const services = data.services.filter((s) => s.statusCheck?.enabled);
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			const encoder = new TextEncoder();
+	const results = await Promise.all(
+		services.map(async (s) => {
+			const status = await checkService(s.url, s.statusCheck.method || 'HEAD');
+			return { id: s.id, status };
+		})
+	);
 
-			const sendEvent = (event: string, data: unknown) => {
-				controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-			};
+	const map: Record<string, string> = {};
+	for (const r of results) {
+		map[r.id] = r.status;
+	}
 
-			// Initial status check for all services
-			const checkService = async (url: string, method: string) => {
-				try {
-					const response = await fetch(url, { method, signal: AbortSignal.timeout(5000) });
-					return response.ok ? 'online' : 'error';
-				} catch {
-					return 'offline';
-				}
-			};
-
-			// Send initial statuses
-			for (const service of services) {
-				const status = await checkService(service.url, service.statusCheck.method || 'HEAD');
-				sendEvent('status', { id: service.id, status });
-			}
-
-			// Keep connection alive and re-check periodically
-			const interval = setInterval(async () => {
-				for (const service of services) {
-					const status = await checkService(service.url, service.statusCheck.method || 'HEAD');
-					sendEvent('status', { id: service.id, status });
-				}
-			}, 30000);
-
-			// Clean up on disconnect
-			request.signal.addEventListener('abort', () => {
-				clearInterval(interval);
-				try { controller.close(); } catch { /* already closed */ }
-			});
-		}
-	});
-
-	return new Response(stream, {
-		headers: {
-			'Content-Type': 'text/event-stream',
-			'Cache-Control': 'no-cache',
-			'Connection': 'keep-alive'
-		}
-	});
+	cache = { data: map, expires: Date.now() + CACHE_TTL };
+	return json(map);
 };

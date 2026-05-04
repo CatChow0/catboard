@@ -292,26 +292,28 @@
 {/if}
 
 {#if showEditModal}
-	<div class="edit-overlay" class:closing onclick={() => closeModal()}></div>
-	<div class="edit-modal" class:closing>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="edit-overlay" class:closing onclick={() => closeModal()} onpointerdown={(e) => e.stopPropagation()}></div>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="edit-modal" class:closing onpointerdown={(e) => e.stopPropagation()}>
 		<h3>Calendar Sources</h3>
 		<div class="edit-fields">
 			<label class="source-check" class:disabled={!hasRadarr}>
-				<input type="checkbox" bind:checked={radarrEnabled} disabled={!hasRadarr} />
+				<input type="checkbox" class="toggle-switch" bind:checked={radarrEnabled} disabled={!hasRadarr} />
 				<span>Radarr</span>
 				{#if !hasRadarr}
 					<span class="source-hint">(not configured)</span>
 				{/if}
 			</label>
 			<label class="source-check" class:disabled={!hasSonarr}>
-				<input type="checkbox" bind:checked={sonarrEnabled} disabled={!hasSonarr} />
+				<input type="checkbox" class="toggle-switch" bind:checked={sonarrEnabled} disabled={!hasSonarr} />
 				<span>Sonarr</span>
 				{#if !hasSonarr}
 					<span class="source-hint">(not configured)</span>
 				{/if}
 			</label>
 			<label class="source-check" class:disabled={!hasLidarr}>
-				<input type="checkbox" bind:checked={lidarrEnabled} disabled={!hasLidarr} />
+				<input type="checkbox" class="toggle-switch" bind:checked={lidarrEnabled} disabled={!hasLidarr} />
 				<span>Lidarr</span>
 				{#if !hasLidarr}
 					<span class="source-hint">(not configured)</span>
@@ -747,5 +749,45 @@
 	@keyframes slideDown {
 		from { opacity: 1; transform: translate(-50%, -50%); }
 		to { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+	}
+
+	/* Toggle switch */
+	.toggle-switch {
+		appearance: none;
+		width: 36px;
+		height: 20px;
+		background: var(--border);
+		border-radius: 20px;
+		position: relative;
+		cursor: pointer;
+		outline: none;
+		flex-shrink: 0;
+		transition: background var(--transition);
+	}
+
+	.toggle-switch::after {
+		content: '';
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		background: white;
+		border-radius: 50%;
+		transition: transform var(--transition);
+		box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+	}
+
+	.toggle-switch:checked {
+		background: var(--accent);
+	}
+
+	.toggle-switch:checked::after {
+		transform: translateX(16px);
+	}
+
+	.toggle-switch:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 </style>

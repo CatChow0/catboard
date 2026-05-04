@@ -1,21 +1,27 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Dashboard from '$lib/components/Dashboard.svelte';
-	import { loadDashboard, serviceStatuses, systemStats, uptimeKumaData, dockerData } from '$lib/stores/dashboard';
+	import { loadDashboard, serviceStatuses, systemStats, uptimeKumaData, dockerData, adguardHomeData } from '$lib/stores/dashboard';
 
 	let loaded = $state(false);
 
 	onMount(() => {
 		loadDashboard().then(() => { loaded = true; });
 
-		const evtSource = new EventSource('/api/status');
-		evtSource.addEventListener('status', (e) => {
-			const data = JSON.parse(e.data);
-			serviceStatuses.update((prev) => ({
-				...prev,
-				[data.id]: data.status
-			}));
-		});
+		// Status checks: fetch once then every 5 minutes (not SSE)
+		async function fetchStatuses() {
+			try {
+				const res = await fetch('/api/status');
+				if (res.ok) {
+					const data = await res.json();
+					serviceStatuses.set(data);
+				}
+			} catch {
+				// silent fail
+			}
+		}
+		fetchStatuses();
+		const statusInterval = setInterval(fetchStatuses, 300_000);
 
 		const statsSource = new EventSource('/api/system-stats');
 		statsSource.addEventListener('system-stats', (e) => {
@@ -41,11 +47,21 @@
 			}));
 		});
 
+		const adguardSource = new EventSource('/api/integrations/adguard-home/heartbeat');
+		adguardSource.addEventListener('adguard-home-status', (e) => {
+			const data = JSON.parse(e.data);
+			adguardHomeData.update((prev) => ({
+				...prev,
+				[data.instanceId]: data
+			}));
+		});
+
 		return () => {
-			evtSource.close();
+			clearInterval(statusInterval);
 			statsSource.close();
 			uptimeKumaSource.close();
 			dockerSource.close();
+			adguardSource.close();
 		};
 	});
 </script>

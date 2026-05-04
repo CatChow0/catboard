@@ -5,7 +5,7 @@ import type {
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
 	NavbarItem, NavbarLayout, Layout, CustomPalette, Settings, ServiceStatus,
 	SystemStats, UptimeKumaStatusPageData, UptimeKumaStatusPageConfig, DockerEnvironmentData, DockerWidgetConfig, IntegrationsConfig,
-	ArrCalendarData
+	ArrCalendarData, AdGuardHomeData
 } from '$lib/types';
 
 export type {
@@ -13,7 +13,7 @@ export type {
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
 	NavbarItem, NavbarLayout, Layout, CustomPalette, Settings, ServiceStatus,
 	SystemStats, UptimeKumaStatusPageData, UptimeKumaStatusPageConfig, DockerEnvironmentData, DockerWidgetConfig, IntegrationsConfig,
-	ArrCalendarData
+	ArrCalendarData, AdGuardHomeData
 };
 
 // --- API helper ---
@@ -62,6 +62,7 @@ export const systemStats = writable<SystemStats>({
 });
 export const uptimeKumaData = writable<Record<string, UptimeKumaStatusPageData>>({});
 export const dockerData = writable<Record<string, DockerEnvironmentData>>({});
+export const adguardHomeData = writable<Record<string, AdGuardHomeData>>({});
 export const arrCalendarData = writable<ArrCalendarData>({ entries: [], updatedAt: 0 });
 export const isEditing = writable(false);
 export const currentUser = writable<{ username: string; role: string } | null>(null);
@@ -197,7 +198,7 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 	layout.set(newLayout);
 }
 
-export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
+export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
 	if (!newLayout.items) newLayout.items = [];
 	const pos = findNextAvailablePosition(newLayout.items, colSpan, rowSpan, maxCols);
@@ -213,7 +214,11 @@ export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-st
 				? { id: crypto.randomUUID(), type: 'uptime-kuma-status-page' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as UptimeKumaStatusPageConfig }
 				: type === 'docker'
 					? { id: crypto.randomUUID(), type: 'docker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as DockerWidgetConfig }
-				: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
+					: type === 'adguard-home'
+						? { id: crypto.randomUUID(), type: 'adguard-home' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
+						: type === 'adguard-home-control'
+							? { id: crypto.randomUUID(), type: 'adguard-home-control' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
+							: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
 	newLayout.items.push(item);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
@@ -604,6 +609,7 @@ export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, c
 			case 'navbar-disk': return { id: crypto.randomUUID(), type: 'navbar-disk', col: targetCol, colSpan, config: { disks: (config?.disks as string[]) || [] } };
 			case 'navbar-uptime-kuma-status-page': return { id: crypto.randomUUID(), type: 'navbar-uptime-kuma-status-page', col: targetCol, colSpan, config: { slug: (config?.slug as string) || '' } };
 			case 'navbar-docker': return { id: crypto.randomUUID(), type: 'navbar-docker', col: targetCol, colSpan, config: { environmentId: (config?.environmentId as string) || '' } };
+		case 'navbar-adguard-home-control': return { id: crypto.randomUUID(), type: 'navbar-adguard-home-control', col: targetCol, colSpan, config: { instanceId: (config?.instanceId as string) || 'default' } };
 			default: return { id: crypto.randomUUID(), type: 'navbar-title', col: targetCol, colSpan };
 		}
 	})();
