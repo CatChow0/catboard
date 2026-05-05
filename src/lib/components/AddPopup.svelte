@@ -67,6 +67,12 @@
 	let lidarrApiKey = $state('');
 	let lidarrSaving = $state(false);
 
+	let jellyfinUrl = $state('');
+	let jellyfinApiKey = $state('');
+	let jellyfinSaving = $state(false);
+	let jellyfinWidgetColSpan = $state(4);
+	let jellyfinWidgetRowSpan = $state(3);
+
 	$effect(() => {
 		if (activeTab === 'integrations') loadIntegrationsConfig();
 	});
@@ -120,6 +126,8 @@
 			sonarrApiKey = config.sonarr?.apiKey || '';
 			lidarrUrl = config.lidarr?.url || '';
 			lidarrApiKey = config.lidarr?.apiKey || '';
+			jellyfinUrl = config.jellyfin?.url || '';
+			jellyfinApiKey = config.jellyfin?.apiKey || '';
 		} catch {
 			// ignore
 		}
@@ -281,6 +289,22 @@
 		} finally {
 			lidarrSaving = false;
 		}
+	}
+
+	async function handleSaveJellyfin() {
+		jellyfinSaving = true;
+		try {
+			await setIntegrations({ jellyfin: buildArrConnection(jellyfinUrl, jellyfinApiKey) });
+		} catch {
+			// ignore
+		} finally {
+			jellyfinSaving = false;
+		}
+	}
+
+	async function handleAddJellyfinWidget() {
+		close();
+		await addWidgetToDashboard('jellyfin-latest', '', jellyfinWidgetColSpan, jellyfinWidgetRowSpan, getMaxCols(), { instanceId: 'default', limit: 5 });
 	}
 
 	async function handleSaveAdGuard() {
@@ -711,7 +735,36 @@
 						</div>
 					</div>
 
-					<div class="integration-card">
+										<div class="integration-card">
+						<div class="integration-header">
+							<div class="integration-icon">
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+									<rect x="2" y="2" width="20" height="20" rx="2.18" />
+									<circle cx="12" cy="12" r="5" />
+									<path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+								</svg>
+							</div>
+							<div class="integration-info">
+								<span class="integration-name">Jellyfin</span>
+								<span class="integration-desc">Display recently added media items</span>
+							</div>
+						</div>
+						<div class="field">
+							<label>Instance URL</label>
+							<input type="url" bind:value={jellyfinUrl} placeholder="https://jellyfin.home.local" />
+						</div>
+						<div class="field">
+							<label>API Key</label>
+							<input type="password" bind:value={jellyfinApiKey} placeholder="Your Jellyfin API key" />
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleSaveJellyfin} disabled={jellyfinSaving}>
+								{jellyfinSaving ? 'Saving...' : 'Save'}
+							</button>
+						</div>
+					</div>
+
+<div class="integration-card">
 						<div class="integration-header">
 							<div class="integration-icon">
 								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -909,6 +962,39 @@
 						{/if}
 						<div class="form-actions">
 							<button type="button" class="btn-save" onclick={handleAddAdGuardWidget}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<rect x="2" y="2" width="20" height="20" rx="2.18" />
+								<circle cx="12" cy="12" r="5" />
+								<path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Jellyfin Latest</span>
+							<span class="integration-desc">Display recently added media from Jellyfin</span>
+						</div>
+					</div>
+					{#if !jellyfinUrl}
+						<p class="hint">Configure the Jellyfin connection first.</p>
+					{:else}
+						<div class="size-row">
+							<div class="field">
+								<label>Width (columns)</label>
+								<input type="number" bind:value={jellyfinWidgetColSpan} min="1" max="12" />
+							</div>
+							<div class="field">
+								<label>Height (rows)</label>
+								<input type="number" bind:value={jellyfinWidgetRowSpan} min="1" max="12" />
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleAddJellyfinWidget}>Add Widget</button>
 						</div>
 					{/if}
 				</div>

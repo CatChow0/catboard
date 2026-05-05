@@ -14,6 +14,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Clock & Weather widgets** -- Configurable clock with seconds/date options and weather display with location search
 - **Calendar widget** -- Month view with today highlighted; optional *Arr integration shows upcoming movie/TV/music releases from Radarr, Sonarr, and Lidarr
 - **AdGuard Home integration** -- Monitor DNS queries, blocked requests, and filter statistics; toggle protection and set temporary pauses directly from the dashboard
+- **Jellyfin integration** -- Display recently added movies, TV shows, albums, and episodes from your Jellyfin server as a scrollable list of media cards
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP)
 - **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr)
@@ -124,6 +125,7 @@ Add widgets via Add > Widgets tab:
 | **Docker** | Environment name, running/stopped counts, and container list |
 | **AdGuard Home Stats** | DNS queries, blocked requests, blocked domains, and latency |
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
+| **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
 
 ### Integrations
 
@@ -134,6 +136,7 @@ Add integrations via Add > Integrations tab:
    - **Docker:** Add environments (name + socket path or TCP URL)
    - **AdGuard Home:** Enter your instance URL, username, and password
    - **Radarr / Sonarr / Lidarr:** Enter instance URL and API key for each
+   - **Jellyfin:** Enter instance URL and API key
 2. **Widgets** sub-tab -- Add widgets that use configured integrations
 
 ### Export & Import
@@ -185,6 +188,7 @@ Backup and restore your dashboard:
 | `GET` | `/api/integrations/adguard-home/heartbeat` | SSE stream for AdGuard Home stats and status |
 | `POST` | `/api/integrations/adguard-home/protection` | Toggle AdGuard Home protection (with optional pause duration) |
 | `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr |
+| `GET` | `/api/integrations/jellyfin/latest` | Recently added items from Jellyfin |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |
 | `GET` | `/api/version` | Current vs latest Docker image version |

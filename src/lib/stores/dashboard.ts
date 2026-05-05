@@ -198,7 +198,7 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 	layout.set(newLayout);
 }
 
-export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
+export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
 	if (!newLayout.items) newLayout.items = [];
 	const pos = findNextAvailablePosition(newLayout.items, colSpan, rowSpan, maxCols);
@@ -218,7 +218,9 @@ export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-st
 						? { id: crypto.randomUUID(), type: 'adguard-home' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
 						: type === 'adguard-home-control'
 							? { id: crypto.randomUUID(), type: 'adguard-home-control' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
-							: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
+									: type === 'jellyfin-latest'
+										? { id: crypto.randomUUID(), type: 'jellyfin-latest' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string; limit?: number } }
+											: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
 	newLayout.items.push(item);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);

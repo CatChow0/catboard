@@ -8,3 +8,5 @@ config/*.json
 config/
 
 CLAUDE.md
+
+.mcp.json

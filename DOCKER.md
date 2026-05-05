@@ -227,6 +227,23 @@ http://host.docker.internal:8989   # Sonarr
 http://host.docker.internal:8686   # Lidarr
 ```
 
+### Jellyfin
+
+To connect CatBoard to a Jellyfin instance:
+
+1. Open **Add > Integrations > Connections**
+2. Under **Jellyfin**, enter:
+   - **URL:** Your Jellyfin instance URL (e.g. `http://192.168.1.10:8096`)
+   - **API Key:** Found in Dashboard > Advanced > API Keys
+3. Go to **Add > Integrations > Widgets** to add a **Jellyfin Latest** widget
+
+If Jellyfin is running on the Docker host:
+```
+http://host.docker.internal:8096
+```
+
+On Linux hosts without Docker Desktop, add `--add-host=host.docker.internal:host-gateway` to the container or use `network_mode: host`.
+
 ### Uptime Kuma
 
 To connect CatBoard to an Uptime Kuma instance:
@@ -434,6 +451,13 @@ The container may not be able to reach the service URLs. Ensure:
 
 - Ensure the instance URL is reachable from inside the container
 - Verify the API key is correct (found in Settings > General of each app)
+- Check container logs for connection or authentication errors
+
+### Jellyfin integration not working
+
+- Ensure the Jellyfin URL is reachable from inside the container (use `host.docker.internal` for host services)
+- Verify the API key is correct (found in Dashboard > Advanced > API Keys)
+- Check that the Jellyfin user has access to the library you want to monitor
 - Check container logs for connection or authentication errors
 
 ### Uptime Kuma integration not working

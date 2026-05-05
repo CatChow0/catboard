@@ -99,7 +99,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem;
+export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem;
 
 // --- Weather ---
 
@@ -250,6 +250,7 @@ export interface IntegrationsConfig {
 	sonarr?: ArrConnection;
 	lidarr?: ArrConnection;
 	adguardHome?: { url: string; username: string; password: string };
+	jellyfin?: ArrConnection;
 }
 
 export interface DockerEnvironment {
@@ -339,4 +340,33 @@ export interface NavbarAdGuardHomeItem extends NavbarItemBase {
 export interface NavbarAdGuardHomeControlItem extends NavbarItemBase {
 	type: 'navbar-adguard-home-control';
 	config: AdGuardHomeConfig;
+}
+
+// --- Jellyfin ---
+
+export interface JellyfinLatestConfig {
+	instanceId: string;
+	userId?: string;
+	limit?: number;
+}
+
+export interface JellyfinMediaItem {
+	id: string;
+	name: string;
+	overview: string;
+	type: string;
+	dateCreated: string;
+	imageUrl?: string;
+	backdropUrl?: string;
+}
+
+export interface JellyfinLatestData {
+	instanceId: string;
+	items: JellyfinMediaItem[];
+	updatedAt: number;
+}
+
+export interface JellyfinLatestItem extends DashboardItemBase {
+	type: 'jellyfin-latest';
+	config?: JellyfinLatestConfig;
 }

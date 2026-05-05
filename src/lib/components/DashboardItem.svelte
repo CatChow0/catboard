@@ -11,6 +11,7 @@
 	import Docker from './Docker.svelte';
 	import AdGuardStats from './AdGuardStats.svelte';
 	import AdGuardControl from './AdGuardControl.svelte';
+	import JellyfinLatest from './JellyfinLatest.svelte';
 
 	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild }: {
 		item: DashboardItemType;
@@ -62,6 +63,8 @@
 		<AdGuardStats config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'adguard-home-control'}
 		<AdGuardControl config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'jellyfin-latest'}
+		<JellyfinLatest config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'service' && !service}
 		<div class="missing-service">Service not found</div>
 	{/if}
