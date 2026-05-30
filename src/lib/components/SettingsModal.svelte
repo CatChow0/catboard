@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { settings, layout, saveSettings, saveNavbarLayout, currentUser, exportDashboard, importDashboard } from '$lib/stores/dashboard';
+	import { settings, layout, activeBreakpointId, saveSettings, saveNavbarLayout, currentUser, exportDashboard, importDashboard } from '$lib/stores/dashboard';
 	import { themePresets, customPaletteDefaults, themeDefaults } from '$lib/themes';
 	import type { CustomPalette } from '$lib/stores/dashboard';
 	import AdminPanel from './AdminPanel.svelte';
@@ -12,7 +12,7 @@
 	let title = $state($settings.title);
 	let cellSize = $state($settings.layout?.cellSize || 80);
 	let gap = $state($settings.layout?.gap || 12);
-	let breakpoints = $state([...($settings.layout?.breakpoints || [{ minWidth: 0, columns: 4 }, { minWidth: 800, columns: 6 }, { minWidth: 1200, columns: 10 }])]);
+	let breakpoints = $state([...($settings.layout?.breakpoints || [{ id: 'mobile', name: 'Mobile', minWidth: 0, columns: 4 }, { id: 'tablet', name: 'Tablet', minWidth: 800, columns: 6 }, { id: 'desktop', name: 'Desktop', minWidth: 1200, columns: 10 }])].map((bp, i) => bp.id ? bp : { ...bp, id: `bp-${bp.minWidth}-${i}` }));
 	let selectedTheme = $state($settings.theme);
 	let bgType = $state($settings.background?.type || 'none');
 	let bgValue = $state($settings.background?.value || '');
@@ -43,7 +43,7 @@
 	};
 
 	function addBreakpoint() {
-		breakpoints = [...breakpoints, { minWidth: 0, columns: 4 }];
+		breakpoints = [...breakpoints, { id: crypto.randomUUID(), name: 'New Layout', minWidth: 0, columns: 4 }];
 	}
 
 	function removeBreakpoint(index: number) {
@@ -89,8 +89,9 @@
 			delete data.customPalette;
 		}
 		await saveSettings(data);
-		if ($layout.navbar) {
-			await saveNavbarLayout({ ...$layout.navbar, columns: navbarColumns });
+		const activeNavbar = $layout?.layouts?.[$activeBreakpointId]?.navbar;
+		if (activeNavbar) {
+			await saveNavbarLayout({ ...activeNavbar, columns: navbarColumns });
 		}
 		close();
 	}
@@ -403,6 +404,10 @@
 					<div class="breakpoints-list">
 						{#each breakpoints as bp, i}
 							<div class="breakpoint-row">
+								<div class="field-row">
+									<label>Name</label>
+									<input type="text" bind:value={bp.name} placeholder="Layout name" />
+								</div>
 								<div class="field-row">
 									<label>Min Width</label>
 									<input type="number" bind:value={bp.minWidth} min="0" />

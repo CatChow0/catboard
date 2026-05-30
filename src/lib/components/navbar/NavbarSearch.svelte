@@ -1,6 +1,24 @@
 <script lang="ts">
-	let { placeholder = 'Search services...' }: { placeholder?: string } = $props();
+	let {
+		placeholder = 'Search services...',
+		onsearch
+	}: {
+		placeholder?: string;
+		onsearch?: (query: string, isEnter: boolean) => void;
+	} = $props();
+
 	let searchQuery = $state('');
+
+	function handleInput() {
+		onsearch?.(searchQuery, false);
+	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			onsearch?.(searchQuery, true);
+		}
+	}
 </script>
 
 <div class="search-box">
@@ -8,7 +26,7 @@
 		<circle cx="11" cy="11" r="8" />
 		<path d="M21 21l-4.35-4.35" />
 	</svg>
-	<input type="text" {placeholder} bind:value={searchQuery} />
+	<input type="text" {placeholder} bind:value={searchQuery} oninput={handleInput} onkeydown={handleKeyDown} />
 </div>
 
 <style>

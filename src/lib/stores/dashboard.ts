@@ -3,7 +3,7 @@ import { findNextAvailablePosition, hasCollision } from '$lib/utils/grid';
 import type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
-	NavbarItem, NavbarLayout, Layout, CustomPalette, Settings, ServiceStatus,
+	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, ServiceStatus,
 	SystemStats, UptimeKumaStatusPageData, UptimeKumaStatusPageConfig, DockerEnvironmentData, DockerWidgetConfig, IntegrationsConfig,
 	ArrCalendarData, AdGuardHomeData
 } from '$lib/types';
@@ -11,7 +11,7 @@ import type {
 export type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
-	NavbarItem, NavbarLayout, Layout, CustomPalette, Settings, ServiceStatus,
+	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, ServiceStatus,
 	SystemStats, UptimeKumaStatusPageData, UptimeKumaStatusPageConfig, DockerEnvironmentData, DockerWidgetConfig, IntegrationsConfig,
 	ArrCalendarData, AdGuardHomeData
 };
@@ -39,9 +39,12 @@ async function api<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const services = writable<Service[]>([]);
 export const layout = writable<Layout>({
-	grid: { cellSize: 80, gap: 12, breakpoints: [{ minWidth: 0, columns: 4 }, { minWidth: 800, columns: 6 }, { minWidth: 1200, columns: 10 }] },
-	items: [],
-	navbar: { columns: 12, items: [] }
+	grid: { cellSize: 80, gap: 12, breakpoints: [{ id: 'mobile', name: 'Mobile', minWidth: 0, columns: 4 }, { id: 'tablet', name: 'Tablet', minWidth: 800, columns: 6 }, { id: 'desktop', name: 'Desktop', minWidth: 1200, columns: 10 }] },
+	layouts: {
+		mobile: { items: [], navbar: { columns: 12, items: [] } },
+		tablet: { items: [], navbar: { columns: 12, items: [] } },
+		desktop: { items: [], navbar: { columns: 12, items: [] } }
+	}
 });
 export const settings = writable<Settings>({
 	title: 'My Homelab',
@@ -52,7 +55,7 @@ export const settings = writable<Settings>({
 	scrollbarStyle: 'thin',
 	navbar: { columns: 12 },
 	statusCheckInterval: 30000,
-	layout: { cellSize: 80, gap: 12, breakpoints: [{ minWidth: 0, columns: 4 }, { minWidth: 800, columns: 6 }, { minWidth: 1200, columns: 10 }] }
+	layout: { cellSize: 80, gap: 12, breakpoints: [{ id: 'mobile', name: 'Mobile', minWidth: 0, columns: 4 }, { id: 'tablet', name: 'Tablet', minWidth: 800, columns: 6 }, { id: 'desktop', name: 'Desktop', minWidth: 1200, columns: 10 }] }
 });
 export const serviceStatuses = writable<ServiceStatus>({});
 export const systemStats = writable<SystemStats>({
@@ -66,23 +69,64 @@ export const adguardHomeData = writable<Record<string, AdGuardHomeData>>({});
 export const arrCalendarData = writable<ArrCalendarData>({ entries: [], updatedAt: 0 });
 export const isEditing = writable(false);
 export const currentUser = writable<{ username: string; role: string } | null>(null);
+export const activeBreakpointId = writable<string>('desktop');
+export const manualBreakpointId = writable<string | null>(null);
+export const searchQuery = writable<string>('');
 
 // --- Helpers ---
+
+function sanitizeBreakpoints(
+	breakpoints: { id?: string; minWidth: number; columns: number }[]
+): { id: string; minWidth: number; columns: number }[] {
+	return breakpoints.map((bp, i) => {
+		if (bp.id) return bp as { id: string; minWidth: number; columns: number };
+		let id = bp.minWidth === 0 ? 'mobile' : bp.minWidth === 800 ? 'tablet' : bp.minWidth === 1200 ? 'desktop' : `bp-${bp.minWidth}-${i}`;
+		return { ...bp, id };
+	});
+}
 
 function mergeGridConfig(layoutData: Layout): Layout {
 	const s = get(settings);
 	if (s.layout) {
 		layoutData.grid = s.layout;
 	}
+	if (layoutData.grid?.breakpoints) {
+		layoutData.grid.breakpoints = sanitizeBreakpoints(layoutData.grid.breakpoints);
+	}
 	return layoutData;
 }
 
-export function getActiveColumns(breakpoints: { minWidth: number; columns: number }[], windowWidth: number): number {
+export function getActiveColumns(breakpoints: { id: string; minWidth: number; columns: number }[], windowWidth: number): number {
 	const sorted = [...breakpoints].sort((a, b) => b.minWidth - a.minWidth);
 	for (const bp of sorted) {
 		if (windowWidth >= bp.minWidth) return bp.columns;
 	}
 	return sorted[sorted.length - 1]?.columns || 4;
+}
+
+export function resolveActiveBreakpointId(
+	breakpoints: { id: string; minWidth: number; columns: number }[],
+	windowWidth: number,
+	manualId: string | null
+): string {
+	if (manualId && breakpoints.some((bp) => bp.id === manualId)) {
+		return manualId;
+	}
+	const sorted = [...breakpoints].sort((a, b) => b.minWidth - a.minWidth);
+	for (const bp of sorted) {
+		if (windowWidth >= bp.minWidth && bp.id) return bp.id;
+	}
+	return sorted.find((bp) => bp.id)?.id || 'desktop';
+}
+
+export function getBreakpointLabel(
+	breakpoints: { id: string; minWidth: number; columns: number }[],
+	breakpointId: string
+): string {
+	const bp = breakpoints.find((b) => b.id === breakpointId);
+	if (!bp || !bp.id) return breakpointId;
+	// Simple human-friendly labels
+	return bp.name || bp.id;
 }
 
 export function resolveService(serviceId: string, allServices: Service[]): Service | undefined {
@@ -91,48 +135,74 @@ export function resolveService(serviceId: string, allServices: Service[]): Servi
 
 // --- Actions ---
 
-export async function loadDashboard() {
+export async function loadDashboard(windowWidth?: number) {
 	const [servicesData, layoutData, settingsData, authData] = await Promise.all([
 		api<{ services: Service[] }>('/api/services'),
 		api<Layout>('/api/layout'),
 		api<Settings>('/api/settings'),
 		api<{ authenticated: boolean; needsSetup: boolean; username?: string; role?: string }>('/api/auth/check')
 	]);
-	const allIds = new Set(servicesData.services.map((s) => s.id));
-	if (layoutData.items) {
-		function cleanOrphans(items: DashboardItem[]): DashboardItem[] {
-			return items
-				.filter((item) => !(item.type === 'service' && !allIds.has(item.serviceId)))
-				.map((item) => {
-					if ('children' in item && item.children) {
-						return { ...item, children: cleanOrphans(item.children) };
-					}
-					return item;
-				});
-		}
-		const cleaned = cleanOrphans(layoutData.items);
-		if (cleaned.length !== layoutData.items.length) {
-			layoutData.items = cleaned;
-			await api('/api/layout', { method: 'PUT', body: JSON.stringify(layoutData) });
-		}
-	}
+
 	// Merge grid config from settings into layout
 	if (settingsData.layout) {
 		layoutData.grid = settingsData.layout;
 	}
-	// Migrate: if navbar field is missing, create default from settings
-	if (!layoutData.navbar) {
-		layoutData.navbar = {
-			columns: settingsData.navbar?.columns || 12,
-			items: [
-				{ id: crypto.randomUUID(), type: 'navbar-title', col: 0, colSpan: 2 },
-				{ id: crypto.randomUUID(), type: 'navbar-search' as const, col: 2, colSpan: 4 }
-			]
-		};
+	if (layoutData.grid?.breakpoints) {
+		layoutData.grid.breakpoints = sanitizeBreakpoints(layoutData.grid.breakpoints);
+	}
+
+	// Resolve active breakpoint
+	const breakpoints = layoutData.grid?.breakpoints || [
+		{ id: 'mobile', minWidth: 0, columns: 4 },
+		{ id: 'tablet', minWidth: 800, columns: 6 },
+		{ id: 'desktop', minWidth: 1200, columns: 10 }
+	];
+	const manual = get(manualBreakpointId);
+	const resolvedId = resolveActiveBreakpointId(breakpoints, windowWidth || 1200, manual);
+	activeBreakpointId.set(resolvedId);
+
+	// Ensure all breakpoints have layouts
+	if (!layoutData.layouts) {
+		layoutData.layouts = {};
+	}
+	for (const bp of breakpoints) {
+		if (!layoutData.layouts[bp.id]) {
+			layoutData.layouts[bp.id] = { items: [], navbar: { columns: 12, items: [] } };
+		}
+	}
+
+	// Clean orphans in ALL layouts
+	const allIds = new Set(servicesData.services.map((s) => s.id));
+	function cleanOrphans(items: DashboardItem[]): DashboardItem[] {
+		return items
+			.filter((item) => !(item.type === 'service' && !allIds.has(item.serviceId)))
+			.map((item) => {
+				if ('children' in item && item.children) {
+					return { ...item, children: cleanOrphans(item.children) };
+				}
+				return item;
+			});
+	}
+	let needsSave = false;
+	for (const bp of breakpoints) {
+		const layoutForBp = layoutData.layouts[bp.id];
+		if (layoutForBp?.items) {
+			const cleaned = cleanOrphans(layoutForBp.items);
+			if (cleaned.length !== layoutForBp.items.length) {
+				layoutForBp.items = cleaned;
+				needsSave = true;
+			}
+		}
+	}
+	if (needsSave) {
 		await api('/api/layout', { method: 'PUT', body: JSON.stringify(layoutData) });
 	}
+
 	services.set(servicesData.services);
 	layout.set(layoutData);
+	if (settingsData.layout?.breakpoints) {
+		settingsData.layout.breakpoints = sanitizeBreakpoints(settingsData.layout.breakpoints);
+	}
 	settings.set(settingsData);
 	if (authData.authenticated && authData.username && authData.role) {
 		currentUser.set({ username: authData.username, role: authData.role });
@@ -162,9 +232,9 @@ export async function updateService(id: string, data: Partial<Service>) {
 export async function deleteService(id: string) {
 	await api(`/api/services/${id}`, { method: 'DELETE' });
 	services.update((s) => s.filter((svc) => svc.id !== id));
-	// Remove dashboard items referencing this service
+	// Remove dashboard items referencing this service from ALL layouts
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts) newLayout.layouts = {};
 	function removeOrphanedServiceItems(items: DashboardItem[]): DashboardItem[] {
 		return items
 			.filter((item) => !(item.type === 'service' && item.serviceId === id))
@@ -175,15 +245,22 @@ export async function deleteService(id: string) {
 				return item;
 			});
 	}
-	newLayout.items = removeOrphanedServiceItems(newLayout.items);
+	for (const bpId of Object.keys(newLayout.layouts)) {
+		const bpLayout = newLayout.layouts[bpId];
+		if (bpLayout?.items) {
+			bpLayout.items = removeOrphanedServiceItems(bpLayout.items);
+		}
+	}
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function addServiceToDashboard(serviceId: string, maxCols: number) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
-	const pos = findNextAvailablePosition(newLayout.items, 1, 1, maxCols);
+	const activeId = get(activeBreakpointId);
+	if (!newLayout.layouts[activeId]) newLayout.layouts[activeId] = { items: [], navbar: { columns: 12, items: [] } };
+	const activeItems = newLayout.layouts[activeId].items;
+	const pos = findNextAvailablePosition(activeItems, 1, 1, maxCols);
 	const item: ServiceItem = {
 		id: crypto.randomUUID(),
 		type: 'service',
@@ -193,15 +270,17 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 		colSpan: 1,
 		rowSpan: 1
 	};
-	newLayout.items.push(item);
+	activeItems.push(item);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
-	const pos = findNextAvailablePosition(newLayout.items, colSpan, rowSpan, maxCols);
+	const activeId = get(activeBreakpointId);
+	if (!newLayout.layouts[activeId]) newLayout.layouts[activeId] = { items: [], navbar: { columns: 12, items: [] } };
+	const activeItems = newLayout.layouts[activeId].items;
+	const pos = findNextAvailablePosition(activeItems, colSpan, rowSpan, maxCols);
 	const item: DashboardItem = type === 'group-collapsible'
 		? { id: crypto.randomUUID(), type: 'group-collapsible' as const, title, col: pos.col, row: pos.row, colSpan, rowSpan, children: [] as DashboardItem[] }
 		: type === 'group-standard'
@@ -221,14 +300,16 @@ export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-st
 									: type === 'jellyfin-latest'
 										? { id: crypto.randomUUID(), type: 'jellyfin-latest' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string; limit?: number } }
 											: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
-	newLayout.items.push(item);
+	activeItems.push(item);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function removeDashboardItem(itemId: string) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	const activeId = get(activeBreakpointId);
+	if (!newLayout.layouts[activeId]) newLayout.layouts[activeId] = { items: [], navbar: { columns: 12, items: [] } };
+	const activeItems = newLayout.layouts[activeId].items;
 
 	function removeItem(items: DashboardItem[]): DashboardItem[] {
 		return items
@@ -241,14 +322,15 @@ export async function removeDashboardItem(itemId: string) {
 			});
 	}
 
-	newLayout.items = removeItem(newLayout.items);
+	newLayout.layouts[activeId].items = removeItem(activeItems);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function updateDashboardItem(itemId: string, updates: Partial<DashboardItemBase>) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 	function updateItems(items: DashboardItem[]): DashboardItem[] {
 		return items.map((item) => {
@@ -262,14 +344,15 @@ export async function updateDashboardItem(itemId: string, updates: Partial<Dashb
 		});
 	}
 
-	newLayout.items = updateItems(newLayout.items);
+	newLayout.layouts[activeId].items = updateItems(newLayout.layouts[activeId].items);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function updateChildInGroup(groupId: string, childId: string, updates: { col?: number; row?: number; colSpan?: number; rowSpan?: number }) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 	function updateChild(items: DashboardItem[]): DashboardItem[] {
 		return items.map((item) => {
@@ -289,14 +372,15 @@ export async function updateChildInGroup(groupId: string, childId: string, updat
 		});
 	}
 
-	newLayout.items = updateChild(newLayout.items);
+	newLayout.layouts[activeId].items = updateChild(newLayout.layouts[activeId].items);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function moveItemToGroup(itemId: string, groupId: string, pos?: { col: number; row: number }) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 	let extracted: DashboardItem | undefined;
 	function extractItem(items: DashboardItem[]): DashboardItem[] {
@@ -320,7 +404,7 @@ export async function moveItemToGroup(itemId: string, groupId: string, pos?: { c
 			return item;
 		});
 	}
-	newLayout.items = extractItem(newLayout.items);
+	newLayout.layouts[activeId].items = extractItem(newLayout.layouts[activeId].items);
 	if (!extracted) return;
 
 		// Find the target group to check for collisions
@@ -331,7 +415,7 @@ export async function moveItemToGroup(itemId: string, groupId: string, pos?: { c
 				if ('children' in item && item.children) findGroup(item.children);
 			}
 		}
-		findGroup(newLayout.items);
+		findGroup(newLayout.layouts[activeId].items);
 
 		let insertCol = pos?.col ?? 0;
 		let insertRow = pos?.row ?? 0;
@@ -363,15 +447,16 @@ export async function moveItemToGroup(itemId: string, groupId: string, pos?: { c
 				return item;
 			});
 		}
-		newLayout.items = addToGroup(newLayout.items);
+		newLayout.layouts[activeId].items = addToGroup(newLayout.layouts[activeId].items);
 
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 	export async function batchMoveToGroup(itemIds: string[], groupId: string, positions: Map<string, { col: number; row: number }>) {
+	const activeId = get(activeBreakpointId);
 		const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-		if (!newLayout.items) newLayout.items = [];
+		if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 		const extracted: DashboardItem[] = [];
 		function extractItems(items: DashboardItem[]): DashboardItem[] {
@@ -395,7 +480,7 @@ export async function moveItemToGroup(itemId: string, groupId: string, pos?: { c
 				return item;
 			});
 		}
-		newLayout.items = extractItems(newLayout.items);
+		newLayout.layouts[activeId].items = extractItems(newLayout.layouts[activeId].items);
 
 		// Add all extracted items to target group, checking for collisions
 		function addAllToGroup(items: DashboardItem[]): DashboardItem[] {
@@ -429,15 +514,16 @@ export async function moveItemToGroup(itemId: string, groupId: string, pos?: { c
 				return item;
 			});
 		}
-		newLayout.items = addAllToGroup(newLayout.items);
+		newLayout.layouts[activeId].items = addAllToGroup(newLayout.layouts[activeId].items);
 
 		await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 		layout.set(newLayout);
 	}
 
 export async function moveItemToRoot(itemId: string, maxCols: number) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 	let extracted: DashboardItem | undefined;
 	function extractItem(items: DashboardItem[]): DashboardItem[] {
@@ -461,12 +547,12 @@ export async function moveItemToRoot(itemId: string, maxCols: number) {
 			return item;
 		});
 	}
-	newLayout.items = extractItem(newLayout.items);
+	newLayout.layouts[activeId].items = extractItem(newLayout.layouts[activeId].items);
 	if (!extracted) return;
 
 	const colSpan = 'colSpan' in extracted ? extracted.colSpan : 1;
 	const rowSpan = 'rowSpan' in extracted ? extracted.rowSpan : 1;
-	const pos = findNextAvailablePosition(newLayout.items, colSpan, rowSpan, maxCols);
+	const pos = findNextAvailablePosition(newLayout.layouts[activeId].items, colSpan, rowSpan, maxCols);
 	const restored: DashboardItem = {
 		...extracted,
 		col: pos.col,
@@ -474,15 +560,16 @@ export async function moveItemToRoot(itemId: string, maxCols: number) {
 		colSpan,
 		rowSpan
 	} as DashboardItem;
-	newLayout.items.push(restored);
+	newLayout.layouts[activeId].items.push(restored);
 
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function batchMoveToRoot(itemIds: string[], maxCols: number) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 	const extracted: DashboardItem[] = [];
 	function extractItems(items: DashboardItem[]): DashboardItem[] {
@@ -506,12 +593,12 @@ export async function batchMoveToRoot(itemIds: string[], maxCols: number) {
 			return item;
 		});
 	}
-	newLayout.items = extractItems(newLayout.items);
+	newLayout.layouts[activeId].items = extractItems(newLayout.layouts[activeId].items);
 
 	for (const ext of extracted) {
 		const colSpan = 'colSpan' in ext ? ext.colSpan : 1;
 		const rowSpan = 'rowSpan' in ext ? ext.rowSpan : 1;
-		const pos = findNextAvailablePosition(newLayout.items, colSpan, rowSpan, maxCols);
+		const pos = findNextAvailablePosition(newLayout.layouts[activeId].items, colSpan, rowSpan, maxCols);
 		const restored: DashboardItem = {
 			...ext,
 			col: pos.col,
@@ -519,7 +606,7 @@ export async function batchMoveToRoot(itemIds: string[], maxCols: number) {
 			colSpan,
 			rowSpan
 		} as DashboardItem;
-		newLayout.items.push(restored);
+		newLayout.layouts[activeId].items.push(restored);
 	}
 
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
@@ -527,13 +614,15 @@ export async function batchMoveToRoot(itemIds: string[], maxCols: number) {
 }
 
 export async function saveLayout(newLayout: Layout) {
+	const activeId = get(activeBreakpointId);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function batchUpdatePositions(updates: Map<string, { col: number; row: number }>) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 	function updatePositions(items: DashboardItem[]): DashboardItem[] {
 		return items.map((item) => {
@@ -545,14 +634,15 @@ export async function batchUpdatePositions(updates: Map<string, { col: number; r
 		});
 	}
 
-	newLayout.items = updatePositions(newLayout.items);
+	newLayout.layouts[activeId].items = updatePositions(newLayout.layouts[activeId].items);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function batchUpdateChildPositions(groupId: string, updates: Map<string, { col: number; row: number }>) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>("/api/layout"));
-	if (!newLayout.items) newLayout.items = [];
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
 
 	function updateChildren(items: DashboardItem[]): DashboardItem[] {
 		return items.map((item) => {
@@ -573,7 +663,7 @@ export async function batchUpdateChildPositions(groupId: string, updates: Map<st
 		});
 	}
 
-	newLayout.items = updateChildren(newLayout.items);
+	newLayout.layouts[activeId].items = updateChildren(newLayout.layouts[activeId].items);
 	await api("/api/layout", { method: "PUT", body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
@@ -586,12 +676,13 @@ export async function saveSettings(newSettings: Settings) {
 // --- Navbar Actions ---
 
 export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, config?: Record<string, unknown>) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.items) newLayout.items = [];
-	if (!newLayout.navbar) newLayout.navbar = { columns: 12, items: [] };
+	if (!newLayout.layouts[activeId].items) newLayout.layouts[activeId].items = [];
+	if (!newLayout.layouts[activeId].navbar) newLayout.layouts[activeId].navbar = { columns: 12, items: [] };
 
-	const columns = newLayout.navbar.columns || 12;
-	const items = newLayout.navbar.items;
+	const columns = newLayout.layouts[activeId].navbar.columns || 12;
+	const items = newLayout.layouts[activeId].navbar.items;
 
 	function findGap(span: number): number {
 		for (let c = 0; c <= columns - span; c++) {
@@ -616,23 +707,25 @@ export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, c
 		}
 	})();
 
-	newLayout.navbar.items.push(item);
+	newLayout.layouts[activeId].navbar.items.push(item);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function removeNavbarItem(itemId: string) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.navbar) return;
-	newLayout.navbar.items = newLayout.navbar.items.filter((item) => item.id !== itemId);
+	if (!newLayout.layouts[activeId].navbar) return;
+	newLayout.layouts[activeId].navbar.items = newLayout.layouts[activeId].navbar.items.filter((item) => item.id !== itemId);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }
 
 export async function updateNavbarItem(itemId: string, updates: Partial<NavbarItemBase> & { config?: Record<string, unknown>; placeholder?: string }) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	if (!newLayout.navbar) return;
-	newLayout.navbar.items = newLayout.navbar.items.map((item) => {
+	if (!newLayout.layouts[activeId].navbar) return;
+	newLayout.layouts[activeId].navbar.items = newLayout.layouts[activeId].navbar.items.map((item) => {
 		if (item.id === itemId) {
 			return { ...item, ...updates } as NavbarItem;
 		}
@@ -643,8 +736,9 @@ export async function updateNavbarItem(itemId: string, updates: Partial<NavbarIt
 }
 
 export async function saveNavbarLayout(navbar: NavbarLayout) {
+	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
-	newLayout.navbar = navbar;
+	newLayout.layouts[activeId].navbar = navbar;
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
 }

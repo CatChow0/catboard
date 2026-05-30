@@ -52,12 +52,14 @@ export const GET: RequestHandler = async ({ request }) => {
 
 	const layout = await getLayout();
 	const usedIds = new Set<string>();
-	for (const item of layout.items || []) {
+	const allItems = Object.values(layout.layouts || {}).flatMap((l) => l.items || []);
+	const allNavbarItems = Object.values(layout.layouts || {}).flatMap((l) => l.navbar?.items || []);
+	for (const item of allItems) {
 		if ((item.type === 'adguard-home' || item.type === 'adguard-home-control') && item.config?.instanceId) {
 			usedIds.add(item.config.instanceId);
 		}
 	}
-	for (const item of layout.navbar?.items || []) {
+	for (const item of allNavbarItems) {
 		if ((item.type === 'navbar-adguard-home' || item.type === 'navbar-adguard-home-control') && item.config?.instanceId) {
 			usedIds.add(item.config.instanceId);
 		}

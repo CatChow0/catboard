@@ -4,7 +4,7 @@
 	import { maxResize } from '$lib/utils/grid';
 	import DashboardItem from './DashboardItem.svelte';
 
-	let { item, allServices, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild, gridGap = 12 }: {
+	let { item, allServices, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild, gridGap = 12, query, matchingIds }: {
 		item: CollapsibleGroupItem;
 		allServices: Service[];
 		onedit?: (service: Service) => void;
@@ -15,6 +15,8 @@
 		selectedChildIds?: Set<string>;
 		ontogglechild?: (groupId: string, childId: string, multiSelect: boolean) => void;
 		gridGap?: number;
+		query?: string;
+		matchingIds?: Set<string>;
 	} = $props();
 
 	let collapsed = $state(false);
@@ -178,10 +180,12 @@
 					class:editing={$isEditing}
 					class:dragging={draggingChildId === child.id || (selectedChildIds?.has(child.id) && draggingChildId)}
 					class:selected={selectedChildIds?.has(child.id) && !draggingChildId}
+					class:dimmed={query && !matchingIds?.has(child.id)}
+					class:highlighted={query && matchingIds?.has(child.id)}
 					style={getChildStyle(child)}
 					onpointerdown={(e) => ondragitem?.(e, child)}
 				>
-					<DashboardItem item={child} {allServices} {onedit} {onremove} />
+					<DashboardItem item={child} {allServices} {onedit} {onremove} {query} {matchingIds} />
 					{#if $isEditing}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div

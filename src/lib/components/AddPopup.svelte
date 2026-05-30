@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Service } from '$lib/stores/dashboard';
-	import { services, layout, registerService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, getActiveColumns, getIntegrations, setIntegrations } from '$lib/stores/dashboard';
+	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, getActiveColumns, getIntegrations, setIntegrations } from '$lib/stores/dashboard';
 	import IconPicker from './IconPicker.svelte';
 
 	let { onclose }: { onclose: () => void } = $props();
@@ -11,6 +11,8 @@
 	let newServiceUrl = $state('');
 	let newServiceIcon = $state('');
 	let newServiceDesc = $state('');
+	let addedServiceIds = $state<Set<string>>(new Set());
+	let editingServiceId = $state<string | null>(null);
 	let widgetType = $state<'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather'>('group-collapsible');
 	let widgetTitle = $state('');
 	let widgetColSpan = $state(6);
@@ -152,8 +154,12 @@
 		const url = newServiceUrl;
 		const icon = newServiceIcon;
 		const desc = newServiceDesc;
+		if (editingServiceId) {
+			await updateService(editingServiceId, { name, url, icon, description: desc });
+			resetForm();
+			return;
+		}
 		resetForm();
-		close();
 		const svc = await registerService({
 			name,
 			url,
@@ -162,11 +168,20 @@
 			statusCheck: { enabled: true, method: 'HEAD' }
 		});
 		await addServiceToDashboard(svc.id, getMaxCols());
+		addedServiceIds.add(svc.id);
+		setTimeout(() => {
+			addedServiceIds.delete(svc.id);
+			addedServiceIds = addedServiceIds;
+		}, 1500);
 	}
 
 	async function handleAddExisting(serviceId: string) {
-		close();
 		await addServiceToDashboard(serviceId, getMaxCols());
+		addedServiceIds.add(serviceId);
+		setTimeout(() => {
+			addedServiceIds.delete(serviceId);
+			addedServiceIds = addedServiceIds;
+		}, 1500);
 	}
 
 	async function handleDeleteService(id: string) {
@@ -338,6 +353,29 @@
 		newServiceIcon = '';
 		newServiceDesc = '';
 		showRegisterForm = false;
+		editingServiceId = null;
+	}
+
+	function handleEditService(service: Service) {
+		newServiceName = service.name;
+		newServiceUrl = service.url;
+		newServiceIcon = service.icon;
+		newServiceDesc = service.description;
+		editingServiceId = service.id;
+		showRegisterForm = true;
+	}
+
+	function handleCardIconError(e: Event, service: Service) {
+		const img = e.currentTarget as HTMLImageElement;
+		if (img.src.includes('cdn.jsdelivr.net')) {
+			img.src = `/icons/${service.icon}.svg`;
+		} else if (img.src.includes('/icons/')) {
+			img.src = `/api/icon?url=${encodeURIComponent(service.url)}`;
+		} else {
+			img.style.display = 'none';
+			const fallback = img.parentElement?.querySelector('.card-icon-fallback') as HTMLElement | null;
+			if (fallback) fallback.style.display = 'flex';
+		}
 	}
 
 	function close() {
@@ -367,67 +405,80 @@
 			</div>
 
 		{#if activeTab === 'services'}
-			<div class="tab-content">
-				{#if !showRegisterForm}
-					<button class="btn-register" onclick={() => (showRegisterForm = true)}>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M12 5v14M5 12h14" />
-						</svg>
-						Register New Service
-					</button>
-				{:else}
-					<form class="register-form" onsubmit={handleRegister}>
-						<h3>Register New Service</h3>
-						<div class="field">
-							<label>Name</label>
-							<input type="text" bind:value={newServiceName} required placeholder="Proxmox" />
-						</div>
-						<div class="field">
-							<label>URL</label>
-							<input type="url" bind:value={newServiceUrl} required placeholder="https://proxmox.home.local" />
-						</div>
-						<div class="field">
-							<label>Icon</label>
-							<IconPicker value={newServiceIcon} onchange={(v) => (newServiceIcon = v)} />
-						</div>
-						<div class="field">
-							<label>Description</label>
-							<input type="text" bind:value={newServiceDesc} placeholder="Hypervisor" />
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-cancel" onclick={resetForm}>Cancel</button>
-							<button type="submit" class="btn-save">Register & Add</button>
-						</div>
-					</form>
-				{/if}
+				<div class="tab-content">
+					{#if !showRegisterForm}
+						<button class="btn-register" onclick={() => (showRegisterForm = true)}>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M12 5v14M5 12h14" />
+							</svg>
+							{editingServiceId ? 'Edit Service' : 'Register New Service'}
+						</button>
+					{:else}
+						<form class="register-form" onsubmit={handleRegister}>
+							<h3>{editingServiceId ? 'Edit Service' : 'Register New Service'}</h3>
+							<div class="field">
+								<label>Name</label>
+								<input type="text" bind:value={newServiceName} required placeholder="Proxmox" />
+							</div>
+							<div class="field">
+								<label>URL</label>
+								<input type="url" bind:value={newServiceUrl} required placeholder="https://proxmox.home.local" />
+							</div>
+							<div class="field">
+								<label>Icon</label>
+								<IconPicker value={newServiceIcon} onchange={(v) => (newServiceIcon = v)} />
+							</div>
+							<div class="field">
+								<label>Description</label>
+								<input type="text" bind:value={newServiceDesc} placeholder="Hypervisor" />
+							</div>
+							<div class="form-actions">
+								<button type="button" class="btn-cancel" onclick={resetForm}>Cancel</button>
+								<button type="submit" class="btn-save">{editingServiceId ? 'Save' : 'Register & Add'}</button>
+							</div>
+						</form>
+					{/if}
 
-				{#if $services.length > 0}
-					<div class="service-list">
-						<h3>Registered Services</h3>
-						{#each $services as service (service.id)}
-							<div class="service-row">
-								<div class="service-info">
-									<span class="service-name">{service.name}</span>
-									<span class="service-url">{service.url}</span>
-								</div>
-								<div class="service-actions">
-									<button class="btn-add-existing" onclick={() => handleAddExisting(service.id)} title="Add to dashboard">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M12 5v14M5 12h14" />
-										</svg>
-									</button>
-									<button class="btn-delete-svc" onclick={() => handleDeleteService(service.id)} title="Delete service">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-										</svg>
-									</button>
+					{#if $services.length > 0}
+							<div class="service-grid">
+								<h3>Registered Services</h3>
+								<div class="grid">
+									{#each $services as service (service.id)}
+										<div class="service-card" class:added={addedServiceIds.has(service.id)}>
+											<div class="card-icon-wrapper">
+												{#if service.icon}
+													<img src={`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${service.icon}.svg`} alt={service.name} class="card-icon" onerror={(e) => handleCardIconError(e, service)} />
+													<div class="card-icon-fallback" style="display: none;">{service.name.charAt(0).toUpperCase()}</div>
+												{:else}
+													<div class="card-icon-fallback">{service.name.charAt(0).toUpperCase()}</div>
+												{/if}
+											</div>
+											<span class="card-name">{service.name}</span>
+											<span class="card-desc">{service.description || service.url}</span>
+											<div class="card-actions">
+												<button class="btn-card-add" onclick={() => handleAddExisting(service.id)} title="Add to dashboard">
+													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+														<path d="M12 5v14M5 12h14" />
+													</svg>
+												</button>
+												<button class="btn-card-edit" onclick={() => handleEditService(service)} title="Edit service">
+													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+														<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+														<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+													</svg>
+												</button>
+												<button class="btn-card-delete" onclick={() => handleDeleteService(service.id)} title="Delete service">
+													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+														<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+													</svg>
+												</button>
+											</div>
+										</div>
+									{/each}
 								</div>
 							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{:else if activeTab === 'widgets'}
+						{/if}
+				</div>{:else if activeTab === 'widgets'}
 			<div class="tab-content">
 				<form class="widget-form" onsubmit={handleAddWidget}>
 					<h3>Add Widget</h3>
@@ -1600,6 +1651,130 @@
 		color: var(--accent);
 	}
 
+	.service-grid {
+		border-top: 1px solid var(--border);
+		padding-top: 12px;
+	}
+
+	.service-grid h3 {
+		font-size: 0.9rem;
+		margin-bottom: 10px;
+		color: var(--text-secondary);
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 12px;
+	}
+
+	.service-card {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 14px 10px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		transition: all var(--transition);
+		position: relative;
+	}
+
+	.service-card.added {
+		outline: 2px solid var(--success, #22c55e);
+		outline-offset: -2px;
+		animation: pulseGreen 1.5s ease;
+	}
+
+	.card-icon-wrapper {
+		width: 52px;
+		height: 52px;
+		border-radius: var(--radius-sm);
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(128,128,128,0.12);
+		border: 1px solid var(--border);
+	}
+
+	.card-icon {
+		width: 36px;
+		height: 36px;
+		object-fit: contain;
+	}
+
+	.card-icon-fallback {
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.2rem;
+		font-weight: 700;
+		color: white;
+		background: var(--accent);
+		border-radius: 50%;
+	}
+
+	.card-name {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.card-desc {
+		font-size: 0.7rem;
+		color: var(--text-muted);
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 6px;
+		margin-top: 4px;
+	}
+
+	.card-actions button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--border);
+		color: var(--text-secondary);
+		background: var(--bg-primary);
+		transition: all var(--transition);
+		cursor: pointer;
+	}
+
+	.card-actions button:hover {
+		background: var(--accent);
+		color: white;
+		border-color: var(--accent);
+	}
+
+	.card-actions .btn-card-delete:hover {
+		background: var(--danger);
+		border-color: var(--danger);
+	}
+
+	@keyframes pulseGreen {
+		0% { outline-color: var(--success, #22c55e); }
+		70% { outline-color: var(--success, #22c55e); }
+		100% { outline-color: transparent; }
+	}
 	@keyframes fadeIn {
 		from { opacity: 0; }
 		to { opacity: 1; }

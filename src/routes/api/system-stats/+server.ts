@@ -5,11 +5,12 @@ import type { NavbarDiskItem, NavbarCpuItem } from '$lib/types';
 
 export const GET: RequestHandler = async ({ request }) => {
 	const layout = await getLayout();
-	const diskPaths = (layout.navbar?.items || [])
+	const allNavbarItems = Object.values(layout.layouts || {}).flatMap((l) => l.navbar?.items || []);
+	const diskPaths = allNavbarItems
 		.filter((item): item is NavbarDiskItem => item.type === 'navbar-disk')
 		.flatMap((item) => item.config?.disks || []);
 
-	const cpuSensor = (layout.navbar?.items || [])
+	const cpuSensor = allNavbarItems
 		.find((item): item is NavbarCpuItem => item.type === 'navbar-cpu')
 		?.config?.tempSensor;
 

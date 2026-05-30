@@ -13,7 +13,7 @@
 	import AdGuardControl from './AdGuardControl.svelte';
 	import JellyfinLatest from './JellyfinLatest.svelte';
 
-	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild }: {
+	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild, query, matchingIds }: {
 		item: DashboardItemType;
 		allServices: Service[];
 		effectiveColSpan?: number;
@@ -26,6 +26,8 @@
 		dragPlaceholder?: { col: number; row: number; colSpan: number; rowSpan: number } | null;
 		selectedChildIds?: Set<string>;
 		ontogglechild?: (groupId: string, childId: string, multiSelect: boolean) => void;
+		query?: string;
+		matchingIds?: Set<string>;
 	} = $props();
 
 	let service = $derived(
@@ -46,9 +48,9 @@
 			ondelete={onremove ? () => onremove(item.id) : undefined}
 		/>
 	{:else if item.type === 'group-collapsible'}
-		<CollapsibleGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {draggingChildId} {dragPlaceholder} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} />
+		<CollapsibleGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {draggingChildId} {dragPlaceholder} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
 	{:else if item.type === 'group-standard'}
-		<StandardGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {draggingChildId} {dragPlaceholder} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} />
+		<StandardGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {draggingChildId} {dragPlaceholder} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
 	{:else if item.type === 'calendar'}
 		<Calendar config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'clock'}

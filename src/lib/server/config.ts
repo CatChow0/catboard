@@ -4,13 +4,13 @@ import { join } from 'path';
 import type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, DashboardItem, NavbarItemBase,
-	NavbarItem, NavbarLayout, Layout, CustomPalette, Settings, IntegrationsConfig
+	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, IntegrationsConfig
 } from '$lib/types';
 
 export type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, DashboardItem, NavbarItemBase,
-	NavbarItem, NavbarLayout, Layout, CustomPalette, Settings, IntegrationsConfig
+	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, IntegrationsConfig
 };
 
 const CONFIG_DIR = process.env.CONFIG_DIR || join(process.cwd(), 'config');
@@ -68,20 +68,26 @@ const defaultLayout: Layout = {
 		cellSize: 80,
 		gap: 12,
 		breakpoints: [
-			{ minWidth: 0, columns: 4 },
-			{ minWidth: 800, columns: 6 },
-			{ minWidth: 1200, columns: 10 }
+			{ id: 'mobile', name: 'Mobile', minWidth: 0, columns: 4 },
+			{ id: 'tablet', name: 'Tablet', minWidth: 800, columns: 6 },
+			{ id: 'desktop', name: 'Desktop', minWidth: 1200, columns: 10 }
 		]
-		},
-		items: [],
-		navbar: {
-			columns: 12,
-			items: [
-				{ id: "default-title", type: "navbar-title", col: 0, colSpan: 2 },
-				{ id: "default-search", type: "navbar-search", col: 2, colSpan: 4 }
-			]
+	},
+	layouts: {
+		mobile: { items: [], navbar: { columns: 12, items: [] } },
+		tablet: { items: [], navbar: { columns: 12, items: [] } },
+		desktop: {
+			items: [],
+			navbar: {
+				columns: 12,
+				items: [
+					{ id: "default-title", type: "navbar-title", col: 0, colSpan: 2 },
+					{ id: "default-search", type: "navbar-search", col: 2, colSpan: 4 }
+				]
+			}
 		}
-	};
+	}
+};
 const defaultSettings: Settings = {
 	title: 'My Homelab',
 	theme: 'dark',
@@ -95,9 +101,9 @@ const defaultSettings: Settings = {
 		cellSize: 80,
 		gap: 12,
 		breakpoints: [
-			{ minWidth: 0, columns: 4 },
-			{ minWidth: 800, columns: 6 },
-			{ minWidth: 1200, columns: 10 }
+			{ id: 'mobile', name: 'Mobile', minWidth: 0, columns: 4 },
+			{ id: 'tablet', name: 'Tablet', minWidth: 800, columns: 6 },
+			{ id: 'desktop', name: 'Desktop', minWidth: 1200, columns: 10 }
 		]
 	}
 };
@@ -144,10 +150,72 @@ export async function setServices(data: { services: Service[] }): Promise<void> 
 
 export async function getLayout(): Promise<Layout> {
 	const data = await readConfig('layout.json', defaultLayout);
-	if (!data.navbar) {
-		data.navbar = defaultLayout.navbar;
-		await setLayout(data);
+
+	// Migration: vieux format (items + navbar au niveau racine) -> nouveau format (layouts par breakpoint)
+	if (!data.layouts) {
+		const legacyItems = (data as any).items || [];
+		const legacyNavbar = (data as any).navbar || defaultLayout.layouts.desktop.navbar;
+
+		// Assigner des IDs aux breakpoints s'ils n'en ont pas
+		const breakpoints = data.grid?.breakpoints || defaultLayout.grid.breakpoints;
+		for (const bp of breakpoints) {
+			if (!bp.id) {
+				if (bp.minWidth === 0) bp.id = 'mobile';
+				else if (bp.minWidth === 800) bp.id = 'tablet';
+				else if (bp.minWidth === 1200) bp.id = 'desktop';
+				else bp.id = `bp-${bp.minWidth}`;
+			}
+		}
+
+		// Le breakpoint le plus large herite des items/navbar existants
+		const sorted = [...breakpoints].sort((a, b) => b.minWidth - a.minWidth);
+		const largestBpId = sorted[0]?.id || 'desktop';
+
+		const layouts: Record<string, PerBreakpointLayout> = {};
+		for (const bp of breakpoints) {
+			if (bp.id === largestBpId) {
+				layouts[bp.id] = { items: legacyItems, navbar: legacyNavbar };
+			} else {
+				layouts[bp.id] = { items: [], navbar: { columns: 12, items: [] } };
+			}
+		}
+
+		const migrated: Layout = {
+			grid: { ...data.grid, breakpoints },
+			layouts
+		};
+
+		await setLayout(migrated);
+		return migrated;
 	}
+
+	// S'assurer que tous les breakpoints ont un ID et que tous les layouts existent
+	if (data.grid?.breakpoints) {
+		let needsSave = false;
+		for (const bp of data.grid.breakpoints) {
+			if (!bp.id) {
+				if (bp.minWidth === 0) bp.id = 'mobile';
+				else if (bp.minWidth === 800) bp.id = 'tablet';
+				else if (bp.minWidth === 1200) bp.id = 'desktop';
+				else bp.id = `bp-${bp.minWidth}`;
+				needsSave = true;
+			}
+			if (!bp.name) {
+				bp.name = bp.id.charAt(0).toUpperCase() + bp.id.slice(1);
+				needsSave = true;
+			}
+		}
+		for (const bp of data.grid.breakpoints) {
+			if (!data.layouts[bp.id]) {
+				data.layouts[bp.id] = { items: [], navbar: { columns: 12, items: [] } };
+				needsSave = true;
+			}
+		}
+		if (needsSave) {
+			await setLayout(data);
+		}
+	}
+
 	return data;
 }
 

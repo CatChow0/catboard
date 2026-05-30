@@ -8,6 +8,8 @@
 		services,
 		layout,
 		isEditing,
+		activeBreakpointId,
+		manualBreakpointId,
 		loadDashboard,
 		saveLayout,
 		removeDashboardItem,
@@ -18,8 +20,11 @@
 		moveItemToRoot,
 		updateChildInGroup,
 		getActiveColumns,
+		resolveActiveBreakpointId,
+		getBreakpointLabel,
 		batchUpdatePositions,
-			batchUpdateChildPositions
+			batchUpdateChildPositions,
+		searchQuery
 	} from '$lib/stores/dashboard';
 	import SettingsModal from './SettingsModal.svelte';
 	import type { Service, DashboardItem as DashboardItemType } from '$lib/stores/dashboard';
@@ -75,8 +80,55 @@
 		currentRowSpan: number;
 	} | null>(null);
 
-	let items = $derived($layout?.items || []);
+	let activeBreakpointIdValue = $derived($activeBreakpointId);
+	let activeLayout = $derived($layout?.layouts?.[activeBreakpointIdValue] || { items: [], navbar: { columns: 12, items: [] } });
+	let items = $derived(activeLayout.items || []);
 	let dropTargetGroupId = $derived(dragState?.dropTargetGroupId ?? null);
+
+	let query = $derived($searchQuery.trim().toLowerCase());
+
+	function itemMatchesQuery(item: DashboardItemType, q: string): boolean {
+		if (!q) return false;
+		const lc = q.toLowerCase();
+		if (item.type === 'service') {
+			const svc = $services.find((s) => s.id === item.serviceId);
+			return svc ? svc.name.toLowerCase().includes(lc) : false;
+		}
+		if (item.type === 'calendar' && 'calendar'.includes(lc)) return true;
+		if (item.type === 'clock' && 'clock'.includes(lc)) return true;
+		if (item.type === 'weather' && 'weather'.includes(lc)) return true;
+		if (item.type === 'docker' && 'docker'.includes(lc)) return true;
+		if (item.type === 'uptime-kuma-status-page' && 'uptime'.includes(lc)) return true;
+		if (item.type === 'adguard-home' && 'adguard'.includes(lc)) return true;
+		if (item.type === 'adguard-home-control' && 'adguard'.includes(lc)) return true;
+		if (item.type === 'jellyfin-latest' && 'jellyfin'.includes(lc)) return true;
+		if ((item.type === 'group-collapsible' || item.type === 'group-standard') && item.title?.toLowerCase().includes(lc)) return true;
+		return false;
+	}
+
+	function computeMatchingIds(itemsList: DashboardItemType[], q: string): Set<string> {
+		const ids = new Set<string>();
+		function visit(it: DashboardItemType) {
+			if (itemMatchesQuery(it, q)) ids.add(it.id);
+			if ('children' in it) it.children.forEach(visit);
+		}
+		itemsList.forEach(visit);
+		return ids;
+	}
+
+	let matchingIds = $derived(query ? computeMatchingIds(items, query) : new Set<string>());
+
+	// Update active breakpoint when window width changes (unless manually overridden)
+	$effect(() => {
+		const bpId = resolveActiveBreakpointId(
+			$layout?.grid?.breakpoints || [],
+			windowWidth,
+			$manualBreakpointId
+		);
+		if (bpId !== $activeBreakpointId) {
+			activeBreakpointId.set(bpId);
+		}
+	});
 
 	function getEffectiveColSpan(item: DashboardItemType): number {
 		if (resizeState?.itemId === item.id) return resizeState.currentColSpan;
@@ -623,6 +675,8 @@
 					class:dragging={dragState?.itemId === item.id || (dragState?.multiDrag && selectedItemIds.has(item.id))}
 					class:selected={selectedItemIds.has(item.id) && !dragState}
 					class:drop-target={dropTargetGroupId === item.id && dragState?.sourceGroupId !== item.id}
+					class:dimmed={query && !matchingIds.has(item.id)}
+					class:highlighted={query && matchingIds.has(item.id)}
 					style={getItemStyle(item)}
 					onpointerdown={(e) => handlePointerDownOnItem(e, item)}
 				>
@@ -639,6 +693,8 @@
 						dragPlaceholder={dragState?.dropTargetGroupId === item.id ? { col: dragState.withinGroupCol, row: dragState.withinGroupRow, colSpan: dragState.colSpan, rowSpan: dragState.rowSpan } : null}
 						selectedChildIds={selectedChildIds.get(item.id)}
 						ontogglechild={toggleChildSelection}
+						{query}
+						{matchingIds}
 					/>
 					{#if $isEditing}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -675,8 +731,8 @@
 					<rect x="3" y="14" width="7" height="7" rx="1" />
 					<rect x="14" y="14" width="7" height="7" rx="1" />
 				</svg>
-				<p>Dashboard is empty</p>
-				<p class="hint">Enable edit mode and click Add to get started</p>
+				<p>Ce layout est vide</p>
+				<p class="hint">Ajoutez des services et widgets via le bouton + pour le format {getBreakpointLabel($layout.grid.breakpoints, $activeBreakpointId)}</p>
 			</div>
 		{/if}
 	</main>
@@ -771,6 +827,19 @@
 		background: var(--accent-bg);
 	}
 
+	.dimmed {
+		opacity: 0.35;
+		filter: grayscale(0.7);
+		transition: opacity var(--transition), filter var(--transition);
+	}
+
+	.highlighted {
+		outline: 2px solid #f1c40f;
+		outline-offset: -2px;
+		border-radius: var(--radius);
+		z-index: 2;
+	}
+
 	.resize-handle {
 		position: absolute;
 		bottom: 0;
@@ -820,6 +889,19 @@
 		gap: 8px;
 	}
 
+	.dimmed {
+		opacity: 0.35;
+		filter: grayscale(0.7);
+		transition: opacity var(--transition), filter var(--transition);
+	}
+
+	.highlighted {
+		outline: 2px solid #f1c40f;
+		outline-offset: -2px;
+		border-radius: var(--radius);
+		z-index: 2;
+	}
+
 	.empty-state p {
 		font-size: 1.1rem;
 	}
@@ -828,4 +910,5 @@
 		font-size: 0.85rem !important;
 		color: var(--text-muted);
 	}
+
 </style>

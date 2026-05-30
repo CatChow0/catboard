@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { isEditing, layout, settings, saveNavbarLayout, removeNavbarItem } from '$lib/stores/dashboard';
+	import { isEditing, layout, activeBreakpointId, manualBreakpointId, settings, saveNavbarLayout, removeNavbarItem, getBreakpointLabel, searchQuery, services } from '$lib/stores/dashboard';
 	import type { NavbarItem } from '$lib/types';
 	import NavbarTitle from './navbar/NavbarTitle.svelte';
 	import NavbarSearch from './navbar/NavbarSearch.svelte';
@@ -15,7 +15,21 @@
 	let { onadd, onsettings, onlogout }: { onadd?: () => void; onsettings: () => void; onlogout: () => void } = $props();
 
 	function toggleEdit() {
+		if (!$isEditing) {
+			manualBreakpointId.set($activeBreakpointId);
+		} else {
+			manualBreakpointId.set(null);
+		}
 		isEditing.update((v) => !v);
+	}
+
+	function handleSearchEnter(query: string) {
+		const q = query.trim().toLowerCase();
+		if (!q) return;
+		const hasMatch = $services.some((s) => s.name.toLowerCase().includes(q));
+		if (!hasMatch) {
+			window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query.trim())}`, '_blank');
+		}
 	}
 
 	let dragState = $state<{
@@ -36,8 +50,10 @@
 	let navbarEl: HTMLElement | undefined = $state();
 	let editingItem = $state<NavbarItem | null>(null);
 
+	let activeNavbar = $derived($layout?.layouts?.[$activeBreakpointId]?.navbar || { columns: 12, items: [] });
+
 	function getNavbarColumns(): number {
-		return $layout.navbar?.columns || 12;
+		return activeNavbar.columns || 12;
 	}
 
 	function getColumnWidth(): number {
@@ -82,7 +98,7 @@
 			const rs = resizeState;
 			const colWidth = getColumnWidth();
 			const deltaCol = Math.round((e.clientX - rs.startMouseX) / colWidth);
-			const maxSpan = getNavbarColumns() - (($layout.navbar?.items.find(i => i.id === rs.itemId)?.col) ?? 0);
+			const maxSpan = getNavbarColumns() - ((activeNavbar?.items.find(i => i.id === rs.itemId)?.col) ?? 0);
 			rs.currentColSpan = Math.max(1, Math.min(rs.startColSpan + deltaCol, maxSpan));
 		}
 	}
@@ -90,7 +106,7 @@
 	function handlePointerUp() {
 		if (dragState) {
 			const ds = dragState;
-			const items = [ ...($layout.navbar?.items || []) ];
+			const items = [ ...(activeNavbar?.items || []) ];
 			const item = items.find(i => i.id === ds.itemId);
 			if (item && item.col !== ds.currentCol) {
 				item.col = ds.currentCol;
@@ -100,16 +116,16 @@
 					if (sortedItem.col < nextCol) sortedItem.col = nextCol;
 					nextCol = sortedItem.col + sortedItem.colSpan;
 				}
-				saveNavbarLayout({ ...$layout.navbar!, items: sorted });
+				saveNavbarLayout({ ...activeNavbar!, items: sorted });
 			}
 			dragState = null;
 		} else if (resizeState) {
 			const rs = resizeState;
-			const items = [ ...($layout.navbar?.items || []) ];
+			const items = [ ...(activeNavbar?.items || []) ];
 			const item = items.find(i => i.id === rs.itemId);
 			if (item && item.colSpan !== rs.currentColSpan) {
 				item.colSpan = rs.currentColSpan;
-				saveNavbarLayout({ ...$layout.navbar!, items });
+				saveNavbarLayout({ ...activeNavbar!, items });
 			}
 			resizeState = null;
 		}
@@ -131,9 +147,9 @@
 	<div
 		bind:this={navbarEl}
 		class="navbar-items"
-		style="grid-template-columns: repeat({$layout.navbar?.columns || 12}, 1fr);"
+		style="grid-template-columns: repeat({activeNavbar?.columns || 12}, 1fr);"
 	>
-		{#each $layout.navbar?.items || [] as item (item.id)}
+		{#each activeNavbar?.items || [] as item (item.id)}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="navbar-item"
@@ -145,7 +161,13 @@
 				{#if item.type === 'navbar-title'}
 					<NavbarTitle />
 				{:else if item.type === 'navbar-search'}
-					<NavbarSearch placeholder={item.placeholder} />
+					<NavbarSearch
+						placeholder={item.placeholder}
+						onsearch={(q, isEnter) => {
+							searchQuery.set(q);
+							if (isEnter) handleSearchEnter(q);
+						}}
+					/>
 				{:else if item.type === 'navbar-cpu'}
 					<NavbarCpuWidget colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} config={item.config} />
 				{:else if item.type === 'navbar-ram'}
@@ -186,14 +208,21 @@
 		{/each}
 	</div>
 	<div class="navbar-controls">
-		{#if $isEditing}
-			<button class="btn-add" onclick={() => onadd?.()} title="Add service or widget">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M12 5v14M5 12h14" />
-				</svg>
-				<span>Add</span>
-			</button>
-		{/if}
+					{#if $isEditing}
+				<div class="layout-select-wrapper">
+					<select class="layout-select" onchange={(e) => manualBreakpointId.set(e.currentTarget.value)} value={$manualBreakpointId || $activeBreakpointId}>
+						{#each $layout?.grid?.breakpoints || [] as bp}
+							<option value={bp.id}>{getBreakpointLabel($layout.grid.breakpoints, bp.id)}</option>
+						{/each}
+					</select>
+				</div>
+				<button class="btn-add" onclick={() => onadd?.()} title="Add service or widget">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 5v14M5 12h14" />
+					</svg>
+					<span>Add</span>
+				</button>
+			{/if}
 		<button class="btn-edit-toggle" class:active={$isEditing} onclick={toggleEdit} title="Toggle edit mode">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -376,5 +405,27 @@
 		.navbar-controls {
 			justify-content: flex-end;
 		}
+	}
+
+	.layout-select-wrapper {
+		display: flex;
+		align-items: center;
+	}
+
+	.layout-select {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		color: var(--text-primary);
+		padding: 8px 12px;
+		border-radius: var(--radius-sm);
+		font-size: 0.85rem;
+		font-weight: 500;
+		cursor: pointer;
+		min-width: 120px;
+	}
+
+	.layout-select:focus {
+		outline: none;
+		border-color: var(--accent);
 	}
 </style>

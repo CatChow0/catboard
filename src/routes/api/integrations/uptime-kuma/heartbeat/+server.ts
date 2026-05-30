@@ -8,13 +8,15 @@ export const GET: RequestHandler = async ({ request }) => {
 
 	const layout = await getLayout();
 	const slugs = new Set<string>();
+	const allItems = Object.values(layout.layouts || {}).flatMap((l) => l.items || []);
+	const allNavbarItems = Object.values(layout.layouts || {}).flatMap((l) => l.navbar?.items || []);
 
-	for (const item of layout.items || []) {
+	for (const item of allItems) {
 		if (item.type === 'uptime-kuma-status-page' && (item as UptimeKumaStatusPageItem).config?.slug) {
 			slugs.add((item as UptimeKumaStatusPageItem).config.slug);
 		}
 	}
-	for (const item of layout.navbar?.items || []) {
+	for (const item of allNavbarItems) {
 		if (item.type === 'navbar-uptime-kuma-status-page' && (item as NavbarUptimeKumaStatusPageItem).config?.slug) {
 			slugs.add((item as NavbarUptimeKumaStatusPageItem).config.slug);
 		}

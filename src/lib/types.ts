@@ -11,10 +11,17 @@ export interface Service {
 
 // --- Grid ---
 
+export interface Breakpoint {
+	id: string;
+	name: string;
+	minWidth: number;
+	columns: number;
+}
+
 export interface GridConfig {
 	cellSize: number;
 	gap: number;
-	breakpoints: { minWidth: number; columns: number }[];
+	breakpoints: Breakpoint[];
 }
 
 // --- Dashboard Items ---
@@ -163,10 +170,14 @@ export interface NavbarLayout {
 	items: NavbarItem[];
 }
 
-export interface Layout {
-	grid: GridConfig;
+export interface PerBreakpointLayout {
 	items: DashboardItem[];
 	navbar: NavbarLayout;
+}
+
+export interface Layout {
+	grid: GridConfig;
+	layouts: Record<string, PerBreakpointLayout>;
 }
 
 // --- Styling ---

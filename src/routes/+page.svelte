@@ -6,7 +6,7 @@
 	let loaded = $state(false);
 
 	onMount(() => {
-		loadDashboard().then(() => { loaded = true; });
+		loadDashboard(window.innerWidth).then(() => { loaded = true; });
 
 		// Status checks: fetch once then every 5 minutes (not SSE)
 		async function fetchStatuses() {
