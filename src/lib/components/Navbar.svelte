@@ -9,6 +9,8 @@
 	import NavbarUptimeKumaStatusPage from './navbar/NavbarUptimeKumaStatusPage.svelte';
 	import NavbarDocker from './navbar/NavbarDocker.svelte';
 	import NavbarAdGuardControl from './navbar/NavbarAdGuardControl.svelte';
+	import NavbarClock from './navbar/NavbarClock.svelte';
+	import NavbarWeather from './navbar/NavbarWeather.svelte';
 	import NavbarEditModal from './NavbarEditModal.svelte';
 	import OptionsDropdown from './OptionsDropdown.svelte';
 
@@ -49,6 +51,15 @@
 
 	let navbarEl: HTMLElement | undefined = $state();
 	let editingItem = $state<NavbarItem | null>(null);
+	// Unsaved sizes from the edit modal, shown live on the widget being edited.
+	let sizePreview = $state<{ id: string; iconScale: number; textScale: number } | null>(null);
+
+	function scaleVars(item: NavbarItem): string {
+		const p = sizePreview?.id === item.id ? sizePreview : null;
+		const icon = (p?.iconScale ?? item.iconScale ?? 100) / 100;
+		const text = (p?.textScale ?? item.textScale ?? 100) / 100;
+		return `--nb-icon: ${icon}; --nb-text: ${text};`;
+	}
 
 	let activeNavbar = $derived($layout?.layouts?.[$activeBreakpointId]?.navbar || { columns: 12, items: [] });
 
@@ -155,7 +166,7 @@
 				class="navbar-item"
 				class:editing={$isEditing}
 				class:dragging={dragState?.itemId === item.id}
-				style="grid-column: {dragState?.itemId === item.id ? dragState.currentCol + 1 : item.col + 1} / span {resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan};"
+				style="grid-column: {dragState?.itemId === item.id ? dragState.currentCol + 1 : item.col + 1} / span {resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan}; {scaleVars(item)}"
 				onpointerdown={(e) => handlePointerDownOnItem(e, item)}
 			>
 				{#if item.type === 'navbar-title'}
@@ -180,6 +191,10 @@
 					<NavbarDocker config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
 				{:else if item.type === 'navbar-adguard-home-control'}
 					<NavbarAdGuardControl config={item.config} />
+				{:else if item.type === 'navbar-clock'}
+					<NavbarClock config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
+				{:else if item.type === 'navbar-weather'}
+					<NavbarWeather config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
 				{/if}
 				{#if $isEditing}
 					<button class="navbar-delete-btn" onclick={() => handleDelete(item.id)} title="Remove">
@@ -235,7 +250,14 @@
 </header>
 
 {#if editingItem}
-	<NavbarEditModal item={editingItem} onclose={() => (editingItem = null)} />
+	<NavbarEditModal
+		item={editingItem}
+		onpreview={(iconScale, textScale) => (sizePreview = editingItem ? { id: editingItem.id, iconScale, textScale } : null)}
+		onclose={() => {
+			editingItem = null;
+			sizePreview = null;
+		}}
+	/>
 {/if}
 
 <style>
@@ -255,7 +277,8 @@
 		flex: 1;
 		min-width: 0;
 		display: grid;
-		grid-auto-rows: 44px;
+		/* Rows grow when a widget's icon/text size is turned up. */
+		grid-auto-rows: minmax(44px, auto);
 		gap: 4px;
 		align-items: center;
 	}

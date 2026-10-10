@@ -706,6 +706,8 @@ export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, c
 			case 'navbar-disk': return { id: crypto.randomUUID(), type: 'navbar-disk', col: targetCol, colSpan, config: { disks: (config?.disks as string[]) || [] } };
 			case 'navbar-uptime-kuma-status-page': return { id: crypto.randomUUID(), type: 'navbar-uptime-kuma-status-page', col: targetCol, colSpan, config: { slug: (config?.slug as string) || '' } };
 			case 'navbar-docker': return { id: crypto.randomUUID(), type: 'navbar-docker', col: targetCol, colSpan, config: { environmentId: (config?.environmentId as string) || '' } };
+			case 'navbar-clock': return { id: crypto.randomUUID(), type: 'navbar-clock', col: targetCol, colSpan, config: config as ClockConfig | undefined };
+			case 'navbar-weather': return { id: crypto.randomUUID(), type: 'navbar-weather', col: targetCol, colSpan, config: config as WeatherConfig | undefined };
 		case 'navbar-adguard-home-control': return { id: crypto.randomUUID(), type: 'navbar-adguard-home-control', col: targetCol, colSpan, config: { instanceId: (config?.instanceId as string) || 'default' } };
 			default: return { id: crypto.randomUUID(), type: 'navbar-title', col: targetCol, colSpan };
 		}

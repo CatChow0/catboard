@@ -6,7 +6,7 @@
 
 <style>
 	.navbar-title {
-		font-size: 1.2rem;
+		font-size: calc(1.2rem * var(--nb-text, 1));
 		font-weight: 700;
 		letter-spacing: -0.02em;
 		white-space: nowrap;

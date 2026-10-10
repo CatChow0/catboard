@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { Service } from '$lib/stores/dashboard';
-	import type { StackerServer, StackerSections } from '$lib/types';
+	import type { StackerServer, StackerSections, WeatherLocation } from '$lib/types';
+	import LocationSearch from './LocationSearch.svelte';
+	import DockerLogo from './icons/DockerLogo.svelte';
+	import UptimeKumaLogo from './icons/UptimeKumaLogo.svelte';
 	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, getActiveColumns, getIntegrations, setIntegrations } from '$lib/stores/dashboard';
 	import IconPicker from './IconPicker.svelte';
 
@@ -34,8 +37,10 @@
 		else if (widgetType === 'calendar') widgetColSpan = 4;
 	});
 	let widgetCompact = $state(false);
-	let navbarWidgetType = $state<'navbar-title' | 'navbar-search' | 'navbar-cpu' | 'navbar-ram' | 'navbar-disk'>('navbar-cpu');
+	let navbarWidgetType = $state<'navbar-title' | 'navbar-search' | 'navbar-cpu' | 'navbar-ram' | 'navbar-disk' | 'navbar-clock' | 'navbar-weather'>('navbar-cpu');
 	let navbarColSpan = $state(2);
+	let navbarClock = $state({ showSeconds: false, format12h: false, showDate: true, showFullDate: false });
+	let navbarWeatherLocation = $state<WeatherLocation | null>(null);
 	let diskPaths = $state<string[]>([]);
 	let availableDisks = $state<string[]>([]);
 	let tempSensors = $state<string[]>([]);
@@ -225,6 +230,10 @@
 			config = { disks: diskPaths.length > 0 ? diskPaths : undefined };
 		} else if (navbarWidgetType === 'navbar-cpu' && selectedTempSensor) {
 			config = { tempSensor: selectedTempSensor };
+		} else if (navbarWidgetType === 'navbar-clock') {
+			config = { ...navbarClock, dateFormat: 'DD/MM' };
+		} else if (navbarWidgetType === 'navbar-weather') {
+			config = navbarWeatherLocation ? { location: navbarWeatherLocation } : undefined;
 		}
 		close();
 		await addNavbarItem(navbarWidgetType, navbarColSpan, config);
@@ -633,7 +642,39 @@
 						</svg>
 						<span>Disk</span>
 					</button>
+					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-clock'} onclick={() => (navbarWidgetType = 'navbar-clock')}>
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+							<circle cx="12" cy="12" r="10" />
+							<path d="M12 6v6l4 2" />
+						</svg>
+						<span>Clock</span>
+					</button>
+					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-weather'} onclick={() => (navbarWidgetType = 'navbar-weather')}>
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+							<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+						</svg>
+						<span>Weather</span>
+					</button>
 				</div>
+				{#if navbarWidgetType === 'navbar-clock'}
+					<div class="navbar-options">
+						<span class="field-label">Options</span>
+						<div class="disk-list">
+							<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.showSeconds} /><span>Seconds</span></label>
+							<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.format12h} /><span>12h (AM/PM)</span></label>
+							<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.showDate} /><span>Date</span></label>
+							{#if navbarClock.showDate}
+								<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.showFullDate} /><span>Full date</span></label>
+							{/if}
+						</div>
+					</div>
+				{/if}
+				{#if navbarWidgetType === 'navbar-weather'}
+					<div class="navbar-options">
+						<span class="field-label">Location</span>
+						<LocationSearch bind:location={navbarWeatherLocation} />
+					</div>
+				{/if}
 				{#if navbarWidgetType === 'navbar-cpu'}
 					<div class="field">
 						<label>Temperature sensor</label>
@@ -691,10 +732,7 @@
 					<div class="integration-card">
 						<div class="integration-header">
 							<div class="integration-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<circle cx="12" cy="12" r="10" />
-									<path d="M12 6v6l4 2" />
-								</svg>
+								<UptimeKumaLogo size={22} />
 							</div>
 							<div class="integration-info">
 								<span class="integration-name">Uptime Kuma</span>
@@ -715,9 +753,7 @@
 				<div class="integration-card">
 					<div class="integration-header">
 						<div class="integration-icon docker-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M2 15h4v4H2zM9 15h4v4H9zM16 15h4v4h-4zM2 9h4v4H2zM9 9h4v4H9zM16 9h4v4h-4zM9 3h4v4H9z" />
-							</svg>
+							<DockerLogo size={22} />
 						</div>
 						<div class="integration-info">
 							<span class="integration-name">Docker</span>
@@ -957,10 +993,7 @@
 					<div class="integration-card">
 						<div class="integration-header">
 							<div class="integration-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<circle cx="12" cy="12" r="10" />
-									<path d="M12 6v6l4 2" />
-								</svg>
+								<UptimeKumaLogo size={22} />
 							</div>
 							<div class="integration-info">
 								<span class="integration-name">Uptime Kuma Status Page</span>
@@ -1007,9 +1040,7 @@
 				<div class="integration-card">
 					<div class="integration-header">
 						<div class="integration-icon docker-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M2 15h4v4H2zM9 15h4v4H9zM16 15h4v4h-4zM2 9h4v4H2zM9 9h4v4H9zM16 9h4v4h-4zM9 3h4v4H9z" />
-							</svg>
+							<DockerLogo size={22} />
 						</div>
 						<div class="integration-info">
 							<span class="integration-name">Docker Containers</span>
@@ -1760,7 +1791,8 @@
 		color: #3fb6ff;
 	}
 
-	.stacker-sections {
+	.stacker-sections,
+	.navbar-options {
 		margin-bottom: 10px;
 	}
 

@@ -52,7 +52,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 3px;
-		min-width: 40px;
+		min-width: calc(40px * var(--nb-text, 1));
 	}
 
 	.ram-bar-row {
@@ -62,9 +62,9 @@
 	}
 
 	.ram-label, .swap-label {
-		font-size: 0.65rem;
+		font-size: calc(0.65rem * var(--nb-text, 1));
 		font-weight: 700;
-		min-width: 28px;
+		min-width: calc(28px * var(--nb-text, 1));
 		flex-shrink: 0;
 	}
 
@@ -80,11 +80,11 @@
 
 	.ram-bar-wrap {
 		flex: 1;
-		height: 6px;
+		height: calc(6px * var(--nb-icon, 1));
 		background: var(--border);
 		border-radius: 3px;
 		overflow: hidden;
-		min-width: 24px;
+		min-width: calc(24px * var(--nb-text, 1));
 	}
 
 	.ram-bar {
@@ -105,26 +105,26 @@
 	}
 
 	.ram-pct {
-		font-size: 0.7rem;
+		font-size: calc(0.7rem * var(--nb-text, 1));
 		font-weight: 600;
 		color: var(--text-primary);
-		min-width: 28px;
+		min-width: calc(28px * var(--nb-text, 1));
 		text-align: right;
 	}
 
 	.swap-pct {
-		font-size: 0.7rem;
+		font-size: calc(0.7rem * var(--nb-text, 1));
 		font-weight: 600;
 		color: #7c6ff7;
-		min-width: 28px;
+		min-width: calc(28px * var(--nb-text, 1));
 		text-align: right;
 	}
 
 	.ram-info {
-		font-size: 0.8rem;
+		font-size: calc(0.8rem * var(--nb-text, 1));
 		font-weight: 600;
 		color: var(--text-primary);
-		min-width: 80px;
+		min-width: calc(80px * var(--nb-text, 1));
 		text-align: right;
 	}
 </style>

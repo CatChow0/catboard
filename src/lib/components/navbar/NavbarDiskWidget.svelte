@@ -97,11 +97,11 @@
 	}
 
 	.disk-page-indicator {
-		font-size: 0.6rem;
+		font-size: calc(0.6rem * var(--nb-text, 1));
 		color: var(--text-muted);
 		opacity: 0.6;
 		flex-shrink: 0;
-		min-width: 16px;
+		min-width: calc(16px * var(--nb-text, 1));
 		text-align: center;
 		align-self: center;
 	}
@@ -130,25 +130,25 @@
 	}
 
 	.disk-label {
-		font-size: 0.75rem;
+		font-size: calc(0.75rem * var(--nb-text, 1));
 		font-weight: 600;
 		color: var(--text-muted);
 		text-transform: uppercase;
 	}
 
 	.disk-path {
-		font-size: 0.7rem;
+		font-size: calc(0.7rem * var(--nb-text, 1));
 		color: var(--text-muted);
-		min-width: 28px;
+		min-width: calc(28px * var(--nb-text, 1));
 	}
 
 	.disk-bar-wrap {
 		flex: 1;
-		height: 6px;
+		height: calc(6px * var(--nb-icon, 1));
 		background: var(--border);
 		border-radius: 3px;
 		overflow: hidden;
-		min-width: 24px;
+		min-width: calc(24px * var(--nb-text, 1));
 	}
 
 	.disk-bar {
@@ -162,15 +162,15 @@
 	.disk-bar.high { background: var(--danger); }
 
 	.disk-pct {
-		font-size: 0.8rem;
+		font-size: calc(0.8rem * var(--nb-text, 1));
 		font-weight: 600;
 		color: var(--text-primary);
-		min-width: 30px;
+		min-width: calc(30px * var(--nb-text, 1));
 		text-align: right;
 	}
 
 	.disk-info {
-		font-size: 0.75rem;
+		font-size: calc(0.75rem * var(--nb-text, 1));
 		color: var(--text-secondary);
 	}
 </style>

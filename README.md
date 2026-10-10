@@ -2,14 +2,14 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.2.0-blue)
+![Version](https://img.shields.io/badge/version-2.3.0-blue)
 
 ## Features
 
 - **Drag-and-drop grid layout** -- Place, resize, and reorder service tiles and widgets on a responsive CSS grid
 - **Service management** -- Register services with URL, icon, and description; click a tile to open the service; live status checks via SSE
 - **Collapsible & standard groups** -- Organize services into visual groups with sub-grids
-- **Dynamic navbar** -- Customizable navbar with draggable/resizable widgets: title, search, CPU, RAM, disk monitors, Uptime Kuma status, and Docker container status
+- **Dynamic navbar** -- Customizable navbar with draggable/resizable widgets: title, search, clock, weather, CPU, RAM, disk monitors, Uptime Kuma status, and Docker container status (click for details)
 - **System monitoring** -- Real-time CPU usage/temperature, RAM/swap usage, and disk utilization via SSE
 - **Clock & Weather widgets** -- Configurable clock with seconds/date options and weather display with location search
 - **Calendar widget** -- Month view with today highlighted; optional *Arr integration shows upcoming movie/TV/music releases from Radarr, Sonarr, and Lidarr
@@ -106,11 +106,13 @@ Add widgets to the navbar via Add > Navbar tab:
 | **CPU** | CPU usage bar + temperature (configurable sensor) |
 | **RAM** | RAM usage bar + swap bar |
 | **Disk** | Disk usage bars with click-to-cycle pagination |
-| **Uptime Kuma** | Compact status page monitor (active/inactive counts + uptime %) |
-| **Docker** | Container counts (running/stopped) with status dots |
+| **Clock** | Time and date on one line (two lines at width 1); seconds, 12h/24h, date format and full date options |
+| **Weather** | Weather icon, temperature and city (city hidden at width 1); location set by city search |
+| **Uptime Kuma** | Uptime Kuma logo, active/inactive counts and uptime %; click for the full monitor list |
+| **Docker** | Docker logo and running/stopped counts; click for the full container list |
 | **AdGuard Home** | Toggle protection status with colored state pill |
 
-Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, or Docker environment.
+Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, Docker environment, clock format or weather location. Every navbar widget also has **Icon size** and **Text size** sliders (50–250%, previewed live); the navbar row grows to fit larger widgets. Outside edit mode, clicking the Docker or Uptime Kuma widget opens a details popover with the same content as the standard widget (close it with a click outside or Escape).
 
 ### Dashboard Widgets
 

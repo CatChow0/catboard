@@ -171,6 +171,10 @@ export interface NavbarItemBase {
 	id: string;
 	col: number;
 	colSpan: number;
+	/** Icon / graphic size in percent (default 100). */
+	iconScale?: number;
+	/** Text size in percent (default 100). */
+	textScale?: number;
 }
 
 export interface NavbarTitleItem extends NavbarItemBase {
@@ -201,7 +205,17 @@ export interface NavbarUptimeKumaStatusPageItem extends NavbarItemBase {
 	config: UptimeKumaStatusPageConfig;
 }
 
-export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem;
+export interface NavbarClockItem extends NavbarItemBase {
+	type: 'navbar-clock';
+	config?: ClockConfig;
+}
+
+export interface NavbarWeatherItem extends NavbarItemBase {
+	type: 'navbar-weather';
+	config?: WeatherConfig;
+}
+
+export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem | NavbarClockItem | NavbarWeatherItem;
 
 export interface NavbarLayout {
 	columns: number;

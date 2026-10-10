@@ -47,7 +47,7 @@
 		disabled={loading}
 		title={isPaused ? 'AdGuard Paused' : isActive ? 'AdGuard Active - click to disable' : 'AdGuard Inactive - click to enable'}
 	>
-	<svg class="shield" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+	<svg class="shield" style="width: calc(14px * var(--nb-icon, 1)); height: calc(14px * var(--nb-icon, 1))" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 		<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
 	</svg>
 		<span class="label">{isPaused ? 'Paused' : isActive ? 'Active' : 'Off'}</span>
@@ -65,7 +65,7 @@
 		align-items: center;
 		gap: 5px;
 		padding: 3px 10px;
-		font-size: 0.72rem;
+		font-size: calc(0.72rem * var(--nb-text, 1));
 		white-space: nowrap;
 		background: rgba(231, 76, 60, 0.15);
 		border: 1px solid rgba(231, 76, 60, 0.3);

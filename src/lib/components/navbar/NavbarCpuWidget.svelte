@@ -28,7 +28,7 @@
 	}
 
 	.cpu-label {
-		font-size: 0.75rem;
+		font-size: calc(0.75rem * var(--nb-text, 1));
 		font-weight: 600;
 		color: var(--text-muted);
 		text-transform: uppercase;
@@ -36,11 +36,11 @@
 
 	.cpu-bar-wrap {
 		flex: 1;
-		height: 6px;
+		height: calc(6px * var(--nb-icon, 1));
 		background: var(--border);
 		border-radius: 3px;
 		overflow: hidden;
-		min-width: 40px;
+		min-width: calc(40px * var(--nb-text, 1));
 	}
 
 	.cpu-bar {
@@ -54,17 +54,17 @@
 	.cpu-bar.high { background: var(--danger); }
 
 	.cpu-pct {
-		font-size: 0.8rem;
+		font-size: calc(0.8rem * var(--nb-text, 1));
 		font-weight: 600;
 		color: var(--text-primary);
-		min-width: 36px;
+		min-width: calc(36px * var(--nb-text, 1));
 		text-align: right;
 	}
 
 	.cpu-temp {
-		font-size: 0.75rem;
+		font-size: calc(0.75rem * var(--nb-text, 1));
 		color: var(--text-secondary);
-		min-width: 36px;
+		min-width: calc(36px * var(--nb-text, 1));
 	}
 
 	.cpu-temp.no-data {

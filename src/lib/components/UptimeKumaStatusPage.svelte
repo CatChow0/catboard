@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { UptimeKumaStatusPageConfig } from '$lib/types';
 	import { isEditing, updateDashboardItem, uptimeKumaData } from '$lib/stores/dashboard';
+	import UptimeKumaDetails from './details/UptimeKumaDetails.svelte';
+	import UptimeKumaLogo from './icons/UptimeKumaLogo.svelte';
 
 	let { config, colSpan = 1, rowSpan = 1, ondelete, itemid }: {
 		config?: UptimeKumaStatusPageConfig;
@@ -18,12 +20,6 @@
 	const showMonitors = $derived(cells >= 6);
 
 	const data = $derived($uptimeKumaData[config?.slug || '']);
-
-	function uptimeColor(pct: number): string {
-		if (pct >= 99) return 'var(--success)';
-		if (pct >= 95) return 'var(--warning)';
-		return 'var(--danger)';
-	}
 
 	function openEditModal() {
 		editSlug = config?.slug || '';
@@ -47,39 +43,13 @@
 	<div class="uk-inner">
 		{#if !config?.slug}
 			<div class="uk-placeholder">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-					<circle cx="12" cy="12" r="10" />
-					<path d="M12 6v6l4 2" />
-				</svg>
+				<UptimeKumaLogo size={24} />
 				<span>No status page configured</span>
 			</div>
 		{:else if !data}
 			<div class="uk-loading">...</div>
 		{:else}
-			<div class="uk-content">
-				<div class="uk-title">{data.title}</div>
-				<div class="uk-summary">
-					<span class="uk-badge active">{data.activeCount} up</span>
-					<span class="uk-badge inactive">{data.inactiveCount} down</span>
-					<span class="uk-uptime" style="color: {uptimeColor(data.overallUptime)}">{data.overallUptime}%</span>
-				</div>
-				{#if cells >= 2}
-					<div class="uk-bar-track">
-						<div class="uk-bar-fill" style="width: {data.overallUptime}%; background: {uptimeColor(data.overallUptime)};"></div>
-					</div>
-				{/if}
-				{#if showMonitors && data.monitors.length > 0}
-					<div class="uk-monitors">
-						{#each data.monitors as mon}
-							<div class="uk-monitor">
-								<span class="uk-monitor-dot" class:up={mon.status === 1} class:down={mon.status !== 1}></span>
-								<span class="uk-monitor-name">{mon.name}</span>
-								<span class="uk-monitor-uptime" style="color: {uptimeColor(mon.uptime24h)}">{mon.uptime24h}%</span>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
+			<UptimeKumaDetails {data} showBar={cells >= 2} showList={showMonitors} />
 		{/if}
 	</div>
 	{#if $isEditing}
@@ -159,116 +129,6 @@
 	.uk-loading {
 		font-size: 1.2rem;
 		color: var(--text-muted);
-	}
-
-	.uk-content {
-		display: flex;
-		flex-direction: column;
-		padding: 12px;
-		width: 100%;
-		min-width: 0;
-		gap: 8px;
-		height: 100%;
-	}
-
-	.uk-title {
-		font-size: 0.9rem;
-		font-weight: 600;
-		color: var(--text-primary);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.uk-summary {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-wrap: wrap;
-	}
-
-	.uk-badge {
-		font-size: 0.7rem;
-		font-weight: 600;
-		padding: 2px 8px;
-		border-radius: 10px;
-		white-space: nowrap;
-	}
-
-	.uk-badge.active {
-		background: color-mix(in srgb, var(--success) 20%, transparent);
-		color: var(--success);
-	}
-
-	.uk-badge.inactive {
-		background: color-mix(in srgb, var(--danger) 20%, transparent);
-		color: var(--danger);
-	}
-
-	.uk-uptime {
-		font-size: 0.8rem;
-		font-weight: 700;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.uk-bar-track {
-		height: 4px;
-		background: var(--border);
-		border-radius: 2px;
-		overflow: hidden;
-	}
-
-	.uk-bar-fill {
-		height: 100%;
-		border-radius: 2px;
-		transition: width 0.3s ease;
-	}
-
-	.uk-monitors {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		margin-top: 4px;
-		flex: 1;
-		min-height: 0;
-		overflow-y: auto;
-	}
-
-	.uk-monitor {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 0.75rem;
-	}
-
-	.uk-monitor-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.uk-monitor-dot.up {
-		background: var(--success);
-	}
-
-	.uk-monitor-dot.down {
-		background: var(--danger);
-	}
-
-	.uk-monitor-name {
-		flex: 1;
-		color: var(--text-secondary);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		min-width: 0;
-	}
-
-	.uk-monitor-uptime {
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
-		flex-shrink: 0;
 	}
 
 	.btn-delete {

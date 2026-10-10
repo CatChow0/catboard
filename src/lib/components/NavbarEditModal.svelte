@@ -1,8 +1,53 @@
 <script lang="ts">
-	import type { NavbarItem } from '$lib/types';
+	import type { NavbarItem, WeatherLocation } from '$lib/types';
 	import { updateNavbarItem, getIntegrations } from '$lib/stores/dashboard';
+	import LocationSearch from './LocationSearch.svelte';
 
-	let { item, onclose }: { item: NavbarItem; onclose: () => void } = $props();
+	let { item, onclose, onpreview }: {
+		item: NavbarItem;
+		onclose: () => void;
+		/** Shows unsaved icon/text sizes on the widget while the modal is open. */
+		onpreview?: (iconScale: number, textScale: number) => void;
+	} = $props();
+
+	// Sizes in percent. Title and Clock are text only; CPU/RAM/Disk scale their bars.
+	let iconScale = $state(item.iconScale ?? 100);
+	let textScale = $state(item.textScale ?? 100);
+	const hasIcon = item.type !== 'navbar-title' && item.type !== 'navbar-clock';
+	const widgetNames: Partial<Record<NavbarItem['type'], string>> = {
+		'navbar-title': 'Title',
+		'navbar-search': 'Search',
+		'navbar-cpu': 'CPU',
+		'navbar-ram': 'RAM',
+		'navbar-disk': 'Disk',
+		'navbar-uptime-kuma-status-page': 'Uptime Kuma',
+		'navbar-docker': 'Docker',
+		'navbar-adguard-home': 'AdGuard Home',
+		'navbar-adguard-home-control': 'AdGuard Home',
+		'navbar-clock': 'Clock',
+		'navbar-weather': 'Weather'
+	};
+	const iconLabel =['navbar-cpu', 'navbar-ram', 'navbar-disk'].includes(item.type) ? 'Bar size' : 'Icon size';
+
+	$effect(() => {
+		onpreview?.(iconScale, textScale);
+	});
+
+	const clockConfig = item.type === 'navbar-clock' ? item.config : undefined;
+	let showSeconds = $state(clockConfig?.showSeconds ?? false);
+	let format12h = $state(clockConfig?.format12h ?? false);
+	let showDate = $state(clockConfig?.showDate ?? true);
+	let dateFormat = $state<'DD/MM' | 'MM/DD'>(clockConfig?.dateFormat ?? 'DD/MM');
+	let showFullDate = $state(clockConfig?.showFullDate ?? false);
+	let weatherLocation = $state<WeatherLocation | null>(item.type === 'navbar-weather' ? (item.config?.location ?? null) : null);
+
+	// The Docker environment list is only needed when editing a navbar Docker widget.
+	$effect(() => {
+		if (item.type !== 'navbar-docker') return;
+		getIntegrations()
+			.then((i) => (dockerEnvironments = i.docker?.environments || []))
+			.catch(() => (dockerEnvironments = []));
+	});
 
 	let closing = $state(false);
 	let tempSensor = $state(item.type === 'navbar-cpu' ? (item.config?.tempSensor || '') : '');
@@ -60,7 +105,12 @@
 	}
 
 	async function handleSave() {
-		const updates: Partial<NavbarItem> & { config?: Record<string, unknown>; placeholder?: string } = { colSpan };
+		const updates: Partial<NavbarItem> & { config?: Record<string, unknown>; placeholder?: string } = {
+			colSpan,
+			// 100% is the default; store nothing so the layout file stays clean.
+			iconScale: hasIcon && iconScale !== 100 ? iconScale : undefined,
+			textScale: textScale !== 100 ? textScale : undefined
+		};
 
 		if (item.type === 'navbar-cpu') {
 			updates.config = { tempSensor: tempSensor || undefined };
@@ -72,6 +122,12 @@
 			updates.placeholder = placeholder;
 		} else if (item.type === 'navbar-adguard-home-control') {
 			updates.config = { instanceId: item.config?.instanceId || 'default', align };
+		} else if (item.type === 'navbar-docker') {
+			updates.config = { environmentId: dockerEnvId };
+		} else if (item.type === 'navbar-clock') {
+			updates.config = { showSeconds, format12h, showDate, dateFormat, showFullDate };
+		} else if (item.type === 'navbar-weather') {
+			updates.config = { location: weatherLocation || undefined };
 		}
 
 		await updateNavbarItem(item.id, updates);
@@ -88,7 +144,7 @@
 <div class="modal-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
 	<div class="modal" onclick={(e) => e.stopPropagation()}>
 		<div class="modal-header">
-			<h2>Edit {item.type.replace('navbar-', '').charAt(0).toUpperCase() + item.type.replace('navbar-', '').slice(1)} Widget</h2>
+			<h2>Edit {widgetNames[item.type] ?? 'Navbar'} Widget</h2>
 			<button class="btn-close" onclick={close}>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M18 6L6 18M6 6l12 12" />
@@ -165,7 +221,76 @@
 					<label>Status page slug</label>
 					<input type="text" bind:value={ukSlug} placeholder="e.g. default" />
 				</div>
+			{:else if item.type === 'navbar-docker'}
+				<div class="field">
+					<label for="nb-docker-env">Environment</label>
+					{#if dockerEnvironments.length > 0}
+						<select id="nb-docker-env" bind:value={dockerEnvId}>
+							<option value="">Select environment</option>
+							{#each dockerEnvironments as env (env.id)}
+								<option value={env.id}>{env.name}</option>
+							{/each}
+						</select>
+					{:else}
+						<p class="hint">No Docker environments configured. Add one in Add &gt; Integrations &gt; Connections.</p>
+					{/if}
+				</div>
+			{:else if item.type === 'navbar-clock'}
+				<div class="toggles">
+					<label class="toggle-switch">
+						<input type="checkbox" bind:checked={showSeconds} />
+						<span class="toggle-slider"></span>
+						<span class="toggle-label">Show seconds</span>
+					</label>
+					<label class="toggle-switch">
+						<input type="checkbox" bind:checked={format12h} />
+						<span class="toggle-slider"></span>
+						<span class="toggle-label">{format12h ? '12h (AM/PM)' : '24h'}</span>
+					</label>
+					<label class="toggle-switch">
+						<input type="checkbox" bind:checked={showDate} />
+						<span class="toggle-slider"></span>
+						<span class="toggle-label">Show date</span>
+					</label>
+					{#if showDate}
+						<label class="toggle-switch indented">
+							<input type="checkbox" bind:checked={showFullDate} />
+							<span class="toggle-slider"></span>
+							<span class="toggle-label">Full date (e.g. Sat, Oct 10)</span>
+						</label>
+						{#if !showFullDate}
+							<div class="toggle-switch indented">
+								<button type="button" class="format-toggle" onclick={() => (dateFormat = dateFormat === 'DD/MM' ? 'MM/DD' : 'DD/MM')}>{dateFormat}</button>
+								<span class="toggle-label">Date format</span>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			{:else if item.type === 'navbar-weather'}
+				<div class="field">
+					<span class="field-label">Location</span>
+					<LocationSearch bind:location={weatherLocation} />
+				</div>
 			{/if}
+
+			<div class="sizes">
+				<span class="field-label">Size</span>
+				{#if hasIcon}
+					<div class="size-row">
+						<label for="nb-icon-scale">{iconLabel}</label>
+						<input id="nb-icon-scale" type="range" min="50" max="250" step="10" bind:value={iconScale} />
+						<span class="size-value">{iconScale}%</span>
+					</div>
+				{/if}
+				<div class="size-row">
+					<label for="nb-text-scale">Text size</label>
+					<input id="nb-text-scale" type="range" min="50" max="250" step="10" bind:value={textScale} />
+					<span class="size-value">{textScale}%</span>
+				</div>
+				{#if iconScale !== 100 || textScale !== 100}
+					<button type="button" class="btn-reset" onclick={() => { iconScale = 100; textScale = 100; }}>Reset to 100%</button>
+				{/if}
+			</div>
 
 			<div class="field">
 				<label>Width (columns)</label>
@@ -381,5 +506,126 @@
 	@keyframes slideUp {
 		from { opacity: 0; transform: translateY(20px); }
 		to { opacity: 1; transform: translateY(0); }
+	}
+
+	.sizes {
+		margin-bottom: 12px;
+	}
+
+	.size-row {
+		display: grid;
+		grid-template-columns: 76px 1fr 44px;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 6px;
+		font-size: 0.85rem;
+		color: var(--text-secondary);
+	}
+
+	.size-row input[type='range'] {
+		width: 100%;
+		accent-color: var(--accent);
+	}
+
+	.size-value {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+		color: var(--text-primary);
+	}
+
+	.btn-reset {
+		font-size: 0.8rem;
+		color: var(--accent);
+		padding: 2px 0;
+	}
+
+	.field-label {
+		display: block;
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: var(--text-muted);
+		margin-bottom: 6px;
+	}
+
+	.toggles {
+		margin-bottom: 6px;
+	}
+
+	.toggle-switch {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		cursor: pointer;
+		margin-bottom: 10px;
+		position: relative;
+	}
+
+	.toggle-switch.indented {
+		padding-left: 28px;
+	}
+
+	.toggle-switch input {
+		opacity: 0;
+		width: 0;
+		height: 0;
+		position: absolute;
+	}
+
+	.toggle-slider {
+		width: 36px;
+		height: 20px;
+		background: var(--border);
+		border-radius: 20px;
+		position: relative;
+		transition: background var(--transition);
+		flex-shrink: 0;
+	}
+
+	.toggle-slider::after {
+		content: '';
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		background: white;
+		border-radius: 50%;
+		transition: transform var(--transition);
+	}
+
+	.toggle-switch input:checked + .toggle-slider {
+		background: var(--accent);
+	}
+
+	.toggle-switch input:checked + .toggle-slider::after {
+		transform: translateX(16px);
+	}
+
+	.toggle-switch input:focus-visible + .toggle-slider {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.toggle-label {
+		font-size: 0.85rem;
+		color: var(--text-secondary);
+	}
+
+	.format-toggle {
+		padding: 4px 10px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		font-size: 0.8rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		min-width: 48px;
+		text-align: center;
+	}
+
+	.format-toggle:hover {
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 </style>

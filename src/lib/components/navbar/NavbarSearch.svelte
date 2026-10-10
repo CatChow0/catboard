@@ -22,7 +22,7 @@
 </script>
 
 <div class="search-box">
-	<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+	<svg style="width: calc(16px * var(--nb-icon, 1)); height: calc(16px * var(--nb-icon, 1))" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 		<circle cx="11" cy="11" r="8" />
 		<path d="M21 21l-4.35-4.35" />
 	</svg>
@@ -58,6 +58,6 @@
 		width: 100%;
 		padding: 0;
 		color: var(--text-primary);
-		font-size: 0.9rem;
+		font-size: calc(0.9rem * var(--nb-text, 1));
 	}
 </style>
