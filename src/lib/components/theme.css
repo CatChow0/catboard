@@ -259,6 +259,96 @@ input, select, textarea {
 	--shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* === TMOG (tmog.org) — instrument-panel look === */
+
+@font-face {
+	font-family: 'Michroma';
+	src: url('/fonts/michroma/Michroma-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+[data-theme='tmog'] {
+	--bg-primary: #070b0f;
+	--bg-secondary: #0b1117;
+	--bg-card: #0e151c;
+	--bg-card-hover: #111a22;
+	--bg-modal: #0b1117;
+	--text-primary: #edf5fa;
+	--text-secondary: #91a1ac;
+	--text-muted: #60717d;
+	--accent: #16c5ff;
+	--accent-hover: #6edcff;
+	--accent-glow: rgba(22, 197, 255, 0.22);
+	--accent-bg: rgba(22, 197, 255, 0.05);
+	--danger: #ff4f55;
+	--success: #45ed73;
+	--warning: #ffe016;
+	--border: #1c262e;
+	--border-light: #2a3a45;
+	--shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+	--tmog-glow: rgba(9, 140, 255, 0.09);
+}
+
+[data-theme='tmog-green'] {
+	--bg-primary: #050a06;
+	--bg-secondary: #08100a;
+	--bg-card: #0b160e;
+	--bg-card-hover: #0f1d13;
+	--bg-modal: #08100a;
+	--text-primary: #b8ffca;
+	--text-secondary: #6fc488;
+	--text-muted: #3f7a52;
+	--accent: #45ed73;
+	--accent-hover: #86ff35;
+	--accent-glow: rgba(69, 237, 115, 0.22);
+	--accent-bg: rgba(69, 237, 115, 0.05);
+	--danger: #ff4f55;
+	--success: #86ff35;
+	--warning: #ffe016;
+	--border: #16301e;
+	--border-light: #21452b;
+	--shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+	--tmog-glow: rgba(69, 237, 115, 0.07);
+}
+
+[data-theme='tmog-amber'] {
+	--bg-primary: #0b0805;
+	--bg-secondary: #120d07;
+	--bg-card: #18110a;
+	--bg-card-hover: #20170d;
+	--bg-modal: #120d07;
+	--text-primary: #ffd99a;
+	--text-secondary: #c99a55;
+	--text-muted: #7d6038;
+	--accent: #ffb336;
+	--accent-hover: #ffcb6b;
+	--accent-glow: rgba(255, 179, 54, 0.22);
+	--accent-bg: rgba(255, 179, 54, 0.05);
+	--danger: #ff4f55;
+	--success: #45ed73;
+	--warning: #ff8a22;
+	--border: #33240f;
+	--border-light: #4a3517;
+	--shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+	--tmog-glow: rgba(255, 138, 34, 0.07);
+}
+
+[data-theme^='tmog'] {
+	--font-display: 'Michroma', 'Avenir Next', system-ui, sans-serif;
+	background-image: radial-gradient(circle at 70% -10%, var(--tmog-glow), transparent 40rem);
+	background-attachment: fixed;
+}
+
+/* Doubled attribute selector so these win over component-scoped title styles */
+[data-theme][data-theme^='tmog'] :is(h1, h2, h3, .navbar-title, .group-title) {
+	font-family: var(--font-display);
+	font-weight: 400;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
 /* === Style Presets === */
 
 [data-style='sharp'] {

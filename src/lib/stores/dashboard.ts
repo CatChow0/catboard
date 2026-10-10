@@ -5,7 +5,7 @@ import type {
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
 	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, ServiceStatus,
 	SystemStats, UptimeKumaStatusPageData, UptimeKumaStatusPageConfig, DockerEnvironmentData, DockerWidgetConfig, IntegrationsConfig,
-	ArrCalendarData, AdGuardHomeData
+	ArrCalendarData, ArrReleasesConfig, AdGuardHomeData
 } from '$lib/types';
 
 export type {
@@ -13,7 +13,7 @@ export type {
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
 	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, ServiceStatus,
 	SystemStats, UptimeKumaStatusPageData, UptimeKumaStatusPageConfig, DockerEnvironmentData, DockerWidgetConfig, IntegrationsConfig,
-	ArrCalendarData, AdGuardHomeData
+	ArrCalendarData, ArrReleasesConfig, AdGuardHomeData
 };
 
 // --- API helper ---
@@ -275,7 +275,7 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 	layout.set(newLayout);
 }
 
-export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
+export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest' | 'arr-releases', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
 	const activeId = get(activeBreakpointId);
 	if (!newLayout.layouts[activeId]) newLayout.layouts[activeId] = { items: [], navbar: { columns: 12, items: [] } };
@@ -299,6 +299,8 @@ export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-st
 							? { id: crypto.randomUUID(), type: 'adguard-home-control' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
 									: type === 'jellyfin-latest'
 										? { id: crypto.randomUUID(), type: 'jellyfin-latest' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string; limit?: number } }
+										: type === 'arr-releases'
+											? { id: crypto.randomUUID(), type: 'arr-releases' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ArrReleasesConfig }
 											: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
 	activeItems.push(item);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });

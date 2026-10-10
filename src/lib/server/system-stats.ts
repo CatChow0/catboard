@@ -191,10 +191,47 @@ function normalizeMountPath(mount: string): string {
 	return mount;
 }
 
+// Real on-disk filesystems worth surfacing as "disks" in the navbar.
+// Pseudo/container filesystems (overlay, tmpfs, proc, sysfs, ...) are excluded,
+// as are the per-container overlayfs rootfs that leak into this container's
+// mount namespace when a host path containing docker's image store is bind-mounted
+// (e.g. /mnt/Fast_Boi -> /Fast_Boi drags in /Fast_Boi/docker-data/rootfs/overlayfs/*).
+const REAL_DISK_FS_TYPES = new Set([
+	'ext2', 'ext3', 'ext4', 'btrfs', 'xfs', 'zfs', 'ntfs', 'ntfs3', 'f2fs',
+	'exfat', 'vfat', 'fat32', 'fuseblk', 'apfs', 'hfs', 'hfsplus', 'reiserfs', 'jfs'
+]);
+
+function isInternalMountPath(mount: string): boolean {
+	if (!mount) return true;
+	const configDir = process.env.CONFIG_DIR || '/app/config';
+	return (
+		mount.startsWith('/proc') ||
+		mount.startsWith('/sys') ||
+		mount.startsWith('/dev') ||
+		mount.startsWith('/etc/') ||
+		mount.startsWith('/run/') ||
+		mount === configDir ||
+		mount.startsWith(configDir + '/') ||
+		mount.includes('/docker-data/rootfs/overlayfs/') ||
+		mount.includes('/docker/overlay2/') ||
+		mount.includes('/containerd/io.containerd.snapshotter.')
+	);
+}
+
+function isRealDisk(d: { type?: string; fs?: string; mount?: string }): boolean {
+	if (isInternalMountPath(d.mount || '')) return false;
+	const t = (d.type || '').toLowerCase();
+	const fsName = (d.fs || '').toLowerCase();
+	// overlay = container rootfs + leaked per-container rootfs -> never a user disk
+	if (t === 'overlay' || fsName === 'overlay') return false;
+	if (!t) return false;
+	return REAL_DISK_FS_TYPES.has(t);
+}
+
 export async function getDiskStats(requestedPaths?: string[]): Promise<DiskStats> {
 	const result: DiskStats = {};
 	try {
-		const fs = await si.fsSize();
+		const fs = (await si.fsSize()).filter(isRealDisk);
 
 		const diskMap = new Map<string, { total: number; used: number }>();
 		for (const d of fs) {
@@ -226,7 +263,7 @@ export async function getDiskStats(requestedPaths?: string[]): Promise<DiskStats
 export async function getAvailableDisks(): Promise<string[]> {
 	try {
 		const fs = await si.fsSize();
-		return fs.map(d => normalizeMountPath(d.mount));
+		return fs.filter(isRealDisk).map(d => normalizeMountPath(d.mount));
 	} catch {
 		return [];
 	}

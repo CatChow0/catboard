@@ -747,6 +747,9 @@
 	.theme-preview[data-theme-preview="gruvbox-dark"] { background: #282828; color: #ebdbb2; }
 	.theme-preview[data-theme-preview="one-dark"] { background: #282c34; color: #abb2bf; }
 	.theme-preview[data-theme-preview="tokyo-night"] { background: #1a1b26; color: #c0caf5; }
+	.theme-preview[data-theme-preview="tmog"] { background: radial-gradient(circle at 80% 0%, rgba(22, 197, 255, 0.25), transparent 70%), #070b0f; color: #16c5ff; }
+	.theme-preview[data-theme-preview="tmog-green"] { background: radial-gradient(circle at 80% 0%, rgba(69, 237, 115, 0.22), transparent 70%), #050a06; color: #45ed73; }
+	.theme-preview[data-theme-preview="tmog-amber"] { background: radial-gradient(circle at 80% 0%, rgba(255, 179, 54, 0.22), transparent 70%), #0b0805; color: #ffb336; }
 
 	.custom-preview {
 		background: conic-gradient(from 0deg, #ff4f6f, #ffbf4f, #4fdd8f, #4f8fff, #bd93f9, #ff4f6f);

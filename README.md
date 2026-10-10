@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.1.0-blue)
 
 ## Features
 
@@ -15,13 +15,14 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Calendar widget** -- Month view with today highlighted; optional *Arr integration shows upcoming movie/TV/music releases from Radarr, Sonarr, and Lidarr
 - **AdGuard Home integration** -- Monitor DNS queries, blocked requests, and filter statistics; toggle protection and set temporary pauses directly from the dashboard
 - **Jellyfin integration** -- Display recently added movies, TV shows, albums, and episodes from your Jellyfin server as a scrollable list of media cards
+- **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP)
 - **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
-- **Theme system** -- Dark/light themes with custom palettes, style presets (default, sharp, pill), animation options
+- **Theme system** -- Built-in presets (Dark, Light, Nord, Dracula, Solarized, Catppuccin, Gruvbox, One Dark, Tokyo Night, and TMOG in cyan/green/amber with a self-hosted Michroma display font), custom palettes, style presets (default, sharp, pill), animation options
 - **Cross-platform** -- Works on Linux and Windows; disk paths and temperature sensors adapt to the host OS
 
 ## Quick Start
@@ -126,6 +127,7 @@ Add widgets via Add > Widgets tab:
 | **AdGuard Home Stats** | DNS queries, blocked requests, blocked domains, and latency |
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
+| **Arr Releases** | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter |
 
 ### Integrations
 
@@ -188,6 +190,7 @@ Backup and restore your dashboard:
 | `GET` | `/api/integrations/adguard-home/heartbeat` | SSE stream for AdGuard Home stats and status |
 | `POST` | `/api/integrations/adguard-home/protection` | Toggle AdGuard Home protection (with optional pause duration) |
 | `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr |
+| `GET` | `/api/integrations/arr/releases` | Recently released items from Radarr/Sonarr/Lidarr (`sources`, `days`, `limit`, `onlyDownloaded`) |
 | `GET` | `/api/integrations/jellyfin/latest` | Recently added items from Jellyfin |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |

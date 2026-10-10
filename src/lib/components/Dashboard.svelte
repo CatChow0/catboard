@@ -102,6 +102,7 @@
 		if (item.type === 'adguard-home' && 'adguard'.includes(lc)) return true;
 		if (item.type === 'adguard-home-control' && 'adguard'.includes(lc)) return true;
 		if (item.type === 'jellyfin-latest' && 'jellyfin'.includes(lc)) return true;
+		if (item.type === 'arr-releases' && ('releases'.includes(lc) || 'arr'.includes(lc))) return true;
 		if ((item.type === 'group-collapsible' || item.type === 'group-standard') && item.title?.toLowerCase().includes(lc)) return true;
 		return false;
 	}

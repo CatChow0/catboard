@@ -75,6 +75,9 @@
 	let jellyfinWidgetColSpan = $state(4);
 	let jellyfinWidgetRowSpan = $state(3);
 
+	let arrReleasesWidgetColSpan = $state(4);
+	let arrReleasesWidgetRowSpan = $state(3);
+
 	$effect(() => {
 		if (activeTab === 'integrations') loadIntegrationsConfig();
 	});
@@ -320,6 +323,15 @@
 	async function handleAddJellyfinWidget() {
 		close();
 		await addWidgetToDashboard('jellyfin-latest', '', jellyfinWidgetColSpan, jellyfinWidgetRowSpan, getMaxCols(), { instanceId: 'default', limit: 5 });
+	}
+
+	async function handleAddArrReleasesWidget() {
+		close();
+		await addWidgetToDashboard('arr-releases', '', arrReleasesWidgetColSpan, arrReleasesWidgetRowSpan, getMaxCols(), {
+			integrations: { radarr: !!radarrUrl, sonarr: !!sonarrUrl, lidarr: !!lidarrUrl },
+			days: 14,
+			limit: 10
+		});
 	}
 
 	async function handleSaveAdGuard() {
@@ -1046,6 +1058,39 @@
 						</div>
 						<div class="form-actions">
 							<button type="button" class="btn-save" onclick={handleAddJellyfinWidget}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<rect x="2" y="4" width="20" height="16" rx="2" />
+								<path d="M2 8h20M7 4v4M17 4v4" />
+								<path d="M10 12l4 2.5-4 2.5z" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Arr Releases</span>
+							<span class="integration-desc">Display recently released movies, episodes and albums from Radarr, Sonarr and Lidarr</span>
+						</div>
+					</div>
+					{#if !radarrUrl && !sonarrUrl && !lidarrUrl}
+						<p class="hint">Configure a Radarr, Sonarr or Lidarr connection first.</p>
+					{:else}
+						<div class="size-row">
+							<div class="field">
+								<label>Width (columns)</label>
+								<input type="number" bind:value={arrReleasesWidgetColSpan} min="1" max="12" />
+							</div>
+							<div class="field">
+								<label>Height (rows)</label>
+								<input type="number" bind:value={arrReleasesWidgetRowSpan} min="1" max="12" />
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleAddArrReleasesWidget}>Add Widget</button>
 						</div>
 					{/if}
 				</div>

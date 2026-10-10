@@ -15,7 +15,10 @@ export const themePresets: ThemePreset[] = [
 	{ name: 'catppuccin-mocha', label: 'Catppuccin Mocha' },
 	{ name: 'gruvbox-dark', label: 'Gruvbox Dark' },
 	{ name: 'one-dark', label: 'One Dark' },
-	{ name: 'tokyo-night', label: 'Tokyo Night' }
+	{ name: 'tokyo-night', label: 'Tokyo Night' },
+	{ name: 'tmog', label: 'TMOG' },
+	{ name: 'tmog-green', label: 'TMOG Green' },
+	{ name: 'tmog-amber', label: 'TMOG Amber' }
 ];
 
 export const customPaletteDefaults: Record<string, CustomPalette> = {
@@ -78,6 +81,24 @@ export const customPaletteDefaults: Record<string, CustomPalette> = {
 		bgModal: '#16161e', textPrimary: '#c0caf5', textSecondary: '#a9b1d6', textMuted: '#565f89',
 		accent: '#7aa2f7', accentHover: '#7dcfff', danger: '#f7768e', success: '#9ece6a',
 		warning: '#e0af68', border: '#292e42', borderLight: '#3b4261'
+	},
+	'tmog': {
+		bgPrimary: '#070b0f', bgSecondary: '#0b1117', bgCard: '#0e151c', bgCardHover: '#111a22',
+		bgModal: '#0b1117', textPrimary: '#edf5fa', textSecondary: '#91a1ac', textMuted: '#60717d',
+		accent: '#16c5ff', accentHover: '#6edcff', danger: '#ff4f55', success: '#45ed73',
+		warning: '#ffe016', border: '#1c262e', borderLight: '#2a3a45'
+	},
+	'tmog-green': {
+		bgPrimary: '#050a06', bgSecondary: '#08100a', bgCard: '#0b160e', bgCardHover: '#0f1d13',
+		bgModal: '#08100a', textPrimary: '#b8ffca', textSecondary: '#6fc488', textMuted: '#3f7a52',
+		accent: '#45ed73', accentHover: '#86ff35', danger: '#ff4f55', success: '#86ff35',
+		warning: '#ffe016', border: '#16301e', borderLight: '#21452b'
+	},
+	'tmog-amber': {
+		bgPrimary: '#0b0805', bgSecondary: '#120d07', bgCard: '#18110a', bgCardHover: '#20170d',
+		bgModal: '#120d07', textPrimary: '#ffd99a', textSecondary: '#c99a55', textMuted: '#7d6038',
+		accent: '#ffb336', accentHover: '#ffcb6b', danger: '#ff4f55', success: '#45ed73',
+		warning: '#ff8a22', border: '#33240f', borderLight: '#4a3517'
 	}
 };
 
@@ -96,5 +117,8 @@ export const themeDefaults: Record<string, ThemeDefaults> = {
 	'catppuccin-mocha': { stylePreset: 'default', scrollbarStyle: 'thin' },
 	'gruvbox-dark': { stylePreset: 'sharp', scrollbarStyle: 'thin' },
 	'one-dark': { stylePreset: 'default', scrollbarStyle: 'thin' },
-	'tokyo-night': { stylePreset: 'default', scrollbarStyle: 'thin' }
+	'tokyo-night': { stylePreset: 'default', scrollbarStyle: 'thin' },
+	'tmog': { stylePreset: 'sharp', scrollbarStyle: 'thin' },
+	'tmog-green': { stylePreset: 'sharp', scrollbarStyle: 'thin' },
+	'tmog-amber': { stylePreset: 'sharp', scrollbarStyle: 'thin' }
 };

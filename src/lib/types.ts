@@ -66,6 +66,22 @@ export interface CalendarItem extends DashboardItemBase {
 	config?: CalendarConfig;
 }
 
+export interface ArrReleasesConfig {
+	integrations?: {
+		radarr?: boolean;
+		sonarr?: boolean;
+		lidarr?: boolean;
+	};
+	days?: number;
+	limit?: number;
+	onlyDownloaded?: boolean;
+}
+
+export interface ArrReleasesItem extends DashboardItemBase {
+	type: 'arr-releases';
+	config?: ArrReleasesConfig;
+}
+
 export interface ClockConfig {
 	showSeconds?: boolean;
 	format12h?: boolean;
@@ -106,7 +122,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem;
+export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem;
 
 // --- Weather ---
 
