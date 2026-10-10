@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Service } from '$lib/stores/dashboard';
+	import type { StackerServer, StackerSections } from '$lib/types';
 	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, getActiveColumns, getIntegrations, setIntegrations } from '$lib/stores/dashboard';
 	import IconPicker from './IconPicker.svelte';
 
@@ -78,6 +79,13 @@
 	let arrReleasesWidgetColSpan = $state(4);
 	let arrReleasesWidgetRowSpan = $state(3);
 
+	let stackerServers = $state<StackerServer[]>([]);
+	let stackerSaving = $state(false);
+	let stackerWidgetServerId = $state('');
+	let stackerWidgetSections = $state<StackerSections>({ cpu: true, memory: true, gpu: true, disk: true, network: true });
+	let stackerWidgetColSpan = $state(4);
+	let stackerWidgetRowSpan = $state(4);
+
 	$effect(() => {
 		if (activeTab === 'integrations') loadIntegrationsConfig();
 	});
@@ -133,6 +141,7 @@
 			lidarrApiKey = config.lidarr?.apiKey || '';
 			jellyfinUrl = config.jellyfin?.url || '';
 			jellyfinApiKey = config.jellyfin?.apiKey || '';
+			stackerServers = config.stacker?.servers || [];
 		} catch {
 			// ignore
 		}
@@ -323,6 +332,40 @@
 	async function handleAddJellyfinWidget() {
 		close();
 		await addWidgetToDashboard('jellyfin-latest', '', jellyfinWidgetColSpan, jellyfinWidgetRowSpan, getMaxCols(), { instanceId: 'default', limit: 5 });
+	}
+
+	async function handleSaveStackerServers() {
+		stackerSaving = true;
+		try {
+			const servers = stackerServers
+				.filter((s) => s.url.trim())
+				.map((s) => ({ ...s, url: s.url.trim(), name: s.name.trim(), username: s.username?.trim() || undefined, password: s.username?.trim() ? s.password : undefined }));
+			await setIntegrations({ stacker: { servers } });
+			stackerServers = servers;
+		} catch {
+			// ignore
+		} finally {
+			stackerSaving = false;
+		}
+	}
+
+	function addStackerServer() {
+		stackerServers = [...stackerServers, { id: crypto.randomUUID(), name: '', url: '' }];
+	}
+
+	function removeStackerServer(id: string) {
+		stackerServers = stackerServers.filter((s) => s.id !== id);
+	}
+
+	async function handleAddStackerWidget() {
+		if (!stackerWidgetServerId) return;
+		close();
+		await addWidgetToDashboard('stacker', '', stackerWidgetColSpan, stackerWidgetRowSpan, getMaxCols(), {
+			serverId: stackerWidgetServerId,
+			sections: { ...stackerWidgetSections },
+			graphs: true,
+			totals: true
+		});
 	}
 
 	async function handleAddArrReleasesWidget() {
@@ -710,6 +753,56 @@
 						</button>
 					</div>
 				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon stacker-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<rect x="2" y="3" width="20" height="18" rx="2" />
+								<path d="M5 16l3.5-5 3 3 3.5-6 4 5" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Stacker</span>
+							<span class="integration-desc">Live CPU, memory, GPU, disk and network from Stacker servers</span>
+						</div>
+					</div>
+					{#if stackerServers.length > 0}
+						<div class="env-list">
+							{#each stackerServers as srv (srv.id)}
+								<div class="env-row">
+									<div class="env-fields">
+										<input type="text" bind:value={srv.name} placeholder="Name (e.g. ShibaServer)" class="env-name-input" />
+										<input type="text" bind:value={srv.url} placeholder="URL (e.g. http://stacker:8080)" class="env-url-input" />
+										<details class="env-auth" open={!!srv.username}>
+											<summary>Basic auth (only if Stacker is behind a login)</summary>
+											<div class="env-auth-fields">
+												<input type="text" bind:value={srv.username} placeholder="Username" autocomplete="off" class="env-name-input" />
+												<input type="password" bind:value={srv.password} placeholder="Password" autocomplete="new-password" class="env-name-input" />
+											</div>
+										</details>
+									</div>
+									<button type="button" class="btn-remove-env" onclick={() => removeStackerServer(srv.id)} title="Remove">
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M18 6L6 18M6 6l12 12" />
+										</svg>
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+					<button type="button" class="btn-add-env" onclick={addStackerServer}>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M12 5v14M5 12h14" />
+						</svg>
+						Add server
+					</button>
+					<div class="form-actions">
+						<button type="button" class="btn-save" onclick={handleSaveStackerServers} disabled={stackerSaving}>
+							{stackerSaving ? 'Saving...' : 'Save'}
+						</button>
+					</div>
+				</div>
 				
 
 					<div class="integration-card">
@@ -961,6 +1054,59 @@
 						{/if}
 						<div class="form-actions">
 							<button type="button" class="btn-save" onclick={handleAddDockerWidget} disabled={!dockerWidgetEnvId}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon stacker-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<rect x="2" y="3" width="20" height="18" rx="2" />
+								<path d="M5 16l3.5-5 3 3 3.5-6 4 5" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Stacker</span>
+							<span class="integration-desc">Live hardware gauges and graphs from a Stacker server</span>
+						</div>
+					</div>
+					{#if stackerServers.length === 0}
+						<p class="hint">Configure Stacker servers in the Connections tab first.</p>
+					{:else}
+						<div class="field">
+							<label for="stacker-server">Server</label>
+							<select id="stacker-server" bind:value={stackerWidgetServerId}>
+								<option value="">Select server</option>
+								{#each stackerServers as srv (srv.id)}
+									<option value={srv.id}>{srv.name || srv.url}</option>
+								{/each}
+							</select>
+						</div>
+						<div class="stacker-sections">
+							<span class="field-label">Show</span>
+							<div class="disk-list">
+								{#each [['cpu', 'CPU'], ['memory', 'Memory'], ['gpu', 'GPU'], ['disk', 'Disk'], ['network', 'Network']] as const as [key, label] (key)}
+									<label class="disk-check">
+										<input type="checkbox" bind:checked={stackerWidgetSections[key]} />
+										<span>{label}</span>
+									</label>
+								{/each}
+							</div>
+						</div>
+						<div class="size-row">
+							<div class="field">
+								<label for="stacker-cols">Width (columns)</label>
+								<input id="stacker-cols" type="number" bind:value={stackerWidgetColSpan} min="2" max="12" />
+							</div>
+							<div class="field">
+								<label for="stacker-rows">Height (rows)</label>
+								<input id="stacker-rows" type="number" bind:value={stackerWidgetRowSpan} min="1" max="12" />
+							</div>
+						</div>
+						<p class="hint">The widget adapts to its size: one line per section on small tiles, tables and graphs on larger ones.</p>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleAddStackerWidget} disabled={!stackerWidgetServerId}>Add Widget</button>
 						</div>
 					{/if}
 				</div>
@@ -1607,6 +1753,41 @@
 	.docker-icon {
 		background: rgba(0, 150, 136, 0.1);
 		color: #009688;
+	}
+
+	.stacker-icon {
+		background: rgba(63, 182, 255, 0.1);
+		color: #3fb6ff;
+	}
+
+	.stacker-sections {
+		margin-bottom: 10px;
+	}
+
+	.field-label {
+		display: block;
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: var(--text-muted);
+		margin-bottom: 3px;
+	}
+
+	.env-auth summary {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 2px 0;
+	}
+
+	.env-auth-fields {
+		display: flex;
+		gap: 4px;
+		margin-top: 4px;
+	}
+
+	.env-auth-fields input {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.env-list {

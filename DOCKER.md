@@ -244,6 +244,21 @@ http://host.docker.internal:8096
 
 On Linux hosts without Docker Desktop, add `--add-host=host.docker.internal:host-gateway` to the container or use `network_mode: host`.
 
+### Stacker
+
+To show live hardware stats from a Stacker server:
+
+1. Open **Add > Integrations > Connections**
+2. Under **Stacker**, click **Add server** and enter a name and the URL. Add several servers to monitor several machines.
+3. Go to **Add > Integrations > Widgets**, pick the server and the sections to show (CPU, Memory, GPU, Disk, Network)
+
+If Stacker and CatBoard share a Docker network, use the container name, which needs no login:
+```
+http://stacker:8080
+```
+
+If you can only reach Stacker through a reverse proxy with basic auth, enter its public URL and fill in the **Basic auth** username and password. CatBoard polls Stacker's `/api/snapshot` every 2 seconds, so the Stacker version must include that endpoint.
+
 ### Uptime Kuma
 
 To connect CatBoard to an Uptime Kuma instance:
@@ -459,6 +474,12 @@ The container may not be able to reach the service URLs. Ensure:
 - Verify the API key is correct (found in Dashboard > Advanced > API Keys)
 - Check that the Jellyfin user has access to the library you want to monitor
 - Check container logs for connection or authentication errors
+
+### Stacker widget not working
+
+- "Cannot reach Stacker": the URL must be reachable from inside the CatBoard container (container name on a shared network, or `host.docker.internal`)
+- "HTTP 401": Stacker is behind a login; set the basic-auth username and password on the server entry
+- "HTTP 404": update Stacker to a version with the `/api/snapshot` endpoint
 
 ### Uptime Kuma integration not working
 

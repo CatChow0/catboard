@@ -82,6 +82,28 @@ export interface ArrReleasesItem extends DashboardItemBase {
 	config?: ArrReleasesConfig;
 }
 
+// --- Stacker ---
+
+export interface StackerSections {
+	cpu: boolean;
+	memory: boolean;
+	gpu: boolean;
+	disk: boolean;
+	network: boolean;
+}
+
+export interface StackerConfig {
+	serverId: string;
+	sections?: StackerSections;
+	graphs?: boolean;
+	totals?: boolean;
+}
+
+export interface StackerItem extends DashboardItemBase {
+	type: 'stacker';
+	config?: StackerConfig;
+}
+
 export interface ClockConfig {
 	showSeconds?: boolean;
 	format12h?: boolean;
@@ -122,7 +144,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem;
+export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem;
 
 // --- Weather ---
 
@@ -278,6 +300,43 @@ export interface IntegrationsConfig {
 	lidarr?: ArrConnection;
 	adguardHome?: { url: string; username: string; password: string };
 	jellyfin?: ArrConnection;
+	stacker?: { servers: StackerServer[] };
+}
+
+/** A Stacker (web task manager) instance polled by the Stacker widget. */
+export interface StackerServer {
+	id: string;
+	name: string;
+	url: string;
+	/** Optional basic-auth credentials, for a Stacker behind a reverse-proxy login. */
+	username?: string;
+	password?: string;
+}
+
+// Subset of Stacker's /api/snapshot payload used by the widget.
+export interface StackerStatic {
+	sys: { hostname: string; platform: string; kernel: string };
+	cpu: { model: string; threads: number; maxMHz: number };
+	mem: { total: number; swapTotal: number };
+	gpus: { index: number; name: string; memTotal: number; powerLimitW: number }[] | null;
+	disks: { name: string; model: string; size: number; rotational: boolean }[] | null;
+	nics: { name: string; speedMbs: number }[] | null;
+}
+
+export interface StackerSample {
+	t: number;
+	cpu: { total: number | null; cores: number[] | null; freqMHz: number; tempC: number | null; load1: number; load5: number; load15: number };
+	mem: { total: number; used: number; available: number; free: number; swapTotal: number; swapUsed: number; percent: number };
+	gpus: { index: number; util: number; memUsed: number; memTotal: number; tempC: number | null; powerW: number | null }[] | null;
+	disks: { name: string; readBps: number | null; writeBps: number | null; busy: number | null; readTot: number; writeTot: number }[] | null;
+	nics: { name: string; rxBps: number | null; txBps: number | null; rxTotal: number; txTotal: number }[] | null;
+	procs: { processes: number; threads: number };
+}
+
+export interface StackerSnapshot {
+	interval: number;
+	static?: StackerStatic;
+	samples: StackerSample[];
 }
 
 export interface DockerEnvironment {

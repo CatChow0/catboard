@@ -13,6 +13,7 @@
 	import AdGuardControl from './AdGuardControl.svelte';
 	import JellyfinLatest from './JellyfinLatest.svelte';
 	import ArrReleases from './ArrReleases.svelte';
+	import Stacker from './Stacker.svelte';
 
 	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild, query, matchingIds }: {
 		item: DashboardItemType;
@@ -70,6 +71,8 @@
 		<JellyfinLatest config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'arr-releases'}
 		<ArrReleases config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'stacker'}
+		<Stacker config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'service' && !service}
 		<div class="missing-service">Service not found</div>
 	{/if}

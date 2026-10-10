@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue)
+![Version](https://img.shields.io/badge/version-2.2.0-blue)
 
 ## Features
 
@@ -18,6 +18,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP)
+- **Stacker integration** -- Live CPU, memory, GPU, disk and network gauges and graphs from one or more Stacker servers, with selectable sections
 - **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
@@ -128,6 +129,7 @@ Add widgets via Add > Widgets tab:
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
 | **Arr Releases** | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter |
+| **Stacker** | Live hardware monitor from a Stacker server; choose CPU, Memory, GPU, Disk and Network sections; adapts from one-line gauges to full graphs as the tile grows |
 
 ### Integrations
 
@@ -139,6 +141,7 @@ Add integrations via Add > Integrations tab:
    - **AdGuard Home:** Enter your instance URL, username, and password
    - **Radarr / Sonarr / Lidarr:** Enter instance URL and API key for each
    - **Jellyfin:** Enter instance URL and API key
+   - **Stacker:** Add servers (name + URL, optional basic-auth credentials)
 2. **Widgets** sub-tab -- Add widgets that use configured integrations
 
 ### Export & Import
@@ -192,6 +195,7 @@ Backup and restore your dashboard:
 | `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr |
 | `GET` | `/api/integrations/arr/releases` | Recently released items from Radarr/Sonarr/Lidarr (`sources`, `days`, `limit`, `onlyDownloaded`) |
 | `GET` | `/api/integrations/jellyfin/latest` | Recently added items from Jellyfin |
+| `GET` | `/api/integrations/stacker/snapshot` | New samples from a Stacker server (`serverId`, `since`, `static`) |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |
 | `GET` | `/api/version` | Current vs latest Docker image version |
