@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DashboardItem as DashboardItemType, Service } from '$lib/stores/dashboard';
 	import { resolveService, isEditing } from '$lib/stores/dashboard';
+	import type { GroupDragView } from '$lib/utils/grid';
 	import ServiceTile from './ServiceTile.svelte';
 	import CollapsibleGroup from './CollapsibleGroup.svelte';
 	import StandardGroup from './StandardGroup.svelte';
@@ -15,7 +16,7 @@
 	import ArrReleases from './ArrReleases.svelte';
 	import Stacker from './Stacker.svelte';
 
-	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild, query, matchingIds }: {
+	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, dragView, selectedChildIds, ontogglechild, query, matchingIds }: {
 		item: DashboardItemType;
 		allServices: Service[];
 		effectiveColSpan?: number;
@@ -24,8 +25,7 @@
 		onedit?: (service: Service) => void;
 		onremove?: (itemId: string) => void;
 		ondragitem?: (e: PointerEvent, child: DashboardItemType) => void;
-		draggingChildId?: string | null;
-		dragPlaceholder?: { col: number; row: number; colSpan: number; rowSpan: number } | null;
+		dragView?: GroupDragView | null;
 		selectedChildIds?: Set<string>;
 		ontogglechild?: (groupId: string, childId: string, multiSelect: boolean) => void;
 		query?: string;
@@ -50,9 +50,9 @@
 			ondelete={onremove ? () => onremove(item.id) : undefined}
 		/>
 	{:else if item.type === 'group-collapsible'}
-		<CollapsibleGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {draggingChildId} {dragPlaceholder} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
+		<CollapsibleGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {dragView} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
 	{:else if item.type === 'group-standard'}
-		<StandardGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {draggingChildId} {dragPlaceholder} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
+		<StandardGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {dragView} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
 	{:else if item.type === 'calendar'}
 		<Calendar config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'clock'}

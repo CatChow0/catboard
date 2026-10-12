@@ -623,6 +623,21 @@ export async function saveLayout(newLayout: Layout) {
 	layout.set(newLayout);
 }
 
+/**
+ * Optimistic save used by drag & drop: the new layout shows immediately (no
+ * snap-back while the request is in flight) and is rolled back if the PUT fails.
+ */
+export async function commitLayout(newLayout: Layout) {
+	const previous = get(layout);
+	layout.set(newLayout);
+	try {
+		await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });
+	} catch (err) {
+		layout.set(previous);
+		console.error('Saving the layout failed; changes were reverted.', err);
+	}
+}
+
 export async function batchUpdatePositions(updates: Map<string, { col: number; row: number }>) {
 	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));

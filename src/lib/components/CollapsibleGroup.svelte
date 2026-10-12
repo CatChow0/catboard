@@ -1,17 +1,17 @@
 <script lang="ts">
 	import type { CollapsibleGroupItem, Service, DashboardItem as DashboardItemType } from '$lib/stores/dashboard';
 	import { updateDashboardItem, updateChildInGroup, isEditing } from '$lib/stores/dashboard';
-	import { maxResize } from '$lib/utils/grid';
+	import { maxResize, type GroupDragView } from '$lib/utils/grid';
+	import { flipOnMove } from '$lib/utils/flip';
 	import DashboardItem from './DashboardItem.svelte';
 
-	let { item, allServices, onedit, onremove, ondragitem, draggingChildId, dragPlaceholder, selectedChildIds, ontogglechild, gridGap = 12, query, matchingIds }: {
+	let { item, allServices, onedit, onremove, ondragitem, dragView, selectedChildIds, ontogglechild, gridGap = 12, query, matchingIds }: {
 		item: CollapsibleGroupItem;
 		allServices: Service[];
 		onedit?: (service: Service) => void;
 		onremove?: (itemId: string) => void;
 		ondragitem?: (e: PointerEvent, child: DashboardItemType) => void;
-		draggingChildId?: string | null;
-		dragPlaceholder?: { col: number; row: number; colSpan: number; rowSpan: number } | null;
+		dragView?: GroupDragView | null;
 		selectedChildIds?: Set<string>;
 		ontogglechild?: (groupId: string, childId: string, multiSelect: boolean) => void;
 		gridGap?: number;
@@ -53,11 +53,17 @@
 		currentRowSpan: number;
 	} | null>(null);
 
+	function childRect(child: DashboardItemType) {
+		if (resizeState?.childId === child.id) return { col: child.col, row: child.row, colSpan: resizeState.currentColSpan, rowSpan: resizeState.currentRowSpan };
+		if (!dragView?.ghostIds.has(child.id) && dragView?.preview?.has(child.id)) return dragView.preview.get(child.id)!;
+		return { col: child.col, row: child.row, colSpan: child.colSpan, rowSpan: child.rowSpan };
+	}
+
 	function getChildStyle(child: DashboardItemType): string {
-		if (resizeState?.childId === child.id) {
-			return `grid-column: ${child.col + 1} / span ${resizeState.currentColSpan}; grid-row: ${child.row + 1} / span ${resizeState.currentRowSpan};`;
-		}
-		return `grid-column: ${child.col + 1} / span ${child.colSpan}; grid-row: ${child.row + 1} / span ${child.rowSpan};`;
+		const r = childRect(child);
+		const pos = `grid-column: ${r.col + 1} / span ${r.colSpan}; grid-row: ${r.row + 1} / span ${r.rowSpan};`;
+		// Dragged children stay in their cell and follow the pointer via translate.
+		return dragView?.ghostIds.has(child.id) ? `${pos} transform: ${dragView.ghostTransform};` : pos;
 	}
 
 	function handleResizeStart(e: PointerEvent, child: DashboardItemType) {
@@ -88,7 +94,7 @@
 		const deltaRow = Math.round(deltaY / rs2);
 		const maxColSpan = item.colSpan - child.col;
 		const targetColSpan = Math.max(1, Math.min(rs.startColSpan + deltaCol, maxColSpan));
-		const targetRowSpan = Math.max(1, rs.startRowSpan + deltaRow);
+		const targetRowSpan = Math.max(1, Math.min(rs.startRowSpan + deltaRow, item.rowSpan - child.row));
 		const result = maxResize(item.children, rs.childId, child.col, child.row, rs.startColSpan, rs.startRowSpan, targetColSpan, targetRowSpan);
 		resizeState.currentColSpan = result.colSpan;
 		resizeState.currentRowSpan = result.rowSpan;
@@ -178,11 +184,12 @@
 				<div
 					class="child-wrapper"
 					class:editing={$isEditing}
-					class:dragging={draggingChildId === child.id || (selectedChildIds?.has(child.id) && draggingChildId)}
-					class:selected={selectedChildIds?.has(child.id) && !draggingChildId}
+					class:dragging={dragView?.ghostIds.has(child.id)}
+					class:selected={selectedChildIds?.has(child.id) && !dragView}
 					class:dimmed={query && !matchingIds?.has(child.id)}
 					class:highlighted={query && matchingIds?.has(child.id)}
 					style={getChildStyle(child)}
+					use:flipOnMove={{ key: Object.values(childRect(child)).join(","), animate: !!dragView && !dragView.ghostIds.has(child.id) }}
 					onpointerdown={(e) => ondragitem?.(e, child)}
 				>
 					<DashboardItem item={child} {allServices} {onedit} {onremove} {query} {matchingIds} />
@@ -195,12 +202,9 @@
 					{/if}
 				</div>
 			{/each}
-			{#if dragPlaceholder}
-				<div
-					class="drag-placeholder"
-					style="grid-column: {dragPlaceholder.col + 1} / span {dragPlaceholder.colSpan}; grid-row: {dragPlaceholder.row + 1} / span {dragPlaceholder.rowSpan};"
-				></div>
-			{/if}
+			{#each dragView?.placeholders ?? [] as p, i (i)}
+				<div class="drag-placeholder" style="grid-column: {p.col + 1} / span {p.colSpan}; grid-row: {p.row + 1} / span {p.rowSpan};"></div>
+			{/each}
 		</div>
 	{/if}
 </div>
@@ -438,6 +442,7 @@
 	}
 
 	.child-wrapper.editing {
+		touch-action: none;
 		cursor: grab;
 	}
 
@@ -455,8 +460,12 @@
 		animation: select-pulse 2s ease-in-out infinite;
 	}
 
+	/* The dragged child follows the pointer above its siblings. */
 	.child-wrapper.dragging {
-		opacity: 0.4;
+		z-index: 30;
+		opacity: 0.85;
+		pointer-events: none;
+		filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
 	}
 
 	@keyframes select-pulse {

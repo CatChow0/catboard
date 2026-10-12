@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.3.0-blue)
+![Version](https://img.shields.io/badge/version-2.4.0-blue)
 
 ## Features
 
@@ -87,8 +87,8 @@ All configuration is stored as JSON in `CONFIG_DIR`:
 
 Toggle edit mode with the pencil button in the navbar. In edit mode you can:
 
-- **Drag** items to reposition them on the grid
-- **Resize** items by dragging the corner handle
+- **Drag** items to reposition them on the grid: the tile follows the pointer, and tiles in the way slide down to make room (live preview). Inside a group, which keeps its size, a move that would overflow swaps the two tiles instead. Drag a tile onto a group's grid to put it in the group, or clearly out of a group (about 24 px past its edge) to put it back on the dashboard where you drop it. Shift/Ctrl-click to select several tiles and move them together. Press **Esc** to cancel a drag; dragging near the top or bottom of the window scrolls the page. Works with touch too.
+- **Resize** items by dragging the corner handle (neighbours are pushed down)
 - **Edit** services via the blue pencil button (bottom-left of tile)
 - **Remove** items via the red X button (top-left of tile)
 - **Add** new services, widgets, or navbar items via the "Add" button
