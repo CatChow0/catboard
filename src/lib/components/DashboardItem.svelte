@@ -15,6 +15,10 @@
 	import JellyfinLatest from './JellyfinLatest.svelte';
 	import ArrReleases from './ArrReleases.svelte';
 	import Stacker from './Stacker.svelte';
+	import JellyfinNowPlaying from './JellyfinNowPlaying.svelte';
+	import JellyseerrRequests from './JellyseerrRequests.svelte';
+	import QBittorrent from './QBittorrent.svelte';
+	import Notes from './Notes.svelte';
 
 	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, dragView, selectedChildIds, ontogglechild, query, matchingIds }: {
 		item: DashboardItemType;
@@ -73,6 +77,14 @@
 		<ArrReleases config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'stacker'}
 		<Stacker config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'jellyfin-now-playing'}
+		<JellyfinNowPlaying config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'jellyseerr-requests'}
+		<JellyseerrRequests config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'qbittorrent'}
+		<QBittorrent config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'notes'}
+		<Notes config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'service' && !service}
 		<div class="missing-service">Service not found</div>
 	{/if}

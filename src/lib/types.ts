@@ -144,7 +144,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem;
+export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem;
 
 // --- Weather ---
 
@@ -315,6 +315,9 @@ export interface IntegrationsConfig {
 	adguardHome?: { url: string; username: string; password: string };
 	jellyfin?: ArrConnection;
 	stacker?: { servers: StackerServer[] };
+	/** Jellyseerr or Overseerr (same API). */
+	jellyseerr?: ArrConnection;
+	qbittorrent?: { url: string; username: string; password: string };
 }
 
 /** A Stacker (web task manager) instance polled by the Stacker widget. */
@@ -469,4 +472,103 @@ export interface JellyfinLatestData {
 export interface JellyfinLatestItem extends DashboardItemBase {
 	type: 'jellyfin-latest';
 	config?: JellyfinLatestConfig;
+}
+
+// --- Jellyfin: now playing ---
+
+export interface JellyfinSession {
+	id: string;
+	user: string;
+	device: string;
+	client: string;
+	title: string;
+	subtitle: string; // series name, album, or empty
+	mediaType: string;
+	positionSec: number;
+	runtimeSec: number;
+	paused: boolean;
+	playMethod: 'DirectPlay' | 'DirectStream' | 'Transcode';
+	transcodeInfo: string; // e.g. "HEVC → H264, 8 Mbps (codec not supported)"
+	imageUrl?: string;
+}
+
+export interface JellyfinNowPlayingItem extends DashboardItemBase {
+	type: 'jellyfin-now-playing';
+	config?: Record<string, never>;
+}
+
+// --- Jellyseerr / Overseerr ---
+
+export type JellyseerrStatus = 'pending' | 'approved' | 'declined' | 'processing' | 'available' | 'failed';
+
+export interface JellyseerrRequest {
+	id: number;
+	title: string;
+	year: string;
+	posterUrl?: string;
+	mediaType: 'movie' | 'tv';
+	requestedBy: string;
+	createdAt: string; // ISO date
+	status: JellyseerrStatus;
+}
+
+export interface JellyseerrData {
+	counts: { pending: number; approved: number; processing: number; available: number };
+	requests: JellyseerrRequest[];
+}
+
+export interface JellyseerrRequestsConfig {
+	filter?: 'pending' | 'all';
+	limit?: number;
+}
+
+export interface JellyseerrRequestsItem extends DashboardItemBase {
+	type: 'jellyseerr-requests';
+	config?: JellyseerrRequestsConfig;
+}
+
+// --- qBittorrent ---
+
+export type TorrentState = 'downloading' | 'seeding' | 'paused' | 'queued' | 'checking' | 'stalled' | 'error' | 'completed';
+
+export interface Torrent {
+	hash: string;
+	name: string;
+	progress: number; // 0..1
+	state: TorrentState;
+	dlSpeed: number; // bytes/s
+	upSpeed: number;
+	eta: number; // seconds, -1 when unknown
+	size: number;
+	ratio: number;
+}
+
+export interface QBittorrentData {
+	dlSpeed: number;
+	upSpeed: number;
+	counts: Record<TorrentState, number>;
+	total: number;
+	torrents: Torrent[];
+}
+
+export interface QBittorrentConfig {
+	filter?: 'active' | 'all' | 'downloading' | 'seeding';
+	limit?: number;
+}
+
+export interface QBittorrentItem extends DashboardItemBase {
+	type: 'qbittorrent';
+	config?: QBittorrentConfig;
+}
+
+// --- Notes ---
+
+export interface NotesConfig {
+	title?: string;
+	content?: string; // Markdown
+}
+
+export interface NotesItem extends DashboardItemBase {
+	type: 'notes';
+	config?: NotesConfig;
 }

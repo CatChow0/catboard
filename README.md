@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.4.0-blue)
+![Version](https://img.shields.io/badge/version-2.5.0-blue)
 
 ## Features
 
@@ -14,12 +14,15 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Clock & Weather widgets** -- Configurable clock with seconds/date options and weather display with location search
 - **Calendar widget** -- Month view with today highlighted; optional *Arr integration shows upcoming movie/TV/music releases from Radarr, Sonarr, and Lidarr
 - **AdGuard Home integration** -- Monitor DNS queries, blocked requests, and filter statistics; toggle protection and set temporary pauses directly from the dashboard
-- **Jellyfin integration** -- Display recently added movies, TV shows, albums, and episodes from your Jellyfin server as a scrollable list of media cards
+- **Jellyfin integration** -- Recently added movies, TV shows, albums, and episodes as media cards, plus a **Now Playing** widget (who watches what, progress, direct play or transcode). Artwork is proxied through CatBoard, so the browser never needs to reach Jellyfin
+- **Jellyseerr / Overseerr integration** -- Pending and recent media requests with counters; admins can approve or decline from the dashboard
+- **qBittorrent integration** -- Download/upload speeds with a live graph, the busiest torrents with progress and ETA; admins can pause/resume torrents or everything
+- **Notes widget** -- Markdown notepad edited in place, with clickable checklists
 - **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP)
 - **Stacker integration** -- Live CPU, memory, GPU, disk and network gauges and graphs from one or more Stacker servers, with selectable sections
-- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr)
+- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Stacker)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
@@ -132,6 +135,10 @@ Add widgets via Add > Widgets tab:
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
 | **Arr Releases** | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter |
 | **Stacker** | Live hardware monitor from a Stacker server; choose CPU, Memory, GPU, Disk and Network sections; adapts from one-line gauges to full graphs as the tile grows |
+| **Jellyfin Now Playing** | Active streams: title, user and device, progress, paused state, Direct/Transcode badge (codec and reason on hover); one line per stream on 1-row tiles |
+| **Jellyseerr Requests** | Pending or all recent requests with poster, requester and status; approve/decline buttons for admins |
+| **qBittorrent** | Speeds and 60 s graph, counts per state, torrent list with progress/ETA; per-torrent and global pause/resume for admins |
+| **Notes** | Markdown note (headings, bold/italic, links, lists, code, quotes, `- [ ]` checklists); edit with the Edit button, Ctrl+Enter to save |
 
 ### Integrations
 
@@ -144,7 +151,11 @@ Add integrations via Add > Integrations tab:
    - **Radarr / Sonarr / Lidarr:** Enter instance URL and API key for each
    - **Jellyfin:** Enter instance URL and API key
    - **Stacker:** Add servers (name + URL, optional basic-auth credentials)
+   - **Jellyseerr / Overseerr:** Enter instance URL and API key
+   - **qBittorrent:** Enter the Web UI URL, username and password
 2. **Widgets** sub-tab -- Add widgets that use configured integrations
+
+Only admins (admin and mini-admin roles) can change connections or use widget actions (approve/decline, pause/resume). Other users see the widgets, and integration secrets are hidden from them.
 
 ### Export & Import
 
@@ -197,6 +208,12 @@ Backup and restore your dashboard:
 | `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr |
 | `GET` | `/api/integrations/arr/releases` | Recently released items from Radarr/Sonarr/Lidarr (`sources`, `days`, `limit`, `onlyDownloaded`) |
 | `GET` | `/api/integrations/jellyfin/latest` | Recently added items from Jellyfin |
+| `GET` | `/api/integrations/jellyfin/sessions` | Streams currently playing on Jellyfin |
+| `GET` | `/api/integrations/jellyfin/image` | Jellyfin artwork proxy (`item`, `type`, `tag`, `w`) |
+| `GET` | `/api/integrations/jellyseerr/requests` | Media requests and counters (`filter`, `take`) |
+| `POST` | `/api/integrations/jellyseerr/requests/[id]` | Approve or decline a request (admins) |
+| `GET` | `/api/integrations/qbittorrent/status` | Speeds, counters and torrents (`filter`, `limit`) |
+| `POST` | `/api/integrations/qbittorrent/action` | Pause or resume torrents (admins) |
 | `GET` | `/api/integrations/stacker/snapshot` | New samples from a Stacker server (`serverId`, `since`, `static`) |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |

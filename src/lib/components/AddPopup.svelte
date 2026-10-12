@@ -4,7 +4,7 @@
 	import LocationSearch from './LocationSearch.svelte';
 	import DockerLogo from './icons/DockerLogo.svelte';
 	import UptimeKumaLogo from './icons/UptimeKumaLogo.svelte';
-	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, getActiveColumns, getIntegrations, setIntegrations } from '$lib/stores/dashboard';
+	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, getActiveColumns, getIntegrations, setIntegrations, currentUser } from '$lib/stores/dashboard';
 	import IconPicker from './IconPicker.svelte';
 
 	let { onclose }: { onclose: () => void } = $props();
@@ -17,7 +17,7 @@
 	let newServiceDesc = $state('');
 	let addedServiceIds = $state<Set<string>>(new Set());
 	let editingServiceId = $state<string | null>(null);
-	let widgetType = $state<'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather'>('group-collapsible');
+	let widgetType = $state<'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'notes'>('group-collapsible');
 	let widgetTitle = $state('');
 	let widgetColSpan = $state(6);
 	let adguardHomeUrl = $state('');
@@ -84,6 +84,21 @@
 	let arrReleasesWidgetColSpan = $state(4);
 	let arrReleasesWidgetRowSpan = $state(3);
 
+	let jellyseerrUrl = $state('');
+	let jellyseerrApiKey = $state('');
+	let jellyseerrSaving = $state(false);
+	let qbitUrl = $state('');
+	let qbitUsername = $state('');
+	let qbitPassword = $state('');
+	let qbitSaving = $state(false);
+	let nowPlayingColSpan = $state(4);
+	let nowPlayingRowSpan = $state(3);
+	let requestsColSpan = $state(4);
+	let requestsRowSpan = $state(4);
+	let qbitColSpan = $state(4);
+	let qbitRowSpan = $state(4);
+	const canEditConnections = $derived($currentUser?.role === 'admin' || $currentUser?.role === 'mini-admin');
+
 	let stackerServers = $state<StackerServer[]>([]);
 	let stackerSaving = $state(false);
 	let stackerWidgetServerId = $state('');
@@ -146,6 +161,11 @@
 			lidarrApiKey = config.lidarr?.apiKey || '';
 			jellyfinUrl = config.jellyfin?.url || '';
 			jellyfinApiKey = config.jellyfin?.apiKey || '';
+			jellyseerrUrl = config.jellyseerr?.url || '';
+			jellyseerrApiKey = config.jellyseerr?.apiKey || '';
+			qbitUrl = config.qbittorrent?.url || '';
+			qbitUsername = config.qbittorrent?.username || '';
+			qbitPassword = config.qbittorrent?.password || '';
 			stackerServers = config.stacker?.servers || [];
 		} catch {
 			// ignore
@@ -218,6 +238,8 @@
 			await addWidgetToDashboard('clock', '', cols, 1, getMaxCols());
 		} else if (type === 'weather') {
 			await addWidgetToDashboard('weather', '', cols, 1, getMaxCols());
+		} else if (type === 'notes') {
+			await addWidgetToDashboard('notes', '', cols, 3, getMaxCols(), { content: '' });
 		} else {
 			const config = type === 'group-standard' && widgetCompact ? { compact: true } : undefined;
 			await addWidgetToDashboard(type, title, cols, 3, getMaxCols(), config);
@@ -375,6 +397,33 @@
 			graphs: true,
 			totals: true
 		});
+	}
+
+	async function handleSaveJellyseerr() {
+		jellyseerrSaving = true;
+		try {
+			await setIntegrations({ jellyseerr: buildArrConnection(jellyseerrUrl, jellyseerrApiKey) });
+		} catch {
+			// ignore
+		} finally {
+			jellyseerrSaving = false;
+		}
+	}
+
+	async function handleSaveQbit() {
+		qbitSaving = true;
+		try {
+			await setIntegrations({ qbittorrent: { url: qbitUrl.trim(), username: qbitUsername.trim(), password: qbitPassword } });
+		} catch {
+			// ignore
+		} finally {
+			qbitSaving = false;
+		}
+	}
+
+	async function handleAddIntegrationTile(type: 'jellyfin-now-playing' | 'jellyseerr-requests' | 'qbittorrent', cols: number, rows: number) {
+		close();
+		await addWidgetToDashboard(type, '', cols, rows, getMaxCols());
 	}
 
 	async function handleAddArrReleasesWidget() {
@@ -581,8 +630,15 @@
 							</svg>
 							<span>Weather</span>
 						</button>
+						<button type="button" class="widget-option" class:active={widgetType === 'notes'} onclick={() => (widgetType = 'notes')}>
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+								<path d="M14 3v6h6M8 13h8M8 17h5" />
+							</svg>
+							<span>Notes</span>
+						</button>
 					</div>
-					{#if widgetType !== 'calendar' && widgetType !== 'clock' && widgetType !== 'weather'}
+					{#if widgetType !== 'calendar' && widgetType !== 'clock' && widgetType !== 'weather' && widgetType !== 'notes'}
 						<div class="field">
 							<label>Title</label>
 							<input type="text" bind:value={widgetTitle} placeholder="Infrastructure" />
@@ -729,6 +785,9 @@
 				</div>
 
 				{#if integrationSubTab === 'connections'}
+					{#if !canEditConnections}
+						<p class="hint">Only an admin can change connections. Ask an admin to set them up; you can still add widgets.</p>
+					{/if}
 					<div class="integration-card">
 						<div class="integration-header">
 							<div class="integration-icon">
@@ -955,6 +1014,68 @@
 							</button>
 						</div>
 					</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<path d="M4 4h16v12H8l-4 4z" />
+								<path d="M9 10l2 2 4-4" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Jellyseerr / Overseerr</span>
+							<span class="integration-desc">Media requests: list, approve and decline</span>
+						</div>
+					</div>
+					<div class="field">
+						<label for="seerr-url">Instance URL</label>
+						<input id="seerr-url" type="url" bind:value={jellyseerrUrl} placeholder="http://jellyseerr:5055" />
+					</div>
+					<div class="field">
+						<label for="seerr-key">API Key</label>
+						<input id="seerr-key" type="password" bind:value={jellyseerrApiKey} placeholder="Settings > General > API Key" />
+					</div>
+					<div class="form-actions">
+						<button type="button" class="btn-save" onclick={handleSaveJellyseerr} disabled={jellyseerrSaving || !canEditConnections}>
+							{jellyseerrSaving ? 'Saving...' : 'Save'}
+						</button>
+					</div>
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<path d="M12 3v12M7 10l5 5 5-5" />
+								<path d="M4 19h16" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">qBittorrent</span>
+							<span class="integration-desc">Download speeds, torrents, pause and resume</span>
+						</div>
+					</div>
+					<div class="field">
+						<label for="qbit-url">Web UI URL</label>
+						<input id="qbit-url" type="url" bind:value={qbitUrl} placeholder="http://qbittorrent:8080" />
+					</div>
+					<div class="size-row">
+						<div class="field">
+							<label for="qbit-user">Username</label>
+							<input id="qbit-user" type="text" bind:value={qbitUsername} autocomplete="off" />
+						</div>
+						<div class="field">
+							<label for="qbit-pass">Password</label>
+							<input id="qbit-pass" type="password" bind:value={qbitPassword} autocomplete="new-password" />
+						</div>
+					</div>
+					<div class="form-actions">
+						<button type="button" class="btn-save" onclick={handleSaveQbit} disabled={qbitSaving || !canEditConnections}>
+							{qbitSaving ? 'Saving...' : 'Save'}
+						</button>
+					</div>
+				</div>
 
 <div class="integration-card">
 						<div class="integration-header">
@@ -1268,6 +1389,102 @@
 						</div>
 						<div class="form-actions">
 							<button type="button" class="btn-save" onclick={handleAddArrReleasesWidget}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<rect x="2" y="4" width="20" height="14" rx="2" />
+								<path d="M10 8.5l4.5 2.5-4.5 2.5zM8 21h8" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Jellyfin Now Playing</span>
+							<span class="integration-desc">Who is watching what, progress, direct play or transcode</span>
+						</div>
+					</div>
+					{#if !jellyfinUrl}
+						<p class="hint">Configure the Jellyfin connection first.</p>
+					{:else}
+						<div class="size-row">
+							<div class="field">
+								<label for="np-cols">Width (columns)</label>
+								<input id="np-cols" type="number" bind:value={nowPlayingColSpan} min="2" max="12" />
+							</div>
+							<div class="field">
+								<label for="np-rows">Height (rows)</label>
+								<input id="np-rows" type="number" bind:value={nowPlayingRowSpan} min="1" max="12" />
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={() => handleAddIntegrationTile('jellyfin-now-playing', nowPlayingColSpan, nowPlayingRowSpan)}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<path d="M4 4h16v12H8l-4 4z" />
+								<path d="M9 10l2 2 4-4" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Jellyseerr Requests</span>
+							<span class="integration-desc">Pending and recent media requests, approve or decline (admins)</span>
+						</div>
+					</div>
+					{#if !jellyseerrUrl}
+						<p class="hint">Configure the Jellyseerr / Overseerr connection first.</p>
+					{:else}
+						<div class="size-row">
+							<div class="field">
+								<label for="rq-cols">Width (columns)</label>
+								<input id="rq-cols" type="number" bind:value={requestsColSpan} min="2" max="12" />
+							</div>
+							<div class="field">
+								<label for="rq-rows">Height (rows)</label>
+								<input id="rq-rows" type="number" bind:value={requestsRowSpan} min="1" max="12" />
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={() => handleAddIntegrationTile('jellyseerr-requests', requestsColSpan, requestsRowSpan)}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<path d="M12 3v12M7 10l5 5 5-5" />
+								<path d="M4 19h16" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">qBittorrent</span>
+							<span class="integration-desc">Speeds with a live graph, busiest torrents, pause and resume (admins)</span>
+						</div>
+					</div>
+					{#if !qbitUrl}
+						<p class="hint">Configure the qBittorrent connection first.</p>
+					{:else}
+						<div class="size-row">
+							<div class="field">
+								<label for="qb-cols">Width (columns)</label>
+								<input id="qb-cols" type="number" bind:value={qbitColSpan} min="2" max="12" />
+							</div>
+							<div class="field">
+								<label for="qb-rows">Height (rows)</label>
+								<input id="qb-rows" type="number" bind:value={qbitRowSpan} min="1" max="12" />
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={() => handleAddIntegrationTile('qbittorrent', qbitColSpan, qbitRowSpan)}>Add Widget</button>
 						</div>
 					{/if}
 				</div>

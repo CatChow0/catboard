@@ -275,7 +275,9 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 	layout.set(newLayout);
 }
 
-export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest' | 'arr-releases' | 'stacker', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
+const SIMPLE_WIDGETS = new Set<string>(['jellyfin-now-playing', 'jellyseerr-requests', 'qbittorrent', 'notes']);
+
+export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest' | 'arr-releases' | 'stacker' | 'jellyfin-now-playing' | 'jellyseerr-requests' | 'qbittorrent' | 'notes', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
 	const activeId = get(activeBreakpointId);
 	if (!newLayout.layouts[activeId]) newLayout.layouts[activeId] = { items: [], navbar: { columns: 12, items: [] } };
@@ -303,6 +305,9 @@ export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-st
 											? { id: crypto.randomUUID(), type: 'arr-releases' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ArrReleasesConfig }
 											: type === 'stacker'
 												? { id: crypto.randomUUID(), type: 'stacker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as StackerConfig }
+												: SIMPLE_WIDGETS.has(type)
+													// Widgets whose item is just position + optional config.
+													? ({ id: crypto.randomUUID(), type, col: pos.col, row: pos.row, colSpan, rowSpan, config } as DashboardItem)
 											: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
 	activeItems.push(item);
 	await api('/api/layout', { method: 'PUT', body: JSON.stringify(newLayout) });

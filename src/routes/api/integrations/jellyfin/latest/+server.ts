@@ -1,20 +1,16 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { getIntegrations } from '$lib/server/config';
 import type { JellyfinLatestData, JellyfinMediaItem } from '$lib/types';
+import { jellyfinImagePath } from '$lib/server/jellyfin';
 
 function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
 }
 
-function buildImageUrl(baseUrl: string, itemId: string, imageType: string, tag: string, index?: number): string {
-	let url = `${baseUrl}/Items/${itemId}/Images/${imageType}?tag=${tag}`;
-	if (imageType === 'Backdrop') {
-		url += '&maxWidth=800';
-		if (index !== undefined) url += `&index=${index}`;
-	} else if (imageType === 'Primary') {
-		url += '&maxHeight=300';
-	}
-	return url;
+// Images go through CatBoard's proxy (see $lib/server/jellyfin.ts), so the
+// browser never needs to reach the Jellyfin URL itself.
+function buildImageUrl(_baseUrl: string, itemId: string, imageType: 'Backdrop' | 'Primary', tag: string): string {
+	return imageType === 'Backdrop' ? jellyfinImagePath(itemId, 'Backdrop', tag, 800) : jellyfinImagePath(itemId, 'Primary', tag, 300);
 }
 
 async function getJellyfinUserId(baseUrl: string, apiKey: string): Promise<string | null> {
@@ -105,7 +101,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			let backdropUrl: string | undefined;
 
 			if (backdropTag) {
-				backdropUrl = buildImageUrl(baseUrl, id, 'Backdrop', backdropTag, 0);
+				backdropUrl = buildImageUrl(baseUrl, id, 'Backdrop', backdropTag);
 			}
 			if (primaryTag) {
 				imageUrl = buildImageUrl(baseUrl, id, 'Primary', primaryTag);

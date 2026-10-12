@@ -235,7 +235,9 @@ To connect CatBoard to a Jellyfin instance:
 2. Under **Jellyfin**, enter:
    - **URL:** Your Jellyfin instance URL (e.g. `http://192.168.1.10:8096`)
    - **API Key:** Found in Dashboard > Advanced > API Keys
-3. Go to **Add > Integrations > Widgets** to add a **Jellyfin Latest** widget
+3. Go to **Add > Integrations > Widgets** to add a **Jellyfin Latest** or **Jellyfin Now Playing** widget
+
+Artwork is fetched by CatBoard and served from its own URL, so the Jellyfin address only needs to be reachable from the CatBoard container (an internal `http://jellyfin:8096` works even if the dashboard is served over HTTPS).
 
 If Jellyfin is running on the Docker host:
 ```
@@ -243,6 +245,21 @@ http://host.docker.internal:8096
 ```
 
 On Linux hosts without Docker Desktop, add `--add-host=host.docker.internal:host-gateway` to the container or use `network_mode: host`.
+
+### Jellyseerr / Overseerr
+
+1. Copy the API key from **Settings > General** in Jellyseerr (or Overseerr)
+2. In **Add > Integrations > Connections > Jellyseerr / Overseerr**, enter the URL (e.g. `http://jellyseerr:5055`) and the key
+3. Add a **Jellyseerr Requests** widget from **Add > Integrations > Widgets**
+
+Approving or declining from CatBoard uses that API key, so the key's owner must be allowed to manage requests. Only CatBoard admins see the buttons.
+
+### qBittorrent
+
+1. In **Add > Integrations > Connections > qBittorrent**, enter the Web UI URL (e.g. `http://qbittorrent:8080`), username and password
+2. Add a **qBittorrent** widget from **Add > Integrations > Widgets**
+
+Works with qBittorrent 4.x and 5.x. If the Web UI has "Enable Host header validation" on, add the hostname CatBoard uses (e.g. `qbittorrent`) to its allowed domains. Too many failed logins make qBittorrent ban CatBoard's IP for a while; fix the password and wait.
 
 ### Stacker
 
@@ -474,6 +491,13 @@ The container may not be able to reach the service URLs. Ensure:
 - Verify the API key is correct (found in Dashboard > Advanced > API Keys)
 - Check that the Jellyfin user has access to the library you want to monitor
 - Check container logs for connection or authentication errors
+
+### Jellyseerr or qBittorrent widget not working
+
+- The URL must be reachable from inside the CatBoard container (container name on a shared network, or `host.docker.internal`)
+- Jellyseerr "HTTP 401/403": wrong API key
+- qBittorrent "Wrong qBittorrent username or password", or "banned this IP": check the credentials, then wait for the ban to expire (Web UI settings)
+- Buttons missing: only admin and mini-admin accounts can act on services
 
 ### Stacker widget not working
 
