@@ -4,11 +4,15 @@
 	import DockerLogo from '../icons/DockerLogo.svelte';
 	import DockerDetails from '../details/DockerDetails.svelte';
 	import NavbarPopover from './NavbarPopover.svelte';
+	import { bytes } from '../stacker/format';
 
 	let { config }: { colSpan?: number; config: DockerWidgetConfig } = $props();
 
 	const data = $derived($dockerData[config?.environmentId || '']);
 	const label = $derived(`Docker${data?.name ? `: ${data.name}` : ''}`);
+	// Environment totals next to the counters; per-container detail is in the popover.
+	const totals = $derived(data?.stats && (config?.showCpu || config?.showRam) ? data.stats : null);
+	const cpu = (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)}%`;
 
 	let button = $state<HTMLButtonElement>();
 	let open = $state(false);
@@ -32,6 +36,12 @@
 			<span class="docker-count">{data.runningCount}</span>
 			<span class="docker-dot down"></span>
 			<span class="docker-count">{data.stoppedCount}</span>
+			{#if totals}
+				<span class="docker-totals">
+					{#if config.showCpu}<span title="CPU of all running containers (100% = one core)">CPU {cpu(totals.cpuPercent)}</span>{/if}
+					{#if config.showRam}<span title="Memory of all running containers">RAM {bytes(totals.memUsage)}</span>{/if}
+				</span>
+			{/if}
 		{:else}
 			<span class="docker-dot pending"></span>
 			<span class="docker-loading">...</span>
@@ -39,9 +49,9 @@
 	</button>
 
 	{#if open && button}
-		<NavbarPopover anchor={button} {label} onclose={() => (open = false)}>
+		<NavbarPopover anchor={button} {label} width={config?.showCpu || config?.showRam ? 340 : 300} onclose={() => (open = false)}>
 			{#if data}
-				<DockerDetails {data} />
+				<DockerDetails {data} showCpu={config?.showCpu} showRam={config?.showRam} />
 			{:else}
 				<p class="nb-empty">Loading…</p>
 			{/if}
@@ -72,6 +82,7 @@
 		font: inherit;
 		cursor: pointer;
 		transition: background var(--transition);
+		overflow: hidden;
 	}
 
 	.docker-widget:not(.editing):hover,
@@ -116,6 +127,18 @@
 		color: var(--text-primary);
 	}
 
+	.docker-totals {
+		display: flex;
+		gap: 8px;
+		margin-left: 6px;
+		padding-left: 8px;
+		border-left: 1px solid var(--border);
+		font-size: calc(0.72rem * var(--nb-text, 1));
+		font-weight: 600;
+		color: var(--text-secondary);
+		font-variant-numeric: tabular-nums;
+	}
+
 	.docker-loading {
 		font-size: calc(0.75rem * var(--nb-text, 1));
 		color: var(--text-muted);
@@ -124,7 +147,7 @@
 	.nb-empty {
 		margin: 0;
 		padding: 12px;
-		font-size: calc(0.8rem * var(--nb-text, 1));
+		font-size: 0.8rem;
 		color: var(--text-muted);
 	}
 </style>

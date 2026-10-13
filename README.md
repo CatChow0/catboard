@@ -2,13 +2,13 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.5.0-blue)
+![Version](https://img.shields.io/badge/version-2.6.0-blue)
 
 ## Features
 
 - **Drag-and-drop grid layout** -- Place, resize, and reorder service tiles and widgets on a responsive CSS grid
 - **Service management** -- Register services with URL, icon, and description; click a tile to open the service; live status checks via SSE
-- **Collapsible & standard groups** -- Organize services into visual groups with sub-grids
+- **Collapsible & standard groups** -- Organize services into visual groups with sub-grids; optionally let a group's content extend vertically or horizontally and scroll (wheel or swipe, no scrollbar)
 - **Dynamic navbar** -- Customizable navbar with draggable/resizable widgets: title, search, clock, weather, CPU, RAM, disk monitors, Uptime Kuma status, and Docker container status (click for details)
 - **System monitoring** -- Real-time CPU usage/temperature, RAM/swap usage, and disk utilization via SSE
 - **Clock & Weather widgets** -- Configurable clock with seconds/date options and weather display with location search
@@ -20,7 +20,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Notes widget** -- Markdown notepad edited in place, with clickable checklists
 - **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
-- **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP)
+- **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP), with optional per-container CPU and RAM usage
 - **Stacker integration** -- Live CPU, memory, GPU, disk and network gauges and graphs from one or more Stacker servers, with selectable sections
 - **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Stacker)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
@@ -112,7 +112,7 @@ Add widgets to the navbar via Add > Navbar tab:
 | **Clock** | Time and date on one line (two lines at width 1); seconds, 12h/24h, date format and full date options |
 | **Weather** | Weather icon, temperature and city (city hidden at width 1); location set by city search |
 | **Uptime Kuma** | Uptime Kuma logo, active/inactive counts and uptime %; click for the full monitor list |
-| **Docker** | Docker logo and running/stopped counts; click for the full container list |
+| **Docker** | Docker logo and running/stopped counts (plus total CPU/RAM when enabled); click for the full container list |
 | **AdGuard Home** | Toggle protection status with colored state pill |
 
 Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, Docker environment, clock format or weather location. Every navbar widget also has **Icon size** and **Text size** sliders (50–250%, previewed live); the navbar row grows to fit larger widgets. Outside edit mode, clicking the Docker or Uptime Kuma widget opens a details popover with the same content as the standard widget (close it with a click outside or Escape).
@@ -125,11 +125,13 @@ Add widgets via Add > Widgets tab:
 |---|---|
 | **Collapsible Group** | Expandable container for related services |
 | **Standard Group** | Always-visible container with optional compact mode |
+
+Both group types have a **Content** option in their edit dialog: *Fixed size* (default, content fits the group), *Scroll vertically* (more rows) or *Scroll horizontally* (more columns). Scrolling groups keep their cell size; drop a tile past the visible edge (the group auto-scrolls while dragging near it) to extend the content. A scrolling group is never full: dropping a tile into it shifts the others down (vertical) or to the right (horizontal). They scroll with the mouse wheel or by swiping, without a visible scrollbar; a fade on the edges shows there is more.
 | **Calendar** | Month view with today highlighted, adapts to widget size |
 | **Clock** | Configurable clock with seconds, 12h/24h, and date display |
 | **Weather** | Current weather with location search via Open-Meteo |
 | **Uptime Kuma** | Status page with monitor list and uptime bar |
-| **Docker** | Environment name, running/stopped counts, and container list |
+| **Docker** | Environment name, running/stopped counts, and container list; optional per-container CPU % and RAM (**Show CPU** / **Show RAM**, refreshed every 10 s; 100% CPU = one core, like `docker stats`) |
 | **AdGuard Home Stats** | DNS queries, blocked requests, blocked domains, and latency |
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |

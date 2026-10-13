@@ -25,7 +25,8 @@
 		resizeWithPush,
 		gridMetrics,
 		cellAt,
-		findNextAvailablePosition,
+		groupNextPosition,
+		groupBounds,
 		type Placed,
 		type Bounds,
 		type GridMetrics
@@ -154,6 +155,11 @@
 		preview: Map<string, Rect> | null; // every tile of the target container
 		collapsedTarget: boolean; // dropping onto a collapsed group: append
 		hasGroup: boolean; // groups can't be dropped into groups
+		// Tiles dragged out of a group are drawn as a floating copy (a scrolling
+		// group would clip the tile itself); clientDx/Dy move it with the pointer.
+		avatar: { item: DashboardItemType; left: number; top: number; width: number; height: number } | null;
+		clientDx: number;
+		clientDy: number;
 	} | null>(null);
 
 	let resize = $state<{
@@ -191,10 +197,15 @@
 		return document.querySelector(`[data-group-id="${CSS.escape(id)}"] .group-grid`);
 	}
 
+	/** The element that scrolls a group's content (also clips it when the group scrolls). */
+	function groupScrollEl(id: string): HTMLElement | null {
+		return document.querySelector(`[data-group-id="${CSS.escape(id)}"] .group-scroll`);
+	}
+
 	function boundsOf(c: Container): Bounds {
 		if (c === null) return { cols: columns };
 		const g = items.find((i) => i.id === c);
-		return { cols: g?.colSpan ?? 1, rows: g?.rowSpan ?? 1 };
+		return g && 'children' in g ? groupBounds(g) : { cols: 1, rows: 1 };
 	}
 
 	/**
@@ -226,11 +237,29 @@
 		return new DOMRect(r.left + home.left - now.left, r.top + home.top - now.top, r.width, r.height);
 	}
 
+	/** Visible part of a group's content (its scroll viewport), at the group's stored position. */
+	function groupViewHomeRect(id: string): DOMRect | null {
+		const home = groupHomeRect(id);
+		const el = groupEl(id);
+		const view = groupScrollEl(id);
+		if (!home || !el || !view) return null;
+		const now = el.getBoundingClientRect();
+		const r = view.getBoundingClientRect();
+		return new DOMRect(r.left + home.left - now.left, r.top + home.top - now.top, r.width, r.height);
+	}
+
 	function metricsOf(c: Container): GridMetrics | null {
 		if (c === null) return gridEl ? gridMetrics(gridEl.getBoundingClientRect(), columns, gap, { cellSize }) : null;
 		const g = items.find((i) => i.id === c);
 		const r = groupGridHomeRect(c);
-		return g && r ? gridMetrics(r, g.colSpan, gap, { pad: gap, rows: g.rowSpan }) : null;
+		if (!g || !r) return null;
+		// The group grid publishes its cell size, which stays right when its
+		// content is scrolled or larger than the group (scrolling groups).
+		const cell = groupGridEl(c)?.dataset;
+		const cw = Number(cell?.cellW);
+		const ch = Number(cell?.cellH);
+		if (cw > 0 && ch > 0) return { left: r.left + gap, top: r.top + gap, colStep: cw + gap, rowStep: ch + gap };
+		return gridMetrics(r, g.colSpan, gap, { pad: gap, rows: g.rowSpan });
 	}
 
 	// --- Starting a drag ------------------------------------------------------
@@ -333,7 +362,10 @@
 			origin,
 			preview: null,
 			collapsedTarget: false,
-			hasGroup
+			hasGroup,
+			avatar: pd.source !== null ? { item: pd.anchor, left: r.left, top: r.top, width: r.width, height: r.height } : null,
+			clientDx: 0,
+			clientDy: 0
 		};
 		try {
 			gridEl?.setPointerCapture(pd.pointerId);
@@ -368,10 +400,10 @@
 		if (!d.hasGroup) {
 			const width = blockSpan(d).width;
 			for (const g of items) {
-				if (!isGroupItem(g) || g.id === d.source || width > g.colSpan) continue;
-				// Only the inner grid counts (headers and borders don't), so tiles can
-				// be dragged past a group; a collapsed group accepts drops on itself.
-				const zone = groupGridHomeRect(g.id) ?? groupHomeRect(g.id);
+				if (!isGroupItem(g) || !('children' in g) || g.id === d.source || width > groupBounds(g).cols) continue;
+				// Only the visible content area counts (headers and borders don't), so
+				// tiles can be dragged past a group; a collapsed group accepts drops on itself.
+				const zone = groupViewHomeRect(g.id) ?? groupHomeRect(g.id);
 				if (zone && inside(zone, x, y)) return g.id;
 			}
 		}
@@ -384,6 +416,8 @@
 		const { x, y } = lastPointer;
 		d.dx = x - d.startX + (window.scrollX - d.startScrollX);
 		d.dy = y - d.startY + (window.scrollY - d.startScrollY);
+		d.clientDx = x - d.startX;
+		d.clientDy = y - d.startY;
 
 		const target = pickTarget(d, x, y);
 		if (target !== null && !groupGridEl(target)) {
@@ -428,16 +462,37 @@
 		}
 	}
 
+	const GROUP_EDGE = 28; // px inside a scrolling group's edge where it auto-scrolls
+
 	function autoScroll() {
 		if (!drag) return;
-		const { y } = lastPointer;
+		const { x, y } = lastPointer;
+		let moved = false;
 		let v = 0;
 		if (y < EDGE) v = -((EDGE - y) / EDGE) * 18;
 		else if (y > window.innerHeight - EDGE) v = ((y - (window.innerHeight - EDGE)) / EDGE) * 18;
 		if (v) {
 			window.scrollBy(0, v);
-			updateDrag();
+			moved = true;
 		}
+		// Scrolling group under the pointer: scroll its content near the edges so
+		// tiles can be dropped beyond what is visible.
+		const sc = drag.target !== null ? groupScrollEl(drag.target) : null;
+		if (sc && (sc.scrollHeight > sc.clientHeight || sc.scrollWidth > sc.clientWidth)) {
+			const r = sc.getBoundingClientRect();
+			const step = (d: number) => ((GROUP_EDGE - d) / GROUP_EDGE) * 10;
+			const before = sc.scrollTop + sc.scrollLeft;
+			if (sc.scrollHeight > sc.clientHeight) {
+				if (y - r.top < GROUP_EDGE) sc.scrollTop -= step(y - r.top);
+				else if (r.bottom - y < GROUP_EDGE) sc.scrollTop += step(r.bottom - y);
+			}
+			if (sc.scrollWidth > sc.clientWidth) {
+				if (x - r.left < GROUP_EDGE) sc.scrollLeft -= step(x - r.left);
+				else if (r.right - x < GROUP_EDGE) sc.scrollLeft += step(r.right - x);
+			}
+			if (sc.scrollTop + sc.scrollLeft !== before) moved = true;
+		}
+		if (moved) updateDrag();
 		scrollRaf = requestAnimationFrame(autoScroll);
 	}
 
@@ -480,10 +535,12 @@
 			// Append into the collapsed group's first free spots, or refuse.
 			const g = bp.items.find((i) => i.id === d.target)!;
 			const kids = [...listOf(d.target)];
+			// Scrolling groups always have room along their axis; fixed ones may be full.
+			if (!('children' in g)) return;
 			positions = new Map();
 			for (const it of moving) {
-				const p = findNextAvailablePosition(kids, it.colSpan, it.rowSpan, g.colSpan, g.rowSpan);
-				if (p.col + it.colSpan > g.colSpan || p.row + it.rowSpan > g.rowSpan) return;
+				const p = groupNextPosition(g, kids, it.colSpan, it.rowSpan);
+				if (!p) return;
 				positions.set(it.id, { ...rectOf(it), col: p.col, row: p.row });
 				kids.push({ ...it, col: p.col, row: p.row });
 			}
@@ -629,7 +686,6 @@
 		const isTarget = drag.target === groupId && !drag.collapsedTarget;
 		return {
 			ghostIds: drag.source === groupId ? new Set(drag.origin.keys()) : new Set<string>(),
-			ghostTransform: `translate(${drag.dx}px, ${drag.dy}px)`,
 			preview: isTarget ? drag.preview : null,
 			placeholders: isTarget && drag.preview ? drag.ids.map((id) => drag!.preview!.get(id)).filter((r): r is Rect => !!r) : []
 		};
@@ -723,6 +779,18 @@
 				<div class="drag-placeholder" style={gridPos(p)}></div>
 			{/each}
 		</div>
+
+		{#if drag?.avatar}
+			<!-- Floating copy of a tile dragged out of a group (scrolling groups clip their content). -->
+			<div
+				class="drag-avatar"
+				style="left: {drag.avatar.left + drag.clientDx}px; top: {drag.avatar.top + drag.clientDy}px; width: {drag.avatar.width}px; height: {drag.avatar.height}px;"
+				aria-hidden="true"
+			>
+				<DashboardItem item={drag.avatar.item} allServices={$services} gridGap={gap} />
+				{#if drag.ids.length > 1}<span class="drag-count">{drag.ids.length}</span>{/if}
+			</div>
+		{/if}
 
 		{#if items.length === 0}
 			<div class="empty-state">
@@ -890,6 +958,31 @@
 
 	.resize-handle:hover::after {
 		opacity: 1;
+	}
+
+	.drag-avatar {
+		position: fixed;
+		z-index: 1000;
+		pointer-events: none;
+		opacity: 0.9;
+		filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+	}
+
+	.drag-count {
+		position: absolute;
+		top: -8px;
+		right: -8px;
+		min-width: 20px;
+		height: 20px;
+		padding: 0 5px;
+		border-radius: 10px;
+		background: var(--accent);
+		color: white;
+		font-size: 0.72rem;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.drag-placeholder {

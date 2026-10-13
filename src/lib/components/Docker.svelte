@@ -14,7 +14,9 @@
 
 	let showEditModal = $state(false);
 	let closing = $state(false);
-	let editEnvId = $state(config?.environmentId || '');
+	let editEnvId = $state('');
+	let editShowCpu = $state(false);
+	let editShowRam = $state(false);
 	let availableEnvironments = $state<{ id: string; name: string }[]>([]);
 
 	const cells = $derived(colSpan * rowSpan);
@@ -24,6 +26,8 @@
 
 	async function openEditModal() {
 		editEnvId = config?.environmentId || '';
+		editShowCpu = config?.showCpu ?? false;
+		editShowRam = config?.showRam ?? false;
 		closing = false;
 		try {
 			const integrations = await getIntegrations();
@@ -42,7 +46,8 @@
 	async function handleSaveEdit() {
 		showEditModal = false;
 		closing = false;
-		await updateDashboardItem(itemid, { config: { environmentId: editEnvId.trim() } } as any);
+		const next: DockerWidgetConfig = { environmentId: editEnvId.trim(), showCpu: editShowCpu || undefined, showRam: editShowRam || undefined };
+		await updateDashboardItem(itemid, { config: next } as any);
 	}
 </script>
 
@@ -56,7 +61,7 @@
 		{:else if !data}
 			<div class="docker-loading">...</div>
 		{:else}
-			<DockerDetails {data} showList={showContainers} />
+			<DockerDetails {data} showList={showContainers} showCpu={config.showCpu} showRam={config.showRam} />
 		{/if}
 	</div>
 	{#if $isEditing}
@@ -77,10 +82,10 @@
 {#if showEditModal}
 	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 	<div class="modal-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={closeModal} onpointerdown={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+		<div class="modal" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key !== 'Escape' && e.stopPropagation()}>
 			<div class="modal-header">
 				<h2>Edit Docker Widget</h2>
-				<button class="btn-close" onclick={closeModal}>
+				<button class="btn-close" onclick={closeModal} aria-label="Close">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M18 6L6 18M6 6l12 12" />
 					</svg>
@@ -89,18 +94,30 @@
 
 			<div class="modal-body">
 				<div class="field">
-					<label>Environment</label>
+					<label for="docker-env-{itemid}">Environment</label>
 					{#if availableEnvironments.length > 0}
-						<select bind:value={editEnvId}>
+						<select id="docker-env-{itemid}" bind:value={editEnvId}>
 							<option value="">Select environment</option>
-							{#each availableEnvironments as env}
+							{#each availableEnvironments as env (env.id)}
 								<option value={env.id}>{env.name}</option>
 							{/each}
 						</select>
 					{:else}
-						<p class="hint">No Docker environments configured. Add one in Settings &gt; Integrations.</p>
+						<p class="hint">No Docker environments configured. Add one in Add &gt; Integrations &gt; Connections.</p>
 					{/if}
 				</div>
+				<p class="group-title">Per-container usage</p>
+				<label class="toggle-switch">
+					<input type="checkbox" bind:checked={editShowCpu} />
+					<span class="toggle-slider"></span>
+					<span class="toggle-label">Show CPU</span>
+				</label>
+				<label class="toggle-switch">
+					<input type="checkbox" bind:checked={editShowRam} />
+					<span class="toggle-slider"></span>
+					<span class="toggle-label">Show RAM</span>
+				</label>
+				<p class="hint small">Refreshed every 10 seconds. CPU is averaged between two readings (100% = one core).</p>
 			</div>
 
 			<div class="modal-actions">
@@ -199,6 +216,75 @@
 	}
 
 	.hint {
+		font-size: 0.85rem;
+		color: var(--text-secondary);
+	}
+
+	.hint.small {
+		margin: 4px 0 0;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+	}
+
+	.group-title {
+		margin: 4px 0 8px;
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: var(--text-muted);
+	}
+
+	.toggle-switch {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		cursor: pointer;
+		margin-bottom: 10px;
+		position: relative;
+	}
+
+	.toggle-switch input {
+		opacity: 0;
+		width: 0;
+		height: 0;
+		position: absolute;
+	}
+
+	.toggle-slider {
+		width: 36px;
+		height: 20px;
+		background: var(--border);
+		border-radius: 20px;
+		position: relative;
+		transition: background var(--transition);
+		flex-shrink: 0;
+	}
+
+	.toggle-slider::after {
+		content: '';
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		background: white;
+		border-radius: 50%;
+		transition: transform var(--transition);
+	}
+
+	.toggle-switch input:checked + .toggle-slider {
+		background: var(--accent);
+	}
+
+	.toggle-switch input:checked + .toggle-slider::after {
+		transform: translateX(16px);
+	}
+
+	.toggle-switch input:focus-visible + .toggle-slider {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.toggle-label {
 		font-size: 0.85rem;
 		color: var(--text-secondary);
 	}

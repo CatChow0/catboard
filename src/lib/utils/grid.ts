@@ -115,11 +115,50 @@ export function clampPosition(
 	};
 }
 
+// --- Group geometry ------------------------------------------------------------
+// A group shows colSpan x rowSpan cells. With `config.scroll` its content may
+// extend past that along one axis (cells keep their visible size) and scrolls.
+
+type GroupLike = { colSpan: number; rowSpan: number; children: Rect[]; config?: { scroll?: 'vertical' | 'horizontal' } };
+
+/** Tracks the group's inner grid must render to hold its children. */
+export function groupTracks(g: GroupLike): { cols: number; rows: number } {
+	const scroll = g.config?.scroll;
+	if (scroll === 'vertical') return { cols: g.colSpan, rows: Math.max(g.rowSpan, ...g.children.map((c) => c.row + c.rowSpan)) };
+	if (scroll === 'horizontal') return { cols: Math.max(g.colSpan, ...g.children.map((c) => c.col + c.colSpan)), rows: g.rowSpan };
+	return { cols: g.colSpan, rows: g.rowSpan };
+}
+
+/**
+ * Drag bounds inside a group. Fixed groups are a box; scrolling groups are
+ * unbounded along their axis (like the root grid) so a full group can still
+ * take tiles: vertical ones push tiles down, horizontal ones push them right.
+ */
+export function groupBounds(g: GroupLike): Bounds {
+	const t = groupTracks(g);
+	if (g.config?.scroll === 'vertical') return { cols: t.cols };
+	if (g.config?.scroll === 'horizontal') return { cols: Infinity, rows: t.rows, push: 'right' };
+	return { cols: t.cols, rows: t.rows };
+}
+
+/** First free spot for a tile appended to a group, or null if a fixed group is full. */
+export function groupNextPosition(g: GroupLike, kids: Rect[], colSpan: number, rowSpan: number): { col: number; row: number } | null {
+	const free = (col: number, row: number) => !kids.some((k) => cellsOverlap(k, { col, row, colSpan, rowSpan }));
+	const scroll = g.config?.scroll;
+	if (scroll === 'horizontal') {
+		// Fill column by column; there is always room further right.
+		for (let col = 0; ; col++) for (let row = 0; row + rowSpan <= g.rowSpan; row++) if (free(col, row)) return { col, row };
+	}
+	if (colSpan > g.colSpan) return null;
+	const maxRow = scroll === 'vertical' ? Math.max(0, ...kids.map((k) => k.row + k.rowSpan)) : g.rowSpan - rowSpan;
+	for (let row = 0; row <= maxRow; row++) for (let col = 0; col + colSpan <= g.colSpan; col++) if (free(col, row)) return { col, row };
+	return null;
+}
+
 /** What a group needs to draw an ongoing drag (built by Dashboard). */
 export interface GroupDragView {
-	/** Children being dragged out of this group: drawn as ghosts following the pointer. */
+	/** Children being dragged from this group (drawn faded; a floating copy follows the pointer). */
 	ghostIds: Set<string>;
-	ghostTransform: string;
 	/** Previewed positions of this group's children when it is the drop target. */
 	preview: Map<string, Rect> | null;
 	placeholders: Rect[];
@@ -134,10 +173,15 @@ export interface Placed extends Rect {
 	id: string;
 }
 
-/** Columns always bound a container; rows only bound groups (the root grows). */
+/**
+ * Columns bound a container (Infinity for horizontal scrolling groups); rows
+ * only bound fixed and horizontal groups (the root and vertical groups grow).
+ * `push` is where tiles in the way go: down (default) or right.
+ */
 export interface Bounds {
 	cols: number;
 	rows?: number;
+	push?: 'down' | 'right';
 }
 
 function fits(r: Rect, b: Bounds): boolean {
@@ -146,8 +190,8 @@ function fits(r: Rect, b: Bounds): boolean {
 
 /**
  * Places `moved` (one item, or a block of selected items) and pushes every
- * tile it overlaps straight down, just below whatever hits it; pushes cascade.
- * Tiles are settled in reading order, so untouched tiles never move.
+ * tile it overlaps straight down (or right, see Bounds.push), just past whatever
+ * hits it; pushes cascade. Tiles are settled in reading order, so untouched tiles never move.
  * Returns the full new position map, or null if a tile would leave `bounds`.
  */
 export function moveWithPush(items: Placed[], moved: Map<string, Rect>, bounds: Bounds): Map<string, Rect> | null {
@@ -158,12 +202,16 @@ export function moveWithPush(items: Placed[], moved: Map<string, Rect>, bounds: 
 		settled.push(r);
 		out.set(id, r);
 	}
-	const rest = items.filter((i) => !moved.has(i.id)).sort((a, b) => a.row - b.row || a.col - b.col);
+	const right = bounds.push === 'right';
+	const rest = items
+		.filter((i) => !moved.has(i.id))
+		.sort((a, b) => (right ? a.col - b.col || a.row - b.row : a.row - b.row || a.col - b.col));
 	for (const item of rest) {
 		const r: Rect = { col: item.col, row: item.row, colSpan: item.colSpan, rowSpan: item.rowSpan };
-		// Each step jumps below the lowest blocker, so this terminates.
+		// Each step jumps past the blocker (below it, or right of it), so this terminates.
 		for (let hit = settled.find((s) => cellsOverlap(r, s)); hit; hit = settled.find((s) => cellsOverlap(r, s))) {
-			r.row = hit.row + hit.rowSpan;
+			if (right) r.col = hit.col + hit.colSpan;
+			else r.row = hit.row + hit.rowSpan;
 		}
 		if (!fits(r, bounds)) return null;
 		settled.push(r);

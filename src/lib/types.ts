@@ -39,18 +39,21 @@ export interface ServiceItem extends DashboardItemBase {
 	serviceId: string;
 }
 
+/** A group either keeps its size (default) or lets its content grow and scroll along one axis. */
+export type GroupScroll = 'vertical' | 'horizontal';
+
 export interface CollapsibleGroupItem extends DashboardItemBase {
 	type: 'group-collapsible';
 	title: string;
 	children: DashboardItem[];
-	config?: { outlineColor?: string };
+	config?: { outlineColor?: string; scroll?: GroupScroll };
 }
 
 export interface StandardGroupItem extends DashboardItemBase {
 	type: 'group-standard';
 	title: string;
 	children: DashboardItem[];
-	config?: { compact?: boolean; outlineColor?: string };
+	config?: { compact?: boolean; outlineColor?: string; scroll?: GroupScroll };
 }
 
 export interface CalendarConfig {
@@ -367,6 +370,10 @@ export interface DockerContainerInfo {
 	name: string;
 	status: 'running' | 'stopped' | 'paused' | 'restarting' | 'dead';
 	image: string;
+	/** Only present when a widget of this environment asked for stats. */
+	cpuPercent?: number; // like `docker stats`: 100 % = one full core
+	memUsage?: number; // bytes, page cache excluded
+	memLimit?: number;
 }
 
 export interface DockerEnvironmentData {
@@ -375,6 +382,8 @@ export interface DockerEnvironmentData {
 	containers: DockerContainerInfo[];
 	runningCount: number;
 	stoppedCount: number;
+	/** Totals over running containers, when stats were collected. */
+	stats?: { cpuPercent: number; memUsage: number };
 }
 
 export interface ArrCalendarEntry {
@@ -394,6 +403,8 @@ export interface ArrCalendarData {
 
 export interface DockerWidgetConfig {
 	environmentId: string;
+	showCpu?: boolean;
+	showRam?: boolean;
 }
 
 export interface DockerItem extends DashboardItemBase {

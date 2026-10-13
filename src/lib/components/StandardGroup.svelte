@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { StandardGroupItem, Service, DashboardItem as DashboardItemType } from '$lib/stores/dashboard';
-	import { updateDashboardItem, updateChildInGroup, isEditing } from '$lib/stores/dashboard';
-	import { maxResize, type GroupDragView } from '$lib/utils/grid';
-	import { flipOnMove } from '$lib/utils/flip';
-	import DashboardItem from './DashboardItem.svelte';
+	import type { GroupScroll } from '$lib/types';
+	import { updateDashboardItem, isEditing } from '$lib/stores/dashboard';
+	import type { GroupDragView } from '$lib/utils/grid';
+	import GroupGrid from './GroupGrid.svelte';
 
-	let { item, allServices, onedit, onremove, ondragitem, dragView, selectedChildIds, ontogglechild, gridGap = 12, query, matchingIds }: {
+	let { item, allServices, onedit, onremove, ondragitem, dragView, selectedChildIds, gridGap = 12, query, matchingIds }: {
 		item: StandardGroupItem;
 		allServices: Service[];
 		onedit?: (service: Service) => void;
@@ -20,116 +20,39 @@
 	} = $props();
 
 	let showEditModal = $state(false);
-	let editTitle = $state(item.title);
-	let editCompact = $state(item.config?.compact ?? false);
-	let editOutlineColor = $state(item.config?.outlineColor ?? '');
+	let editTitle = $state('');
+	let editCompact = $state(false);
+	let editOutlineColor = $state('');
+	let editScroll = $state<GroupScroll | ''>('');
 
 	const compact = $derived(item.config?.compact ?? false);
-	const outlineStyle = $derived(
-		item.config?.outlineColor ? `border-color: ${item.config.outlineColor};` : ''
-	);
-
-	let gridEl: HTMLElement | undefined = $state();
-
-	const colStep = $derived(() => {
-		if (!gridEl) return gridGap + 80;
-		const rect = gridEl.getBoundingClientRect();
-		const cols = item.colSpan;
-		return (rect.width - (cols + 1) * gridGap) / cols + gridGap;
-	});
-	const rowStep = $derived(() => {
-		if (!gridEl) return gridGap + 80;
-		const rect = gridEl.getBoundingClientRect();
-		const rows = item.rowSpan;
-		return (rect.height - (rows + 1) * gridGap) / rows + gridGap;
-	});
-
-	let resizeState = $state<{
-		childId: string;
-		startMouseX: number;
-		startMouseY: number;
-		startColSpan: number;
-		startRowSpan: number;
-		currentColSpan: number;
-		currentRowSpan: number;
-	} | null>(null);
-
-	function childRect(child: DashboardItemType) {
-		if (resizeState?.childId === child.id) return { col: child.col, row: child.row, colSpan: resizeState.currentColSpan, rowSpan: resizeState.currentRowSpan };
-		if (!dragView?.ghostIds.has(child.id) && dragView?.preview?.has(child.id)) return dragView.preview.get(child.id)!;
-		return { col: child.col, row: child.row, colSpan: child.colSpan, rowSpan: child.rowSpan };
-	}
-
-	function getChildStyle(child: DashboardItemType): string {
-		const r = childRect(child);
-		const pos = `grid-column: ${r.col + 1} / span ${r.colSpan}; grid-row: ${r.row + 1} / span ${r.rowSpan};`;
-		// Dragged children stay in their cell and follow the pointer via translate.
-		return dragView?.ghostIds.has(child.id) ? `${pos} transform: ${dragView.ghostTransform};` : pos;
-	}
-
-	function handleResizeStart(e: PointerEvent, child: DashboardItemType) {
-		if (!$isEditing) return;
-		e.preventDefault();
-		e.stopPropagation();
-		resizeState = {
-			childId: child.id,
-			startMouseX: e.clientX,
-			startMouseY: e.clientY,
-			startColSpan: child.colSpan,
-			startRowSpan: child.rowSpan,
-			currentColSpan: child.colSpan,
-			currentRowSpan: child.rowSpan
-		};
-	}
-
-	function handlePointerMove(e: PointerEvent) {
-		if (!resizeState) return;
-		const rs = resizeState;
-		const child = item.children.find(c => c.id === rs.childId);
-		if (!child) return;
-		const deltaX = e.clientX - rs.startMouseX;
-		const deltaY = e.clientY - rs.startMouseY;
-		const cs = colStep();
-		const rs2 = rowStep();
-		const deltaCol = Math.round(deltaX / cs);
-		const deltaRow = Math.round(deltaY / rs2);
-		const maxColSpan = item.colSpan - child.col;
-		const targetColSpan = Math.max(1, Math.min(rs.startColSpan + deltaCol, maxColSpan));
-		const targetRowSpan = Math.max(1, Math.min(rs.startRowSpan + deltaRow, item.rowSpan - child.row));
-		const result = maxResize(item.children, rs.childId, child.col, child.row, rs.startColSpan, rs.startRowSpan, targetColSpan, targetRowSpan);
-		resizeState.currentColSpan = result.colSpan;
-		resizeState.currentRowSpan = result.rowSpan;
-	}
-
-	function handlePointerUp() {
-		if (!resizeState) return;
-		const childId = resizeState.childId;
-		const updates = { colSpan: resizeState.currentColSpan, rowSpan: resizeState.currentRowSpan };
-		resizeState = null;
-		updateChildInGroup(item.id, childId, updates);
-	}
+	const outlineStyle = $derived(item.config?.outlineColor ? `border-color: ${item.config.outlineColor};` : '');
 
 	function openEditModal() {
 		editTitle = item.title;
 		editCompact = item.config?.compact ?? false;
 		editOutlineColor = item.config?.outlineColor ?? '';
+		editScroll = item.config?.scroll ?? '';
 		showEditModal = true;
 	}
 
 	async function handleSaveEdit() {
 		showEditModal = false;
 		const updates: Record<string, unknown> = { title: editTitle.trim() || item.title };
-		updates.config = { ...item.config, compact: editCompact, outlineColor: editOutlineColor || undefined };
+		updates.config = { ...item.config, compact: editCompact, outlineColor: editOutlineColor || undefined, scroll: editScroll || undefined };
 		await updateDashboardItem(item.id, updates as any);
 	}
 </script>
-
-<svelte:window onpointermove={handlePointerMove} onpointerup={handlePointerUp} />
 
 <div class="group standard" class:compact style={outlineStyle} data-group-id={item.id}>
 	{#if !compact}
 		<div class="group-header">
 			<span class="group-title">{item.title}</span>
+			{#if item.config?.scroll}
+				<span class="scroll-hint" title={item.config.scroll === 'vertical' ? 'Scrolls vertically' : 'Scrolls horizontally'}>
+					{item.config.scroll === 'vertical' ? '↕' : '↔'}
+				</span>
+			{/if}
 		</div>
 	{/if}
 	{#if $isEditing}
@@ -146,13 +69,12 @@
 		</button>
 	{/if}
 	{#if showEditModal}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="edit-overlay" onclick={() => (showEditModal = false)}></div>
+		<div class="edit-overlay" role="presentation" onclick={() => (showEditModal = false)} onkeydown={(e) => e.key === 'Escape' && (showEditModal = false)}></div>
 		<div class="edit-modal">
 			<h3>Edit Group</h3>
 			<div class="field">
-				<label>Title</label>
-				<input type="text" bind:value={editTitle} placeholder="Group name" />
+				<label for="sg-title-{item.id}">Title</label>
+				<input id="sg-title-{item.id}" type="text" bind:value={editTitle} placeholder="Group name" />
 			</div>
 			<label class="toggle-switch">
 				<input type="checkbox" bind:checked={editCompact} />
@@ -160,11 +82,22 @@
 				<span class="toggle-label">Compact mode (no header)</span>
 			</label>
 			<div class="field">
-				<label>Outline color</label>
+				<label for="sg-scroll-{item.id}">Content</label>
+				<select id="sg-scroll-{item.id}" bind:value={editScroll}>
+					<option value="">Fixed size (fits the group)</option>
+					<option value="vertical">Scroll vertically (more rows)</option>
+					<option value="horizontal">Scroll horizontally (more columns)</option>
+				</select>
+				{#if editScroll}
+					<p class="field-hint">Cells keep their size; drop tiles past the edge to extend the group's content. Scroll with the wheel or by swiping.</p>
+				{/if}
+			</div>
+			<div class="field">
+				<label for="sg-color-{item.id}">Outline color</label>
 				<div class="color-row">
-					<input type="color" bind:value={editOutlineColor} />
+					<input id="sg-color-{item.id}" type="color" bind:value={editOutlineColor} />
 					{#if editOutlineColor}
-						<button class="btn-clear-color" onclick={() => (editOutlineColor = '')} title="Clear color">
+						<button class="btn-clear-color" onclick={() => (editOutlineColor = '')} title="Clear color" aria-label="Clear color">
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<path d="M18 6L6 18M6 6l12 12" />
 							</svg>
@@ -178,39 +111,7 @@
 			</div>
 		</div>
 	{/if}
-	<div
-		bind:this={gridEl}
-		class="group-grid"
-		class:resizing={!!resizeState}
-		style="grid-template-columns: repeat({item.colSpan}, 1fr); grid-template-rows: repeat({item.rowSpan}, 1fr); gap: {gridGap}px; padding: {gridGap}px;"
-	>
-		{#each item.children as child (child.id)}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="child-wrapper"
-				class:editing={$isEditing}
-				class:dragging={dragView?.ghostIds.has(child.id)}
-				class:selected={selectedChildIds?.has(child.id) && !dragView}
-				class:dimmed={query && !matchingIds?.has(child.id)}
-				class:highlighted={query && matchingIds?.has(child.id)}
-				style={getChildStyle(child)}
-				use:flipOnMove={{ key: Object.values(childRect(child)).join(","), animate: !!dragView && !dragView.ghostIds.has(child.id) }}
-				onpointerdown={(e) => ondragitem?.(e, child)}
-			>
-				<DashboardItem item={child} {allServices} {onedit} {onremove} {query} {matchingIds} />
-				{#if $isEditing}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						class="resize-handle"
-						onpointerdown={(e) => handleResizeStart(e, child)}
-					></div>
-				{/if}
-			</div>
-		{/each}
-		{#each dragView?.placeholders ?? [] as p, i (i)}
-				<div class="drag-placeholder" style="grid-column: {p.col + 1} / span {p.colSpan}; grid-row: {p.row + 1} / span {p.rowSpan};"></div>
-			{/each}
-	</div>
+	<GroupGrid {item} {allServices} {onedit} {onremove} {ondragitem} {dragView} {selectedChildIds} {gridGap} {query} {matchingIds} />
 </div>
 
 <style>
@@ -242,6 +143,11 @@
 		font-weight: 600;
 		font-size: 0.9rem;
 		flex: 1;
+	}
+
+	.scroll-hint {
+		font-size: 0.8rem;
+		color: var(--text-muted);
 	}
 
 	.btn-delete {
@@ -315,8 +221,8 @@
 		border-radius: var(--radius-lg);
 		padding: 20px;
 		z-index: 101;
-		min-width: 260px;
-		max-width: 340px;
+		min-width: 280px;
+		max-width: 360px;
 		box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 	}
 
@@ -337,7 +243,8 @@
 		margin-bottom: 3px;
 	}
 
-	.field input[type="text"] {
+	.field input[type="text"],
+	.field select {
 		width: 100%;
 		padding: 8px 10px;
 		background: var(--bg-primary);
@@ -348,8 +255,15 @@
 		color: var(--text-primary);
 	}
 
-	.field input[type="text"]:focus {
+	.field input[type="text"]:focus,
+	.field select:focus {
 		border-color: var(--accent);
+	}
+
+	.field-hint {
+		margin: 6px 0 0;
+		font-size: 0.75rem;
+		color: var(--text-muted);
 	}
 
 	.color-row {
@@ -458,91 +372,5 @@
 
 	.btn-save:hover {
 		background: var(--accent-hover);
-	}
-
-	.group-grid {
-		display: grid;
-		flex: 1;
-		min-height: 0;
-	}
-
-	.group-grid.resizing {
-		user-select: none;
-	}
-
-	.child-wrapper {
-		position: relative;
-		min-width: 0;
-		min-height: 0;
-	}
-
-	.child-wrapper.editing {
-		touch-action: none;
-		cursor: grab;
-	}
-
-	.child-wrapper.editing:active {
-		cursor: grabbing;
-	}
-
-	.child-wrapper.selected {
-		outline: 3px solid var(--accent);
-		outline-offset: -3px;
-		border-radius: var(--radius);
-		z-index: 1;
-		box-shadow: 0 0 0 3px var(--accent), 0 0 12px var(--accent-glow);
-		background: var(--accent-bg);
-		animation: select-pulse 2s ease-in-out infinite;
-	}
-
-	/* The dragged child follows the pointer above its siblings. */
-	.child-wrapper.dragging {
-		z-index: 30;
-		opacity: 0.85;
-		pointer-events: none;
-		filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
-	}
-
-	@keyframes select-pulse {
-		0%, 100% { box-shadow: 0 0 0 3px var(--accent), 0 0 12px var(--accent-glow); }
-		50% { box-shadow: 0 0 0 4px var(--accent), 0 0 20px var(--accent-glow); }
-	}
-
-	.resize-handle {
-		position: absolute;
-		bottom: 0;
-		right: 0;
-		width: 16px;
-		height: 16px;
-		cursor: nwse-resize;
-		z-index: 10;
-		opacity: 0;
-		transition: opacity var(--transition);
-	}
-
-	.child-wrapper:hover .resize-handle {
-		opacity: 1;
-	}
-
-	.resize-handle::after {
-		content: '';
-		position: absolute;
-		bottom: 3px;
-		right: 3px;
-		width: 8px;
-		height: 8px;
-		border-right: 2px solid var(--accent);
-		border-bottom: 2px solid var(--accent);
-		opacity: 0.7;
-	}
-
-	.resize-handle:hover::after {
-		opacity: 1;
-	}
-
-	.drag-placeholder {
-		border: 2px dashed var(--accent);
-		background: var(--accent-bg);
-		border-radius: var(--radius);
 	}
 </style>

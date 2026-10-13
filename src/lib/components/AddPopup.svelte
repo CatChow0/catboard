@@ -64,6 +64,8 @@
 	let dockerWidgetVersion = $state<'standard' | 'navbar'>('standard');
 	let dockerWidgetColSpan = $state(4);
 	let dockerWidgetRowSpan = $state(2);
+	let dockerWidgetShowCpu = $state(false);
+	let dockerWidgetShowRam = $state(false);
 
 	let radarrUrl = $state('');
 	let radarrApiKey = $state('');
@@ -309,10 +311,11 @@
 	async function handleAddDockerWidget() {
 		if (!dockerWidgetEnvId) return;
 		close();
+		const config = { environmentId: dockerWidgetEnvId, showCpu: dockerWidgetShowCpu || undefined, showRam: dockerWidgetShowRam || undefined };
 		if (dockerWidgetVersion === 'standard') {
-			await addWidgetToDashboard('docker', '', dockerWidgetColSpan, dockerWidgetRowSpan, getMaxCols(), { environmentId: dockerWidgetEnvId });
+			await addWidgetToDashboard('docker', '', dockerWidgetColSpan, dockerWidgetRowSpan, getMaxCols(), config);
 		} else {
-			await addNavbarItem('navbar-docker', dockerWidgetColSpan, { environmentId: dockerWidgetEnvId });
+			await addNavbarItem('navbar-docker', dockerWidgetColSpan, config);
 		}
 	}
 
@@ -1179,6 +1182,13 @@
 									<option value={env.id}>{env.name || env.url}</option>
 								{/each}
 							</select>
+						</div>
+						<div class="navbar-options">
+							<span class="field-label">Per-container usage</span>
+							<div class="disk-list">
+								<label class="disk-check"><input type="checkbox" bind:checked={dockerWidgetShowCpu} /><span>CPU</span></label>
+								<label class="disk-check"><input type="checkbox" bind:checked={dockerWidgetShowRam} /><span>RAM</span></label>
+							</div>
 						</div>
 						<div class="field">
 							<label>Version</label>

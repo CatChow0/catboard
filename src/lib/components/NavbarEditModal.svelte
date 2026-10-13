@@ -56,6 +56,8 @@
 	let placeholder = $state(item.type === 'navbar-search' ? (item.placeholder || '') : '');
 	let ukSlug = $state(item.type === 'navbar-uptime-kuma-status-page' ? (item.config?.slug || '') : '');
 	let dockerEnvId = $state(item.type === 'navbar-docker' ? (item.config?.environmentId || '') : '');
+	let dockerShowCpu = $state(item.type === 'navbar-docker' ? (item.config?.showCpu ?? false) : false);
+	let dockerShowRam = $state(item.type === 'navbar-docker' ? (item.config?.showRam ?? false) : false);
 	let dockerEnvironments = $state<{ id: string; name: string }[]>([]);
 	let align = $state<'left' | 'center' | 'right'>(item.type === 'navbar-adguard-home-control' ? (item.config?.align || 'center') : 'center');
 	let colSpan = $state(item.colSpan);
@@ -123,7 +125,7 @@
 		} else if (item.type === 'navbar-adguard-home-control') {
 			updates.config = { instanceId: item.config?.instanceId || 'default', align };
 		} else if (item.type === 'navbar-docker') {
-			updates.config = { environmentId: dockerEnvId };
+			updates.config = { environmentId: dockerEnvId, showCpu: dockerShowCpu || undefined, showRam: dockerShowRam || undefined };
 		} else if (item.type === 'navbar-clock') {
 			updates.config = { showSeconds, format12h, showDate, dateFormat, showFullDate };
 		} else if (item.type === 'navbar-weather') {
@@ -234,6 +236,18 @@
 					{:else}
 						<p class="hint">No Docker environments configured. Add one in Add &gt; Integrations &gt; Connections.</p>
 					{/if}
+				</div>
+				<div class="toggles">
+					<label class="toggle-switch">
+						<input type="checkbox" bind:checked={dockerShowCpu} />
+						<span class="toggle-slider"></span>
+						<span class="toggle-label">Show CPU (total in the bar, per container in the details)</span>
+					</label>
+					<label class="toggle-switch">
+						<input type="checkbox" bind:checked={dockerShowRam} />
+						<span class="toggle-slider"></span>
+						<span class="toggle-label">Show RAM (total in the bar, per container in the details)</span>
+					</label>
 				</div>
 			{:else if item.type === 'navbar-clock'}
 				<div class="toggles">

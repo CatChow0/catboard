@@ -186,6 +186,8 @@ To monitor Docker containers from CatBoard, mount the Docker socket as shown in 
    - URL: `/var/run/docker.sock` (for the local socket)
 3. Go to **Add > Integrations > Widgets** to add Docker widgets (standard or navbar)
 
+Enable **Show CPU** / **Show RAM** in a Docker widget to see per-container usage (navbar: totals in the bar, detail in the popover). CatBoard then reads `/containers/{id}/stats` for running containers every 10 s (30 s otherwise); the read-only socket is enough.
+
 You can add multiple environments by using different Docker socket URLs or HTTP endpoints:
 - Local socket: `/var/run/docker.sock`
 - Remote socket via TCP: `tcp://192.168.1.10:2375`
