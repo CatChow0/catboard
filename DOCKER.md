@@ -135,9 +135,11 @@ volumes:
 
 | Path | Description |
 |---|---|
-| `/app/config` | All persistent configuration (users, services, layout, settings, integrations) |
+| `/app/config` | All persistent configuration (users, services, layout, settings, integrations), plus the icon cache and uploaded icons (`icons/`) |
 
 If you don't mount a volume, config will be lost when the container is removed.
+
+Service icons are downloaded by the container from jsDelivr (`cdn.jsdelivr.net`: selfh.st and homarr icon libraries) and from the services themselves (favicons), then cached in `/app/config/icons`. Without Internet access, already cached and uploaded icons keep working.
 
 #### Bind Mount vs Named Volume
 

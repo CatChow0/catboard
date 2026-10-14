@@ -6,6 +6,7 @@
 	import UptimeKumaLogo from './icons/UptimeKumaLogo.svelte';
 	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, activeGrid, getIntegrations, setIntegrations, currentUser } from '$lib/stores/dashboard';
 	import IconPicker from './IconPicker.svelte';
+	import { iconSrc } from '$lib/utils/icons';
 
 	let { onclose }: { onclose: () => void } = $props();
 	let closing = $state(false);
@@ -567,12 +568,12 @@
 		showRegisterForm = true;
 	}
 
+	/** Server icon failed: try the bundled icon for a legacy name, then show the initial. */
 	function handleCardIconError(e: Event, service: Service) {
 		const img = e.currentTarget as HTMLImageElement;
-		if (img.src.includes('cdn.jsdelivr.net')) {
-			img.src = `/icons/${service.icon}.svg`;
-		} else if (img.src.includes('/icons/')) {
-			img.src = `/api/icon?url=${encodeURIComponent(service.url)}`;
+		const legacy = service.icon && !service.icon.includes(':') ? service.icon : '';
+		if (legacy && !img.src.includes('/icons/')) {
+			img.src = `/icons/${legacy}.svg`;
 		} else {
 			img.style.display = 'none';
 			const fallback = img.parentElement?.querySelector('.card-icon-fallback') as HTMLElement | null;
@@ -628,7 +629,7 @@
 							</div>
 							<div class="field">
 								<label>Icon</label>
-								<IconPicker value={newServiceIcon} onchange={(v) => (newServiceIcon = v)} />
+								<IconPicker value={newServiceIcon} onchange={(v) => (newServiceIcon = v)} name={newServiceName} url={newServiceUrl} />
 							</div>
 							<div class="field">
 								<label>Description</label>
@@ -648,12 +649,8 @@
 									{#each $services as service (service.id)}
 										<div class="service-card" class:added={addedServiceIds.has(service.id)}>
 											<div class="card-icon-wrapper">
-												{#if service.icon}
-													<img src={`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${service.icon}.svg`} alt={service.name} class="card-icon" onerror={(e) => handleCardIconError(e, service)} />
-													<div class="card-icon-fallback" style="display: none;">{service.name.charAt(0).toUpperCase()}</div>
-												{:else}
-													<div class="card-icon-fallback">{service.name.charAt(0).toUpperCase()}</div>
-												{/if}
+												<img src={iconSrc(service)} alt={service.name} class="card-icon" loading="lazy" onerror={(e) => handleCardIconError(e, service)} />
+												<div class="card-icon-fallback" style="display: none;">{service.name.charAt(0).toUpperCase()}</div>
 											</div>
 											<span class="card-name">{service.name}</span>
 											<span class="card-desc">{service.description || service.url}</span>

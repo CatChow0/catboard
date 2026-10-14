@@ -55,7 +55,7 @@
 		</div>
 		<div class="form-group">
 			<label>Icon</label>
-			<IconPicker value={icon} onchange={(v) => (icon = v)} />
+			<IconPicker value={icon} onchange={(v) => (icon = v)} {name} {url} />
 		</div>
 		<div class="form-group">
 			<label for="description">Description</label>

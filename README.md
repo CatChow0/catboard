@@ -2,13 +2,14 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.9.0-blue)
+![Version](https://img.shields.io/badge/version-2.10.0-blue)
 
 ## Features
 
 - **Drag-and-drop grid layout** -- Place, resize, and reorder service tiles and widgets on a responsive CSS grid
 - **Multiple dashboards** -- Several dashboards, each with its own grid and navbar; switch with the squares under the title, the mouse wheel over the title, a touch swipe or the arrow keys, with a slide animation
 - **Service management** -- Register services with URL, icon, and description; click a tile to open the service; live status checks via SSE
+- **Service icons** -- Icons from the selfh.st and homarr libraries (searchable picker), found automatically by service name, a custom image URL or an uploaded file, else the service favicon; all cached by CatBoard
 - **Collapsible & standard groups** -- Organize services into visual groups with sub-grids; optionally let a group's content extend vertically or horizontally and scroll (wheel or swipe, no scrollbar)
 - **Dynamic navbar** -- Customizable navbar with draggable/resizable widgets: title, search, clock, weather, CPU, RAM, disk monitors, Uptime Kuma status, and Docker container status (click for details)
 - **System monitoring** -- Real-time CPU usage/temperature, RAM/swap usage, and disk utilization via SSE
@@ -180,6 +181,17 @@ Add integrations via Add > Integrations tab:
 
 Only admins (admin and mini-admin roles) can change connections or use widget actions (approve/decline, pause/resume/stop). Other users see the widgets, and integration secrets are hidden from them.
 
+### Service Icons
+
+The **Icon** field of a service (Add > Services, or the edit button of a tile) has:
+
+- **Auto** (default): CatBoard looks for the service name in the [selfh.st](https://selfh.st/icons/) then [homarr dashboard-icons](https://github.com/homarr-labs/dashboard-icons) libraries (e.g. "Orca Slicer" -> `orca-slicer`), and falls back to the service's favicon (SVG, apple-touch-icon or the largest size, web manifest icons included).
+- **Libraries:** search both libraries (name, tags, categories; S / H badge for the library).
+- **URL:** any image URL, downloaded once.
+- **Upload:** a PNG, SVG, WebP, JPEG, GIF or ICO file up to 1 MB, stored in `config/icons`.
+
+Icons are downloaded by the server, kept in `config/icons` and served from CatBoard (cached 7 days by browsers), so tiles show them instantly and without Internet access from the browser. Icons that cannot be found are retried after a day. **Settings > Cache** shows the cache and can clear it (uploads are kept) or rebuild it for every service.
+
 ### Export & Import
 
 Backup and restore your dashboard:
@@ -203,7 +215,7 @@ Backup and restore your dashboard:
 - **Adapter:** @sveltejs/adapter-node
 - **System Monitoring:** systeminformation
 - **Auth:** bcryptjs + cookie-based sessions
-- **Icons:** [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) CDN
+- **Icons:** [selfh.st icons](https://github.com/selfhst/icons) and [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (via jsDelivr), cached on the server
 - **Weather:** Open-Meteo API
 
 ## API Endpoints
@@ -249,6 +261,10 @@ Backup and restore your dashboard:
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |
 | `GET` | `/api/version` | Current vs latest Docker image version |
+| `GET` | `/api/icon` | Service icon, resolved and cached by the server (`icon`, `name`, `url`) |
+| `GET` | `/api/icons/catalog` | selfh.st + homarr icon catalogs (icon picker) |
+| `POST` | `/api/icons/upload` | Upload a custom icon (raw image body, max 1 MB) |
+| `GET/DELETE/POST` | `/api/cache` | Icon cache stats / clear / rebuild for all services |
 | `GET` | `/api/export` | Export dashboard config |
 | `POST` | `/api/import` | Import dashboard config |
 

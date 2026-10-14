@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getServices, setServices } from '$lib/server/config';
+import { resolveIcon } from '$lib/server/icon-cache';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const data = await getServices();
@@ -17,6 +18,9 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 	const body = await request.json();
 	data.services[index] = { ...data.services[index], ...body };
 	await setServices(data);
+	// Warm the icon cache in the background so the tile shows it right away.
+	const s = data.services[index];
+	void resolveIcon(s.icon || '', s.name || '', s.url || '').catch(() => null);
 	return json(data.services[index]);
 };
 

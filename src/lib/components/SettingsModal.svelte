@@ -201,6 +201,8 @@
 
 	let cacheCount = $state(0);
 	let cacheSize = $state(0);
+	let cacheUploads = $state(0);
+	let cacheMisses = $state(0);
 	let cacheClearing = $state(false);
 	let cacheRebuilding = $state(false);
 	let cacheRebuildResult = $state<{ rebuilt: number; errors: string[] } | null>(null);
@@ -211,6 +213,8 @@
 			const data = await res.json();
 			cacheCount = data.count;
 			cacheSize = data.size;
+			cacheUploads = data.uploads ?? 0;
+			cacheMisses = data.misses ?? 0;
 		} catch {}
 	}
 
@@ -219,8 +223,7 @@
 		cacheRebuildResult = null;
 		try {
 			await fetch('/api/cache', { method: 'DELETE' });
-			cacheCount = 0;
-			cacheSize = 0;
+			await loadCacheStats();
 		} catch {}
 		cacheClearing = false;
 	}
@@ -576,11 +579,19 @@
 			{:else if activeTab === 'cache'}
 				<div class="settings-section">
 					<h3>Icon Cache</h3>
-					<p class="cache-desc">Favicon icons are cached locally for faster loading. Clearing removes all cached icons. Rebuilding clears and re-fetches icons for all services.</p>
+					<p class="cache-desc">Service icons (selfh.st and homarr libraries, custom URLs, favicons) are downloaded once by CatBoard and served from its cache. Icons that could not be found are retried after a day. Clearing keeps uploaded images; rebuilding clears and fetches the icons of every service again.</p>
 					<div class="cache-stats">
 						<div class="cache-stat">
 							<span class="cache-stat-label">Cached icons</span>
 							<span class="cache-stat-value">{cacheCount}</span>
+						</div>
+						<div class="cache-stat">
+							<span class="cache-stat-label">Uploaded</span>
+							<span class="cache-stat-value">{cacheUploads}</span>
+						</div>
+						<div class="cache-stat">
+							<span class="cache-stat-label">Not found (retried tomorrow)</span>
+							<span class="cache-stat-value">{cacheMisses}</span>
 						</div>
 						<div class="cache-stat">
 							<span class="cache-stat-label">Total size</span>

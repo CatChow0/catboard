@@ -2,6 +2,7 @@
 	import StatusDot from './StatusDot.svelte';
 	import type { Service } from '$lib/stores/dashboard';
 	import { serviceStatuses, isEditing } from '$lib/stores/dashboard';
+	import { iconSrc } from '$lib/utils/icons';
 
 	let { service, colSpan = 1, rowSpan = 1, onedit, ondelete }: {
 		service: Service;
@@ -12,15 +13,18 @@
 	} = $props();
 
 	let status = $derived($serviceStatuses[service.id] || 'checking');
-	const CDN_BASE = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons';
 
+	// One URL: the server resolves and caches the icon. If it has none, a legacy
+	// icon name may still be one of the icons bundled in /icons, else the initial.
 	let iconFailed = $state(false);
-
-	let iconUrl = $derived(
-		iconFailed ? '' :
-		service.icon ? `${CDN_BASE}/svg/${service.icon}.svg` :
-		`/api/icon?url=${encodeURIComponent(service.url)}`
-	);
+	let triedLocal = $state(false);
+	let iconUrl = $derived(iconSrc(service));
+	// Settings changed: try again.
+	$effect(() => {
+		void iconUrl;
+		iconFailed = false;
+		triedLocal = false;
+	});
 
 	let initial = $derived(service.name ? service.name.charAt(0).toUpperCase() : '?');
 
@@ -53,10 +57,10 @@
 
 	function handleIconError(e: Event) {
 		const img = e.target as HTMLImageElement;
-		if (img.src.includes('cdn.jsdelivr.net')) {
-			img.src = `/icons/${service.icon}.svg`;
-		} else if (img.src.includes('/icons/')) {
-			img.src = `/api/icon?url=${encodeURIComponent(service.url)}`;
+		const legacy = service.icon && !service.icon.includes(':') ? service.icon : '';
+		if (legacy && !triedLocal) {
+			triedLocal = true;
+			img.src = `/icons/${legacy}.svg`;
 		} else {
 			iconFailed = true;
 		}
