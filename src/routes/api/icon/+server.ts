@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		return new Response('Not found', { status: 404 });
 	}
 
-	return new Response(data, {
+	return new Response(new Uint8Array(data), {
 		headers: {
 			'Content-Type': entry.contentType,
 			'Cache-Control': 'public, max-age=3600',

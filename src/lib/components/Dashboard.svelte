@@ -78,6 +78,8 @@
 		if (item.type === 'jellyseerr-requests' && ('jellyseerr'.includes(lc) || 'overseerr'.includes(lc) || 'requests'.includes(lc))) return true;
 		if (item.type === 'qbittorrent' && ('qbittorrent'.includes(lc) || 'torrent'.includes(lc))) return true;
 		if (item.type === 'notes' && ('notes'.includes(lc) || (item.config?.title ?? '').toLowerCase().includes(lc))) return true;
+		if (item.type === 'spoolman' && ('spoolman'.includes(lc) || 'filament'.includes(lc) || (item.config?.title ?? '').toLowerCase().includes(lc))) return true;
+		if (item.type === 'elegoo-print' && ('printer'.includes(lc) || 'print'.includes(lc) || 'elegoo'.includes(lc))) return true;
 		if (item.type === 'arr-releases' && ('releases'.includes(lc) || 'arr'.includes(lc))) return true;
 		if (item.type === 'stacker' && ('stacker'.includes(lc) || 'system'.includes(lc))) return true;
 		if ((item.type === 'group-collapsible' || item.type === 'group-standard') && item.title?.toLowerCase().includes(lc)) return true;

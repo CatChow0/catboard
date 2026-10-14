@@ -8,6 +8,7 @@
 	import NavbarDiskWidget from './navbar/NavbarDiskWidget.svelte';
 	import NavbarUptimeKumaStatusPage from './navbar/NavbarUptimeKumaStatusPage.svelte';
 	import NavbarDocker from './navbar/NavbarDocker.svelte';
+	import NavbarElegooPrint from './navbar/NavbarElegooPrint.svelte';
 	import NavbarAdGuardControl from './navbar/NavbarAdGuardControl.svelte';
 	import NavbarClock from './navbar/NavbarClock.svelte';
 	import NavbarWeather from './navbar/NavbarWeather.svelte';
@@ -195,6 +196,8 @@
 					<NavbarClock config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
 				{:else if item.type === 'navbar-weather'}
 					<NavbarWeather config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
+				{:else if item.type === 'navbar-elegoo-print'}
+					<NavbarElegooPrint config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
 				{/if}
 				{#if $isEditing}
 					<button class="navbar-delete-btn" onclick={() => handleDelete(item.id)} title="Remove">

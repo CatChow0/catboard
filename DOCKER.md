@@ -263,6 +263,21 @@ Approving or declining from CatBoard uses that API key, so the key's owner must 
 
 Works with qBittorrent 4.x and 5.x. If the Web UI has "Enable Host header validation" on, add the hostname CatBoard uses (e.g. `qbittorrent`) to its allowed domains. Too many failed logins make qBittorrent ban CatBoard's IP for a while; fix the password and wait.
 
+### Spoolman
+
+1. In **Add > Integrations > Connections > Spoolman**, enter its URL (e.g. `http://spoolman:7912`)
+2. Add a **Spoolman** widget from **Add > Integrations > Widgets**
+
+### Elegoo Centauri Carbon 2
+
+The CC2 runs its own MQTT broker; CatBoard talks to it directly on the LAN.
+
+1. On the printer, enable **LAN Only** mode (Settings > Network). In cloud mode the printer does not answer local clients
+2. In **Add > Integrations > Connections > Elegoo printers**, add the printer IP and its access code (if one is set), then **Detect** to read the serial number (or type it from the label)
+3. Add a **3D Print Status** widget (standard or navbar) from **Add > Integrations > Widgets**
+
+The container must reach the printer on **TCP 1883** (MQTT) and **UDP 52700** (detection only). The default bridge network works for a printer on the LAN. The printer accepts about 4 clients (Elegoo app, slicer…); CatBoard uses a single shared connection and closes it after 5 minutes without a dashboard open.
+
 ### Stacker
 
 To show live hardware stats from a Stacker server:
@@ -500,6 +515,13 @@ The container may not be able to reach the service URLs. Ensure:
 - Jellyseerr "HTTP 401/403": wrong API key
 - qBittorrent "Wrong qBittorrent username or password", or "banned this IP": check the credentials, then wait for the ban to expire (Web UI settings)
 - Buttons missing: only admin and mini-admin accounts can act on services
+
+### 3D printer widget not working
+
+- "No answer to discovery": the printer is off, not in LAN Only mode, or UDP 52700 is blocked; enter the serial number by hand
+- "The printer refused the access code": fix the access code in Connections
+- "Too many connected clients": close the Elegoo app or slicer connection, CatBoard retries
+- Buttons missing: only admin and mini-admin accounts can pause or stop prints
 
 ### Stacker widget not working
 

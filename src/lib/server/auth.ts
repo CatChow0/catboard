@@ -13,7 +13,7 @@ export function requireAdmin(locals: App.Locals): Response | null {
 	return isAdmin(locals) ? null : json({ error: 'Only an admin can do this' }, { status: 403 });
 }
 
-const SECRET_KEYS = new Set(['apiKey', 'password']);
+const SECRET_KEYS = new Set(['apiKey', 'password', 'accessCode']);
 
 /** Deep copy with every secret field blanked, for non-admin readers. */
 export function maskSecrets<T>(value: T): T {

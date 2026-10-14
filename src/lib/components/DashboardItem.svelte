@@ -19,6 +19,8 @@
 	import JellyseerrRequests from './JellyseerrRequests.svelte';
 	import QBittorrent from './QBittorrent.svelte';
 	import Notes from './Notes.svelte';
+	import Spoolman from './Spoolman.svelte';
+	import ElegooPrint from './ElegooPrint.svelte';
 
 	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, dragView, selectedChildIds, ontogglechild, query, matchingIds }: {
 		item: DashboardItemType;
@@ -85,6 +87,10 @@
 		<QBittorrent config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'notes'}
 		<Notes config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'spoolman'}
+		<Spoolman config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if item.type === 'elegoo-print'}
+		<ElegooPrint config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
 	{:else if item.type === 'service' && !service}
 		<div class="missing-service">Service not found</div>
 	{/if}

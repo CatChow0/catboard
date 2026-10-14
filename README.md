@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.6.0-blue)
+![Version](https://img.shields.io/badge/version-2.7.0-blue)
 
 ## Features
 
@@ -18,11 +18,13 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Jellyseerr / Overseerr integration** -- Pending and recent media requests with counters; admins can approve or decline from the dashboard
 - **qBittorrent integration** -- Download/upload speeds with a live graph, the busiest torrents with progress and ETA; admins can pause/resume torrents or everything
 - **Notes widget** -- Markdown notepad edited in place, with clickable checklists
+- **Spoolman integration** -- Recently used filament spools, and spools running low or empty, with colours and remaining weight
+- **Elegoo Centauri Carbon 2 integration** -- Live 3D print status (progress, time left, ETA, layers, temperatures, model preview), as a widget or in the navbar; admins can pause, resume or stop the print
 - **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP), with optional per-container CPU and RAM usage
 - **Stacker integration** -- Live CPU, memory, GPU, disk and network gauges and graphs from one or more Stacker servers, with selectable sections
-- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Stacker)
+- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
@@ -114,8 +116,9 @@ Add widgets to the navbar via Add > Navbar tab:
 | **Uptime Kuma** | Uptime Kuma logo, active/inactive counts and uptime %; click for the full monitor list |
 | **Docker** | Docker logo and running/stopped counts (plus total CPU/RAM when enabled); click for the full container list |
 | **AdGuard Home** | Toggle protection status with colored state pill |
+| **3D printer** | Printer icon, mini progress bar, % and time left; click for the full print details (pause/resume/stop for admins) |
 
-Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, Docker environment, clock format or weather location. Every navbar widget also has **Icon size** and **Text size** sliders (50–250%, previewed live); the navbar row grows to fit larger widgets. Outside edit mode, clicking the Docker or Uptime Kuma widget opens a details popover with the same content as the standard widget (close it with a click outside or Escape).
+Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, Docker environment, printer, clock format or weather location. Every navbar widget also has **Icon size** and **Text size** sliders (50–250%, previewed live); the navbar row grows to fit larger widgets. Outside edit mode, clicking the Docker, Uptime Kuma or 3D printer widget opens a details popover with the same content as the standard widget (close it with a click outside or Escape).
 
 ### Dashboard Widgets
 
@@ -140,6 +143,8 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **Jellyfin Now Playing** | Active streams: title, user and device, progress, paused state, Direct/Transcode badge (codec and reason on hover); one line per stream on 1-row tiles |
 | **Jellyseerr Requests** | Pending or all recent requests with poster, requester and status; approve/decline buttons for admins |
 | **qBittorrent** | Speeds and 60 s graph, counts per state, torrent list with progress/ETA; per-torrent and global pause/resume for admins |
+| **Spoolman** | Recently used spools and spools running low / empty: colour swatch (multi-colour supported), name, vendor and material, remaining weight bar; thresholds (% and/or grams) and archived spools configurable |
+| **3D Print Status** | Elegoo Centauri Carbon 2: model preview, state, progress, time left and end time, elapsed time, layers, nozzle/bed/chamber temperatures and speed mode; temperature cards with target; pause/resume/stop for admins. When idle the layout stays (empty preview, `--` values, disabled buttons); one line on a 1-row tile |
 | **Notes** | Markdown note (headings, bold/italic, links, lists, code, quotes, `- [ ]` checklists); edit with the Edit button, Ctrl+Enter to save |
 
 ### Integrations
@@ -155,9 +160,11 @@ Add integrations via Add > Integrations tab:
    - **Stacker:** Add servers (name + URL, optional basic-auth credentials)
    - **Jellyseerr / Overseerr:** Enter instance URL and API key
    - **qBittorrent:** Enter the Web UI URL, username and password
+   - **Spoolman:** Enter the Spoolman URL
+   - **Elegoo printers:** Add a Centauri Carbon 2 (name, IP, access code if set); **Detect** reads its serial number. The printer must be in **LAN Only** mode (Settings > Network)
 2. **Widgets** sub-tab -- Add widgets that use configured integrations
 
-Only admins (admin and mini-admin roles) can change connections or use widget actions (approve/decline, pause/resume). Other users see the widgets, and integration secrets are hidden from them.
+Only admins (admin and mini-admin roles) can change connections or use widget actions (approve/decline, pause/resume/stop). Other users see the widgets, and integration secrets are hidden from them.
 
 ### Export & Import
 
@@ -216,6 +223,11 @@ Backup and restore your dashboard:
 | `POST` | `/api/integrations/jellyseerr/requests/[id]` | Approve or decline a request (admins) |
 | `GET` | `/api/integrations/qbittorrent/status` | Speeds, counters and torrents (`filter`, `limit`) |
 | `POST` | `/api/integrations/qbittorrent/action` | Pause or resume torrents (admins) |
+| `GET` | `/api/integrations/spoolman/spools` | Recently used, low and empty spools (`limit`, `lowPercent`, `lowGrams`, `archived`) |
+| `GET` | `/api/integrations/elegoo/status` | Print status of a CC2 printer (`printer`) |
+| `GET` | `/api/integrations/elegoo/thumbnail` | Preview image of the current print (`printer`) |
+| `POST` | `/api/integrations/elegoo/action` | Pause, resume or stop the print (admins) |
+| `POST` | `/api/integrations/elegoo/discover` | Read a CC2's serial number and name over UDP (admins) |
 | `GET` | `/api/integrations/stacker/snapshot` | New samples from a Stacker server (`serverId`, `since`, `static`) |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |

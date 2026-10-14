@@ -147,7 +147,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem;
+export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem | SpoolmanItem | ElegooPrintItem;
 
 // --- Weather ---
 
@@ -218,7 +218,7 @@ export interface NavbarWeatherItem extends NavbarItemBase {
 	config?: WeatherConfig;
 }
 
-export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem | NavbarClockItem | NavbarWeatherItem;
+export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem | NavbarClockItem | NavbarWeatherItem | NavbarElegooPrintItem;
 
 export interface NavbarLayout {
 	columns: number;
@@ -321,6 +321,8 @@ export interface IntegrationsConfig {
 	/** Jellyseerr or Overseerr (same API). */
 	jellyseerr?: ArrConnection;
 	qbittorrent?: { url: string; username: string; password: string };
+	spoolman?: { url: string };
+	elegoo?: { printers: ElegooPrinter[] };
 }
 
 /** A Stacker (web task manager) instance polled by the Stacker widget. */
@@ -582,4 +584,106 @@ export interface NotesConfig {
 export interface NotesItem extends DashboardItemBase {
 	type: 'notes';
 	config?: NotesConfig;
+}
+
+// --- Spoolman ---
+
+export interface SpoolInfo {
+	id: number;
+	name: string;
+	vendor: string;
+	material: string;
+	/** CSS colours (#rrggbb); several for multi-colour filaments. */
+	colors: string[];
+	remaining: number | null; // grams
+	initial: number | null; // grams
+	percent: number | null; // 0..100
+	lastUsed: string | null; // ISO date
+	location: string;
+	archived: boolean;
+}
+
+export interface SpoolmanData {
+	url: string; // Spoolman web UI, for links
+	recent: SpoolInfo[];
+	low: SpoolInfo[];
+	empty: SpoolInfo[];
+	total: number;
+}
+
+export interface SpoolmanConfig {
+	title?: string;
+	show?: 'recent' | 'low' | 'both';
+	limit?: number;
+	/** "Running low" below this share of the initial weight (default 15). */
+	lowPercent?: number;
+	/** ...or below this many grams. */
+	lowGrams?: number;
+	/** Count archived spools that still have filament / show archived empty ones. */
+	includeArchived?: boolean;
+}
+
+export interface SpoolmanItem extends DashboardItemBase {
+	type: 'spoolman';
+	config?: SpoolmanConfig;
+}
+
+// --- Elegoo Centauri Carbon 2 ---
+
+/** A CC2 printer on the LAN (MQTT broker on the printer, LAN Only mode). */
+export interface ElegooPrinter {
+	id: string;
+	name: string;
+	host: string;
+	/** Access code shown on the printer when LAN access is protected. */
+	accessCode?: string;
+	/** Serial number; detected over UDP when empty. */
+	serial?: string;
+}
+
+export type ElegooPrintState = 'idle' | 'preheating' | 'printing' | 'pausing' | 'paused' | 'stopping' | 'stopped' | 'completed' | 'busy' | 'error' | 'offline';
+
+export interface ElegooTemp {
+	current: number;
+	target: number;
+}
+
+export interface ElegooStatus {
+	online: boolean;
+	error?: string; // why it is offline (connection refused, wrong code, too many clients...)
+	name: string;
+	model: string;
+	state: ElegooPrintState;
+	/** Human label for busy states (Auto-leveling, Homing...). */
+	stateLabel: string;
+	filename: string;
+	progress: number; // 0..100
+	elapsedSec: number;
+	remainingSec: number;
+	currentLayer: number;
+	totalLayers: number;
+	nozzle: ElegooTemp | null;
+	bed: ElegooTemp | null;
+	chamber: number | null;
+	speedMode: string;
+	hasThumbnail: boolean;
+	/** Changes when the thumbnail changes (cache buster). */
+	thumbKey: string;
+	updatedAt: number; // ms
+}
+
+export interface ElegooPrintConfig {
+	printerId: string;
+	showThumbnail?: boolean;
+	showTemps?: boolean;
+}
+
+export interface ElegooPrintItem extends DashboardItemBase {
+	type: 'elegoo-print';
+	config: ElegooPrintConfig;
+}
+
+export interface NavbarElegooPrintItem extends NavbarItemBase {
+	type: 'navbar-elegoo-print';
+	config: ElegooPrintConfig;
 }

@@ -1,6 +1,6 @@
 {
 	"name": "catchow-catboard",
-	"version": "2.6.0",
+	"version": "2.7.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -20,6 +20,7 @@
 	},
 	"dependencies": {
 		"bcryptjs": "^3.0.3",
+		"mqtt": "^5.16.0",
 		"systeminformation": "^5.31.6",
 		"uuid": "^14.0.0"
 	},

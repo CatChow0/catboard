@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Service } from '$lib/stores/dashboard';
-	import type { StackerServer, StackerSections, WeatherLocation } from '$lib/types';
+	import type { StackerServer, StackerSections, WeatherLocation, ElegooPrinter, SpoolmanConfig } from '$lib/types';
 	import LocationSearch from './LocationSearch.svelte';
 	import DockerLogo from './icons/DockerLogo.svelte';
 	import UptimeKumaLogo from './icons/UptimeKumaLogo.svelte';
@@ -108,6 +108,19 @@
 	let stackerWidgetColSpan = $state(4);
 	let stackerWidgetRowSpan = $state(4);
 
+	let spoolmanUrl = $state('');
+	let spoolmanSaving = $state(false);
+	let spoolmanShow = $state<NonNullable<SpoolmanConfig['show']>>('both');
+	let spoolmanColSpan = $state(4);
+	let spoolmanRowSpan = $state(4);
+	let elegooPrinters = $state<ElegooPrinter[]>([]);
+	let elegooSaving = $state(false);
+	let elegooDetect = $state<Record<string, string>>({});
+	let printWidgetPrinterId = $state('');
+	let printWidgetVersion = $state<'standard' | 'navbar'>('standard');
+	let printWidgetColSpan = $state(4);
+	let printWidgetRowSpan = $state(3);
+
 	$effect(() => {
 		if (activeTab === 'integrations') loadIntegrationsConfig();
 	});
@@ -169,6 +182,8 @@
 			qbitUsername = config.qbittorrent?.username || '';
 			qbitPassword = config.qbittorrent?.password || '';
 			stackerServers = config.stacker?.servers || [];
+			spoolmanUrl = config.spoolman?.url || '';
+			elegooPrinters = config.elegoo?.printers || [];
 		} catch {
 			// ignore
 		}
@@ -421,6 +436,75 @@
 			// ignore
 		} finally {
 			qbitSaving = false;
+		}
+	}
+
+	async function handleSaveSpoolman() {
+		spoolmanSaving = true;
+		try {
+			await setIntegrations({ spoolman: spoolmanUrl.trim() ? { url: spoolmanUrl.trim() } : undefined });
+		} catch {
+			// ignore
+		} finally {
+			spoolmanSaving = false;
+		}
+	}
+
+	async function handleAddSpoolmanWidget() {
+		close();
+		await addWidgetToDashboard('spoolman', '', spoolmanColSpan, spoolmanRowSpan, getMaxCols(), { show: spoolmanShow, limit: 5, lowPercent: 15 });
+	}
+
+	function addElegooPrinter() {
+		elegooPrinters = [...elegooPrinters, { id: crypto.randomUUID(), name: '', host: '' }];
+	}
+
+	function removeElegooPrinter(id: string) {
+		elegooPrinters = elegooPrinters.filter((p) => p.id !== id);
+	}
+
+	/** Ask the printer for its serial number and name (UDP discovery, done by the server). */
+	async function detectElegooPrinter(p: ElegooPrinter) {
+		elegooDetect = { ...elegooDetect, [p.id]: 'Detecting…' };
+		try {
+			const res = await fetch('/api/integrations/elegoo/discover', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ host: p.host.trim() })
+			});
+			const body = await res.json().catch(() => ({}));
+			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			elegooPrinters = elegooPrinters.map((x) => (x.id === p.id ? { ...x, serial: body.sn, name: x.name || body.name || body.model } : x));
+			const code = body.tokenStatus === 1 ? 'an access code is set: enter it below' : 'no access code set';
+			elegooDetect = { ...elegooDetect, [p.id]: `Found ${body.model || 'printer'} (${body.sn}), ${code}` };
+		} catch (e) {
+			elegooDetect = { ...elegooDetect, [p.id]: e instanceof Error ? e.message : String(e) };
+		}
+	}
+
+	async function handleSaveElegooPrinters() {
+		elegooSaving = true;
+		try {
+			const printers = elegooPrinters
+				.filter((p) => p.host.trim())
+				.map((p) => ({ id: p.id, name: p.name.trim() || 'Centauri Carbon 2', host: p.host.trim(), accessCode: p.accessCode?.trim() || undefined, serial: p.serial?.trim() || undefined }));
+			await setIntegrations({ elegoo: { printers } });
+			elegooPrinters = printers;
+		} catch {
+			// ignore
+		} finally {
+			elegooSaving = false;
+		}
+	}
+
+	async function handleAddPrintWidget() {
+		if (!printWidgetPrinterId) return;
+		close();
+		const config = { printerId: printWidgetPrinterId, showThumbnail: true, showTemps: true };
+		if (printWidgetVersion === 'standard') {
+			await addWidgetToDashboard('elegoo-print', '', printWidgetColSpan, printWidgetRowSpan, getMaxCols(), config);
+		} else {
+			await addNavbarItem('navbar-elegoo-print', printWidgetColSpan, config);
 		}
 	}
 
@@ -1080,6 +1164,83 @@
 					</div>
 				</div>
 
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<circle cx="12" cy="12" r="9" />
+								<circle cx="12" cy="12" r="5" />
+								<circle cx="12" cy="12" r="1.5" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Spoolman</span>
+							<span class="integration-desc">Filament spools: recently used, running low and empty</span>
+						</div>
+					</div>
+					<div class="field">
+						<label for="spoolman-url">URL</label>
+						<input id="spoolman-url" type="url" bind:value={spoolmanUrl} placeholder="http://spoolman:7912" />
+					</div>
+					<div class="form-actions">
+						<button type="button" class="btn-save" onclick={handleSaveSpoolman} disabled={spoolmanSaving || !canEditConnections}>
+							{spoolmanSaving ? 'Saving...' : 'Save'}
+						</button>
+					</div>
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="3" y="2.5" width="18" height="19" rx="2" />
+								<path d="M3 7.5h18M10 7.5v3h4v-3M12 10.5V12M7 18h10M9 18v-2.5h6V18" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Elegoo printers</span>
+							<span class="integration-desc">Centauri Carbon 2 print status over the LAN (enable LAN Only mode on the printer: Settings &gt; Network)</span>
+						</div>
+					</div>
+					{#if elegooPrinters.length > 0}
+						<div class="env-list">
+							{#each elegooPrinters as prn (prn.id)}
+								<div class="env-row">
+									<div class="env-fields">
+										<input type="text" bind:value={prn.name} placeholder="Name (e.g. Centauri)" class="env-name-input" />
+										<div class="env-auth-fields">
+											<input type="text" bind:value={prn.host} placeholder="Printer IP (e.g. 192.168.1.50)" class="env-url-input" />
+											<button type="button" class="btn-detect" onclick={() => detectElegooPrinter(prn)} disabled={!prn.host.trim() || !canEditConnections}>Detect</button>
+										</div>
+										<div class="env-auth-fields">
+											<input type="password" bind:value={prn.accessCode} placeholder="Access code (if set)" autocomplete="new-password" class="env-name-input" />
+											<input type="text" bind:value={prn.serial} placeholder="Serial number (auto)" autocomplete="off" class="env-name-input" />
+										</div>
+										{#if elegooDetect[prn.id]}<p class="hint detect-msg">{elegooDetect[prn.id]}</p>{/if}
+									</div>
+									<button type="button" class="btn-remove-env" onclick={() => removeElegooPrinter(prn.id)} title="Remove" aria-label="Remove printer">
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M18 6L6 18M6 6l12 12" />
+										</svg>
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+					<button type="button" class="btn-add-env" onclick={addElegooPrinter}>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M12 5v14M5 12h14" />
+						</svg>
+						Add printer
+					</button>
+					<div class="form-actions">
+						<button type="button" class="btn-save" onclick={handleSaveElegooPrinters} disabled={elegooSaving || !canEditConnections}>
+							{elegooSaving ? 'Saving...' : 'Save'}
+						</button>
+					</div>
+				</div>
+
+
 <div class="integration-card">
 						<div class="integration-header">
 							<div class="integration-icon">
@@ -1498,6 +1659,103 @@
 						</div>
 					{/if}
 				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<circle cx="12" cy="12" r="9" />
+								<circle cx="12" cy="12" r="5" />
+								<circle cx="12" cy="12" r="1.5" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">Spoolman</span>
+							<span class="integration-desc">Recently used filaments, spools running low and empty</span>
+						</div>
+					</div>
+					{#if !spoolmanUrl}
+						<p class="hint">Configure the Spoolman connection first.</p>
+					{:else}
+						<div class="field">
+							<label for="spoolman-show">Show</label>
+							<select id="spoolman-show" bind:value={spoolmanShow}>
+								<option value="both">Recently used and running low</option>
+								<option value="recent">Recently used only</option>
+								<option value="low">Running low / empty only</option>
+							</select>
+						</div>
+						<div class="size-row">
+							<div class="field">
+								<label for="sp-cols">Width (columns)</label>
+								<input id="sp-cols" type="number" bind:value={spoolmanColSpan} min="2" max="12" />
+							</div>
+							<div class="field">
+								<label for="sp-rows">Height (rows)</label>
+								<input id="sp-rows" type="number" bind:value={spoolmanRowSpan} min="1" max="12" />
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleAddSpoolmanWidget}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="integration-card">
+					<div class="integration-header">
+						<div class="integration-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="3" y="2.5" width="18" height="19" rx="2" />
+								<path d="M3 7.5h18M10 7.5v3h4v-3M12 10.5V12M7 18h10M9 18v-2.5h6V18" />
+							</svg>
+						</div>
+						<div class="integration-info">
+							<span class="integration-name">3D Print Status</span>
+							<span class="integration-desc">Centauri Carbon 2: progress, time left, layers, temperatures; pause / stop for admins</span>
+						</div>
+					</div>
+					{#if elegooPrinters.length === 0}
+						<p class="hint">Add your printer in the Connections tab first.</p>
+					{:else}
+						<div class="field">
+							<label for="print-printer">Printer</label>
+							<select id="print-printer" bind:value={printWidgetPrinterId}>
+								<option value="">Select printer</option>
+								{#each elegooPrinters as prn (prn.id)}
+									<option value={prn.id}>{prn.name || prn.host}</option>
+								{/each}
+							</select>
+						</div>
+						<div class="field">
+							<span class="field-label">Version</span>
+							<div class="side-toggle">
+								<button class="side-btn" class:active={printWidgetVersion === 'standard'} onclick={() => (printWidgetVersion = 'standard')}>Standard</button>
+								<button class="side-btn" class:active={printWidgetVersion === 'navbar'} onclick={() => (printWidgetVersion = 'navbar')}>Navbar</button>
+							</div>
+						</div>
+						{#if printWidgetVersion === 'standard'}
+							<div class="size-row">
+								<div class="field">
+									<label for="pr-cols">Width (columns)</label>
+									<input id="pr-cols" type="number" bind:value={printWidgetColSpan} min="2" max="12" />
+								</div>
+								<div class="field">
+									<label for="pr-rows">Height (rows)</label>
+									<input id="pr-rows" type="number" bind:value={printWidgetRowSpan} min="1" max="12" />
+								</div>
+							</div>
+						{:else}
+							<div class="field">
+								<label for="pr-nbcols">Width (columns)</label>
+								<input id="pr-nbcols" type="number" bind:value={printWidgetColSpan} min="1" max="6" />
+							</div>
+						{/if}
+						<div class="form-actions">
+							<button type="button" class="btn-save" onclick={handleAddPrintWidget} disabled={!printWidgetPrinterId}>Add Widget</button>
+						</div>
+					{/if}
+				</div>
+
 
 				{/if}
 			</div>
@@ -2047,6 +2305,30 @@
 	.env-auth-fields input {
 		flex: 1;
 		min-width: 0;
+	}
+
+	.btn-detect {
+		flex-shrink: 0;
+		padding: 0 12px;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--border);
+		font-size: 0.8rem;
+		color: var(--text-secondary);
+		transition: background var(--transition), color var(--transition);
+	}
+
+	.btn-detect:hover:not(:disabled) {
+		color: var(--text-primary);
+		background: var(--bg-card-hover);
+	}
+
+	.btn-detect:disabled {
+		opacity: 0.5;
+	}
+
+	.detect-msg {
+		margin: 2px 0 0;
+		font-size: 0.75rem;
 	}
 
 	.env-list {

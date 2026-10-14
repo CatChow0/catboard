@@ -275,9 +275,9 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 	layout.set(newLayout);
 }
 
-const SIMPLE_WIDGETS = new Set<string>(['jellyfin-now-playing', 'jellyseerr-requests', 'qbittorrent', 'notes']);
+const SIMPLE_WIDGETS = new Set<string>(['jellyfin-now-playing', 'jellyseerr-requests', 'qbittorrent', 'notes', 'spoolman', 'elegoo-print']);
 
-export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest' | 'arr-releases' | 'stacker' | 'jellyfin-now-playing' | 'jellyseerr-requests' | 'qbittorrent' | 'notes', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
+export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest' | 'arr-releases' | 'stacker' | 'jellyfin-now-playing' | 'jellyseerr-requests' | 'qbittorrent' | 'notes' | 'spoolman' | 'elegoo-print', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
 	const newLayout = mergeGridConfig(await api<Layout>('/api/layout'));
 	const activeId = get(activeBreakpointId);
 	if (!newLayout.layouts[activeId]) newLayout.layouts[activeId] = { items: [], navbar: { columns: 12, items: [] } };
@@ -727,6 +727,7 @@ export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, c
 			case 'navbar-uptime-kuma-status-page': return { id: crypto.randomUUID(), type: 'navbar-uptime-kuma-status-page', col: targetCol, colSpan, config: { slug: (config?.slug as string) || '' } };
 			case 'navbar-docker': return { id: crypto.randomUUID(), type: 'navbar-docker', col: targetCol, colSpan, config: { environmentId: (config?.environmentId as string) || '', showCpu: config?.showCpu === true || undefined, showRam: config?.showRam === true || undefined } };
 			case 'navbar-clock': return { id: crypto.randomUUID(), type: 'navbar-clock', col: targetCol, colSpan, config: config as ClockConfig | undefined };
+			case 'navbar-elegoo-print': return { id: crypto.randomUUID(), type: 'navbar-elegoo-print', col: targetCol, colSpan, config: { printerId: (config?.printerId as string) || '', showThumbnail: config?.showThumbnail !== false, showTemps: config?.showTemps !== false } };
 			case 'navbar-weather': return { id: crypto.randomUUID(), type: 'navbar-weather', col: targetCol, colSpan, config: config as WeatherConfig | undefined };
 		case 'navbar-adguard-home-control': return { id: crypto.randomUUID(), type: 'navbar-adguard-home-control', col: targetCol, colSpan, config: { instanceId: (config?.instanceId as string) || 'default' } };
 			default: return { id: crypto.randomUUID(), type: 'navbar-title', col: targetCol, colSpan };

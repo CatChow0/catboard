@@ -25,7 +25,8 @@
 		'navbar-adguard-home': 'AdGuard Home',
 		'navbar-adguard-home-control': 'AdGuard Home',
 		'navbar-clock': 'Clock',
-		'navbar-weather': 'Weather'
+		'navbar-weather': 'Weather',
+		'navbar-elegoo-print': '3D printer'
 	};
 	const iconLabel =['navbar-cpu', 'navbar-ram', 'navbar-disk'].includes(item.type) ? 'Bar size' : 'Icon size';
 
@@ -59,6 +60,19 @@
 	let dockerShowCpu = $state(item.type === 'navbar-docker' ? (item.config?.showCpu ?? false) : false);
 	let dockerShowRam = $state(item.type === 'navbar-docker' ? (item.config?.showRam ?? false) : false);
 	let dockerEnvironments = $state<{ id: string; name: string }[]>([]);
+	const printConfig = item.type === 'navbar-elegoo-print' ? item.config : undefined;
+	let printerId = $state(printConfig?.printerId || '');
+	let printThumb = $state(printConfig?.showThumbnail ?? true);
+	let printTemps = $state(printConfig?.showTemps ?? true);
+	let printers = $state<{ id: string; name: string }[]>([]);
+
+	// The printer list is only needed when editing a navbar print widget.
+	$effect(() => {
+		if (item.type !== 'navbar-elegoo-print') return;
+		getIntegrations()
+			.then((i) => (printers = i.elegoo?.printers || []))
+			.catch(() => (printers = []));
+	});
 	let align = $state<'left' | 'center' | 'right'>(item.type === 'navbar-adguard-home-control' ? (item.config?.align || 'center') : 'center');
 	let colSpan = $state(item.colSpan);
 	let availableDisks = $state<string[]>([]);
@@ -126,6 +140,8 @@
 			updates.config = { instanceId: item.config?.instanceId || 'default', align };
 		} else if (item.type === 'navbar-docker') {
 			updates.config = { environmentId: dockerEnvId, showCpu: dockerShowCpu || undefined, showRam: dockerShowRam || undefined };
+		} else if (item.type === 'navbar-elegoo-print') {
+			updates.config = { printerId, showThumbnail: printThumb, showTemps: printTemps };
 		} else if (item.type === 'navbar-clock') {
 			updates.config = { showSeconds, format12h, showDate, dateFormat, showFullDate };
 		} else if (item.type === 'navbar-weather') {
@@ -247,6 +263,32 @@
 						<input type="checkbox" bind:checked={dockerShowRam} />
 						<span class="toggle-slider"></span>
 						<span class="toggle-label">Show RAM (total in the bar, per container in the details)</span>
+					</label>
+				</div>
+			{:else if item.type === 'navbar-elegoo-print'}
+				<div class="field">
+					<label for="nb-printer">Printer</label>
+					{#if printers.length > 0}
+						<select id="nb-printer" bind:value={printerId}>
+							<option value="">Select printer</option>
+							{#each printers as p (p.id)}
+								<option value={p.id}>{p.name}</option>
+							{/each}
+						</select>
+					{:else}
+						<p class="hint">No printer configured. Add one in Add &gt; Integrations &gt; Connections.</p>
+					{/if}
+				</div>
+				<div class="toggles">
+					<label class="toggle-switch">
+						<input type="checkbox" bind:checked={printThumb} />
+						<span class="toggle-slider"></span>
+						<span class="toggle-label">Show the model preview in the details</span>
+					</label>
+					<label class="toggle-switch">
+						<input type="checkbox" bind:checked={printTemps} />
+						<span class="toggle-slider"></span>
+						<span class="toggle-label">Show temperatures in the details</span>
 					</label>
 				</div>
 			{:else if item.type === 'navbar-clock'}
