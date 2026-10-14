@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { getIntegrations } from '$lib/server/config';
-import { getLayout } from '$lib/server/config';
+import { getLayout, allBreakpointLayouts } from '$lib/server/config';
 import { pausedInstances, basicAuth, setAdGuardProtection } from '$lib/server/adguard-home';
 import type { AdGuardHomeData } from '$lib/types';
 
@@ -52,8 +52,8 @@ export const GET: RequestHandler = async ({ request }) => {
 
 	const layout = await getLayout();
 	const usedIds = new Set<string>();
-	const allItems = Object.values(layout.layouts || {}).flatMap((l) => l.items || []);
-	const allNavbarItems = Object.values(layout.layouts || {}).flatMap((l) => l.navbar?.items || []);
+	const allItems = allBreakpointLayouts(layout).flatMap((l) => l.items || []);
+	const allNavbarItems = allBreakpointLayouts(layout).flatMap((l) => l.navbar?.items || []);
 	for (const item of allItems) {
 		if ((item.type === 'adguard-home' || item.type === 'adguard-home-control') && item.config?.instanceId) {
 			usedIds.add(item.config.instanceId);

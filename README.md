@@ -2,11 +2,12 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.7.0-blue)
+![Version](https://img.shields.io/badge/version-2.8.0-blue)
 
 ## Features
 
 - **Drag-and-drop grid layout** -- Place, resize, and reorder service tiles and widgets on a responsive CSS grid
+- **Multiple dashboards** -- Several dashboards, each with its own grid and navbar; switch with the squares under the title, the mouse wheel over the title, a touch swipe or the arrow keys, with a slide animation
 - **Service management** -- Register services with URL, icon, and description; click a tile to open the service; live status checks via SSE
 - **Collapsible & standard groups** -- Organize services into visual groups with sub-grids; optionally let a group's content extend vertically or horizontally and scroll (wheel or swipe, no scrollbar)
 - **Dynamic navbar** -- Customizable navbar with draggable/resizable widgets: title, search, clock, weather, CPU, RAM, disk monitors, Uptime Kuma status, and Docker container status (click for details)
@@ -81,7 +82,7 @@ All configuration is stored as JSON in `CONFIG_DIR`:
 |---|---|
 | `users.json` | User accounts and roles |
 | `services.json` | Registered services (name, URL, icon, status check config) |
-| `layout.json` | Dashboard grid layout and navbar items |
+| `layout.json` | Dashboards: grid layout and navbar items of each dashboard, per breakpoint |
 | `settings.json` | Global settings (theme, title, grid config, navbar columns) |
 | `settings/<user>.json` | Per-user settings overrides |
 | `integrations.json` | External integration configurations (Uptime Kuma, Docker environments) |
@@ -100,13 +101,23 @@ Toggle edit mode with the pencil button in the navbar. In edit mode you can:
 
 Edit/delete buttons only appear when hovering over an item in edit mode.
 
+### Dashboards
+
+Each dashboard has its own grid and its own navbar (for every breakpoint). The **Title** navbar widget shows one small square per dashboard under the title; the active one is wider and highlighted.
+
+- **Switch:** click a square, scroll the mouse wheel over the title widget, swipe left/right on the grid (touch screens), or press **←** / **→**. The dashboard slides in from the side (no animation with the animation level set to None).
+- **Link:** the URL ends with `#name-of-the-dashboard`, so a bookmark opens that dashboard; the last one used is remembered per browser.
+- **Manage (edit mode):** the **+** square creates a dashboard (with a copy of the current navbar and an empty grid). Click the active square to rename it, move it left/right or delete it (the last dashboard cannot be deleted).
+- **Move tiles:** in edit mode, drag a tile (or a selection, or a tile out of a group) onto another dashboard's square to move it there.
+- The Title widget is mandatory: it can be moved and resized but not removed, and every navbar has exactly one.
+
 ### Navbar Widgets
 
 Add widgets to the navbar via Add > Navbar tab:
 
 | Widget | Description |
 |---|---|
-| **Title** | Displays the dashboard title from settings |
+| **Title** | Dashboard title from settings, with the dashboard switcher squares under it (always present, cannot be removed) |
 | **Search** | Search bar to filter services |
 | **CPU** | CPU usage bar + temperature (configurable sensor) |
 | **RAM** | RAM usage bar + swap bar |
@@ -179,6 +190,7 @@ Backup and restore your dashboard:
 
 - **Escape** -- Clear selection in edit mode, close modals
 - **Shift/Ctrl+Click** -- Multi-select items for batch dragging
+- **← / →** -- Previous / next dashboard (outside edit mode and text fields)
 
 ## Tech Stack
 
@@ -200,7 +212,8 @@ Backup and restore your dashboard:
 | `POST` | `/api/auth/setup` | First-run admin creation |
 | `POST` | `/api/auth/logout` | Sign out |
 | `GET/PUT` | `/api/settings` | Global settings |
-| `GET/PUT` | `/api/layout` | Dashboard layout |
+| `GET/PUT` | `/api/layout` | Layout of one dashboard (`?dashboard=<id>`, default the first), with the dashboard list |
+| `POST` | `/api/layout/dashboards` | Create, rename, move or delete dashboards; move tiles between dashboards |
 | `GET/POST` | `/api/services` | List/register services |
 | `GET/PUT/DELETE` | `/api/services/[id]` | Service CRUD |
 | `GET/PUT/DELETE` | `/api/users` | User management (admin) |

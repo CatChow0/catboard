@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import DashboardItem from './DashboardItem.svelte';
 	import Navbar from './Navbar.svelte';
 	import AddPopup from './AddPopup.svelte';
@@ -7,6 +9,7 @@
 	import {
 		services,
 		layout,
+		settings,
 		isEditing,
 		activeBreakpointId,
 		manualBreakpointId,
@@ -15,7 +18,15 @@
 		getActiveColumns,
 		resolveActiveBreakpointId,
 		getBreakpointLabel,
-		searchQuery
+		searchQuery,
+		dashboards,
+		activeDashboardId,
+		dashboardDirection,
+		dashboardDropTarget,
+		dashboardSwitchBlocked,
+		switchDashboard,
+		followDashboardHash,
+		moveItemsToDashboard
 	} from '$lib/stores/dashboard';
 	import SettingsModal from './SettingsModal.svelte';
 	import type { Service, DashboardItem as DashboardItemType, Layout } from '$lib/stores/dashboard';
@@ -162,6 +173,8 @@
 		avatar: { item: DashboardItemType; left: number; top: number; width: number; height: number } | null;
 		clientDx: number;
 		clientDy: number;
+		// Dashboard square (under the title) the pointer is over: dropping moves the tiles there.
+		targetDashboard: string | null;
 	} | null>(null);
 
 	let resize = $state<{
@@ -367,8 +380,10 @@
 			hasGroup,
 			avatar: pd.source !== null ? { item: pd.anchor, left: r.left, top: r.top, width: r.width, height: r.height } : null,
 			clientDx: 0,
-			clientDy: 0
+			clientDy: 0,
+			targetDashboard: null
 		};
+		dashboardSwitchBlocked.set(true);
 		try {
 			gridEl?.setPointerCapture(pd.pointerId);
 		} catch {
@@ -420,6 +435,21 @@
 		d.dy = y - d.startY + (window.scrollY - d.startScrollY);
 		d.clientDx = x - d.startX;
 		d.clientDy = y - d.startY;
+
+		// Over another dashboard's square (under the title): drop moves the tiles
+		// there. elementsFromPoint, because the dragged tile itself is under the pointer.
+		const dot = document
+			.elementsFromPoint(x, y)
+			.map((el) => (el as HTMLElement).closest?.('[data-dashboard-id]') as HTMLElement | null)
+			.find((el) => !!el);
+		const dotId = dot?.dataset.dashboardId ?? null;
+		d.targetDashboard = dotId && dotId !== $activeDashboardId ? dotId : null;
+		dashboardDropTarget.set(d.targetDashboard);
+		if (d.targetDashboard) {
+			d.target = d.source;
+			d.preview = null;
+			return;
+		}
 
 		const target = pickTarget(d, x, y);
 		if (target !== null && !groupGridEl(target)) {
@@ -513,6 +543,8 @@
 	function endDrag() {
 		cancelAnimationFrame(scrollRaf);
 		drag = null;
+		dashboardSwitchBlocked.set(false);
+		dashboardDropTarget.set(null);
 		swallowClick();
 	}
 
@@ -520,6 +552,15 @@
 		const d = drag;
 		endDrag();
 		if (!d) return;
+
+		if (d.targetDashboard) {
+			const to = d.targetDashboard;
+			const name = $dashboards.find((x) => x.id === to)?.name ?? 'dashboard';
+			moveItemsToDashboard(d.ids, to, columns)
+				.then(() => showToast(`${d.ids.length > 1 ? `${d.ids.length} tiles` : 'Tile'} moved to "${name}"`))
+				.catch((e) => showToast(e instanceof Error ? e.message : 'Move failed'));
+			return;
+		}
 
 		const next: Layout = JSON.parse(JSON.stringify($layout)) as Layout;
 		const bp = next.layouts[activeBreakpointIdValue];
@@ -654,6 +695,16 @@
 	}
 
 	function handleKeyDown(e: KeyboardEvent) {
+		if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+			// Switch dashboards, unless typing, editing or a dialog is open.
+			const t = e.target as HTMLElement | null;
+			const typing = !!t?.closest('input, textarea, select, [contenteditable="true"]');
+			const modal = showAddPopup || showSettings || !!editingService || !!document.querySelector('[aria-modal="true"], [role="dialog"]');
+			if (typing || modal || $isEditing || e.altKey || e.ctrlKey || e.metaKey || $dashboards.length < 2) return;
+			e.preventDefault();
+			void switchDashboard(e.key === 'ArrowRight' ? 'next' : 'prev');
+			return;
+		}
 		if (e.key !== 'Escape') return;
 		if (drag || resize || pending) {
 			cancelAll();
@@ -661,6 +712,46 @@
 		}
 		selectedItemIds = new Set();
 		selectedChildIds = new Map();
+	}
+
+	// --- Dashboards: touch swipe, slide transition, notices ----------------------
+
+	const SWIPE_MIN_PX = 60;
+	const SWIPE_MAX_MS = 600;
+	let swipe: { id: number; x: number; y: number; t: number } | null = null;
+
+	function swipeStart(e: PointerEvent) {
+		if (e.pointerType !== 'touch' || $isEditing || $dashboards.length < 2) return;
+		swipe = { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now() };
+	}
+
+	function swipeEnd(e: PointerEvent) {
+		const s = swipe;
+		swipe = null;
+		if (!s || e.pointerId !== s.id || Date.now() - s.t > SWIPE_MAX_MS) return;
+		const dx = e.clientX - s.x;
+		const dy = e.clientY - s.y;
+		if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+		swallowClick();
+		// Finger moves left -> the next dashboard comes in from the right.
+		void switchDashboard(dx < 0 ? 'next' : 'prev');
+	}
+
+	/** Slide the dashboard page in / out horizontally; none when animations are off. */
+	function slide(node: HTMLElement, { into }: { into: boolean }) {
+		const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if ($settings.animations === 'none' || reduced) return { duration: 0 };
+		const width = node.parentElement?.clientWidth || window.innerWidth;
+		const dir = $dashboardDirection;
+		return fly(node, { x: (into ? dir : -dir) * Math.min(width, 900), duration: 300, easing: cubicOut, opacity: 0 });
+	}
+
+	let toast = $state('');
+	let toastTimer: ReturnType<typeof setTimeout> | undefined;
+	function showToast(msg: string) {
+		toast = msg;
+		clearTimeout(toastTimer);
+		toastTimer = setTimeout(() => (toast = ''), 2600);
 	}
 
 	// --- Rendering helpers ---------------------------------------------------------
@@ -697,9 +788,13 @@
 		windowWidth = window.innerWidth;
 		const onResize = () => { windowWidth = window.innerWidth; };
 		window.addEventListener('resize', onResize);
+		// Back / forward or an edited #name in the address bar.
+		window.addEventListener('hashchange', followDashboardHash);
 		return () => {
 			window.removeEventListener('resize', onResize);
+			window.removeEventListener('hashchange', followDashboardHash);
 			cancelAnimationFrame(scrollRaf);
+			clearTimeout(toastTimer);
 		};
 	});
 
@@ -727,65 +822,88 @@
 >
 	<Navbar onadd={() => (showAddPopup = true)} onsettings={() => (showSettings = true)} onlogout={handleLogout} />
 
-	<main class="dashboard-grid-wrapper">
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			bind:this={gridEl}
-			class="dashboard-grid"
-			style="grid-template-columns: repeat({columns}, 1fr); grid-auto-rows: {cellSize}px; gap: {gap}px;"
-			onpointerdown={handleGridPointerDown}
-		>
-			{#each items as item (item.id)}
-				{@const r = itemRect(item)}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class="item-wrapper"
-					class:editing={$isEditing}
-					class:dragging={isDragged(item.id, null)}
-					class:drag-source={drag?.source === item.id}
-					class:selected={selectedItemIds.has(item.id) && !drag}
-					class:drop-target={drag?.target === item.id && drag?.source !== item.id}
-					class:drop-refused={drag?.target === item.id && drag?.source !== item.id && !drag?.preview && !drag?.collapsedTarget}
-					class:dimmed={query && !matchingIds.has(item.id)}
-					class:highlighted={query && matchingIds.has(item.id)}
-					style={getItemStyle(item)}
-					use:flipOnMove={{ key: `${r.col},${r.row},${r.colSpan},${r.rowSpan}`, animate: !!(drag || resize) && !isDragged(item.id, null) }}
-					onpointerdown={(e) => handlePointerDownOnItem(e, item)}
-				>
-					<DashboardItem
-						{item}
-						allServices={$services}
-						effectiveColSpan={r.colSpan}
-						effectiveRowSpan={r.rowSpan}
-						gridGap={gap}
-						onedit={handleEditService}
-						onremove={handleRemoveItem}
-						ondragitem={handleDragChildFromGroup}
-						dragView={dragViewFor(item.id)}
-						selectedChildIds={selectedChildIds.get(item.id)}
-						ontogglechild={toggleChildSelection}
-						{query}
-						{matchingIds}
-					/>
-					{#if $isEditing}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div
-							class="resize-handle"
-							onpointerdown={(e) => handlePointerDownOnResize(e, item)}
-						></div>
+	<main class="dashboard-grid-wrapper" onpointerdown={swipeStart} onpointerup={swipeEnd} onpointercancel={() => (swipe = null)}>
+		<!-- One page per dashboard: switching slides the old page out and the new one in
+		     (both share the same grid cell while the transition runs). -->
+		<div class="dashboard-pages">
+			{#key $activeDashboardId}
+				<div class="dashboard-page" in:slide={{ into: true }} out:slide={{ into: false }}>
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						bind:this={gridEl}
+						class="dashboard-grid"
+						style="grid-template-columns: repeat({columns}, 1fr); grid-auto-rows: {cellSize}px; gap: {gap}px;"
+						onpointerdown={handleGridPointerDown}
+					>
+						{#each items as item (item.id)}
+							{@const r = itemRect(item)}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class="item-wrapper"
+								class:editing={$isEditing}
+								class:dragging={isDragged(item.id, null)}
+								class:drag-source={drag?.source === item.id}
+								class:selected={selectedItemIds.has(item.id) && !drag}
+								class:drop-target={drag?.target === item.id && drag?.source !== item.id}
+								class:drop-refused={drag?.target === item.id && drag?.source !== item.id && !drag?.preview && !drag?.collapsedTarget}
+								class:to-dashboard={!!drag?.targetDashboard && isDragged(item.id, null)}
+								class:dimmed={query && !matchingIds.has(item.id)}
+								class:highlighted={query && matchingIds.has(item.id)}
+								style={getItemStyle(item)}
+								use:flipOnMove={{ key: `${r.col},${r.row},${r.colSpan},${r.rowSpan}`, animate: !!(drag || resize) && !isDragged(item.id, null) }}
+								onpointerdown={(e) => handlePointerDownOnItem(e, item)}
+							>
+								<DashboardItem
+									{item}
+									allServices={$services}
+									effectiveColSpan={r.colSpan}
+									effectiveRowSpan={r.rowSpan}
+									gridGap={gap}
+									onedit={handleEditService}
+									onremove={handleRemoveItem}
+									ondragitem={handleDragChildFromGroup}
+									dragView={dragViewFor(item.id)}
+									selectedChildIds={selectedChildIds.get(item.id)}
+									ontogglechild={toggleChildSelection}
+									{query}
+									{matchingIds}
+								/>
+								{#if $isEditing}
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="resize-handle"
+										onpointerdown={(e) => handlePointerDownOnResize(e, item)}
+									></div>
+								{/if}
+							</div>
+						{/each}
+
+						{#each rootPlaceholders as p, i (i)}
+							<div class="drag-placeholder" style={gridPos(p)}></div>
+						{/each}
+					</div>
+
+					{#if items.length === 0}
+						<div class="empty-state">
+							<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+								<rect x="3" y="3" width="7" height="7" rx="1" />
+								<rect x="14" y="3" width="7" height="7" rx="1" />
+								<rect x="3" y="14" width="7" height="7" rx="1" />
+								<rect x="14" y="14" width="7" height="7" rx="1" />
+							</svg>
+							<p>Ce layout est vide</p>
+							<p class="hint">Ajoutez des services et widgets via le bouton + pour le format {getBreakpointLabel($layout.grid.breakpoints, $activeBreakpointId)}</p>
+						</div>
 					{/if}
 				</div>
-			{/each}
-
-			{#each rootPlaceholders as p, i (i)}
-				<div class="drag-placeholder" style={gridPos(p)}></div>
-			{/each}
+			{/key}
 		</div>
 
 		{#if drag?.avatar}
 			<!-- Floating copy of a tile dragged out of a group (scrolling groups clip their content). -->
 			<div
 				class="drag-avatar"
+				class:to-dashboard={!!drag.targetDashboard}
 				style="left: {drag.avatar.left + drag.clientDx}px; top: {drag.avatar.top + drag.clientDy}px; width: {drag.avatar.width}px; height: {drag.avatar.height}px;"
 				aria-hidden="true"
 			>
@@ -794,17 +912,8 @@
 			</div>
 		{/if}
 
-		{#if items.length === 0}
-			<div class="empty-state">
-				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-					<rect x="3" y="3" width="7" height="7" rx="1" />
-					<rect x="14" y="3" width="7" height="7" rx="1" />
-					<rect x="3" y="14" width="7" height="7" rx="1" />
-					<rect x="14" y="14" width="7" height="7" rx="1" />
-				</svg>
-				<p>Ce layout est vide</p>
-				<p class="hint">Ajoutez des services et widgets via le bouton + pour le format {getBreakpointLabel($layout.grid.breakpoints, $activeBreakpointId)}</p>
-			</div>
+		{#if toast}
+			<div class="dash-toast" role="status">{toast}</div>
 		{/if}
 	</main>
 </div>
@@ -843,9 +952,57 @@
 		padding: 16px;
 	}
 
+	/* Horizontal swipes are ours (dashboard switch); vertical ones scroll the page. */
+	.dashboard-wrapper:not(.edit-mode) .dashboard-grid-wrapper {
+		touch-action: pan-y;
+	}
+
+	/* Old and new dashboard pages overlap in one cell while sliding; clip the
+	   part that slides past the side (vertical overflow stays visible). */
+	.dashboard-pages {
+		display: grid;
+		overflow-x: clip;
+	}
+
+	.dashboard-page {
+		grid-area: 1 / 1;
+		min-width: 0;
+	}
+
 	.dashboard-grid {
 		display: grid;
 		width: 100%;
+	}
+
+	/* Dragged over a dashboard square: the tile shrinks to show it will leave. */
+	.item-wrapper.to-dashboard,
+	.drag-avatar.to-dashboard {
+		opacity: 0.55;
+		scale: 0.6;
+		/* Shrink toward the grabbed corner so the tile stays under the pointer. */
+		transform-origin: top left;
+		transition: scale 0.15s ease, opacity 0.15s ease;
+	}
+
+	.dash-toast {
+		position: fixed;
+		left: 50%;
+		bottom: 24px;
+		translate: -50% 0;
+		z-index: 1100;
+		padding: 9px 16px;
+		border-radius: var(--radius);
+		background: var(--bg-modal);
+		border: 1px solid var(--border);
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+		font-size: 0.85rem;
+		color: var(--text-primary);
+		animation: toast-in 0.2s ease;
+	}
+
+	@keyframes toast-in {
+		from { opacity: 0; translate: -50% 8px; }
+		to { opacity: 1; translate: -50% 0; }
 	}
 
 	.item-wrapper {

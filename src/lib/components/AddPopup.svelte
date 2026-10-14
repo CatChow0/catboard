@@ -749,12 +749,7 @@
 			<div class="tab-content">
 				<h3>Add Navbar Widget</h3>
 				<div class="widget-options">
-					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-title'} onclick={() => (navbarWidgetType = 'navbar-title')}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M4 7V4h16v3M9 20h6M12 4v16" />
-						</svg>
-						<span>Title</span>
-					</button>
+					<!-- No Title option: every navbar always has exactly one (it holds the dashboard switcher). -->
 					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-search'} onclick={() => (navbarWidgetType = 'navbar-search')}>
 						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 							<circle cx="11" cy="11" r="8" />

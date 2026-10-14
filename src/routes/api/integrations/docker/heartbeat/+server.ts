@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { getIntegrations, getLayout } from '$lib/server/config';
+import { getIntegrations, getLayout, allBreakpointLayouts } from '$lib/server/config';
 import type { DockerEnvironmentData, DockerContainerInfo, DockerEnvironment } from '$lib/types';
 import http from 'node:http';
 import net from 'node:net';
@@ -62,7 +62,7 @@ async function wantedEnvironments(): Promise<{ envIds: Set<string>; statsEnvIds:
 		}
 		for (const child of item.children || []) visit(child);
 	};
-	for (const l of Object.values(layout.layouts || {})) {
+	for (const l of allBreakpointLayouts(layout)) {
 		(l.items || []).forEach(visit);
 		(l.navbar?.items || []).forEach(visit);
 	}

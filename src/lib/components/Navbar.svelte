@@ -200,11 +200,14 @@
 					<NavbarElegooPrint config={item.config} colSpan={resizeState?.itemId === item.id ? resizeState.currentColSpan : item.colSpan} />
 				{/if}
 				{#if $isEditing}
-					<button class="navbar-delete-btn" onclick={() => handleDelete(item.id)} title="Remove">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M18 6L6 18M6 6l12 12" />
-						</svg>
-					</button>
+					{#if item.type !== 'navbar-title'}
+						<!-- The title carries the dashboard switcher: it can be moved, not removed. -->
+						<button class="navbar-delete-btn" onclick={() => handleDelete(item.id)} title="Remove">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M18 6L6 18M6 6l12 12" />
+							</svg>
+						</button>
+					{/if}
 					<button class="navbar-edit-btn" onclick={() => handleEdit(item)} title="Edit">
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />

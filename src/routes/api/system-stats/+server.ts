@@ -1,11 +1,11 @@
 import type { RequestHandler } from './$types';
 import { getCpuStats, getRamStats, getDiskStats } from '$lib/server/system-stats';
-import { getLayout } from '$lib/server/config';
+import { getLayout, allBreakpointLayouts } from '$lib/server/config';
 import type { NavbarDiskItem, NavbarCpuItem } from '$lib/types';
 
 export const GET: RequestHandler = async ({ request }) => {
 	const layout = await getLayout();
-	const allNavbarItems = Object.values(layout.layouts || {}).flatMap((l) => l.navbar?.items || []);
+	const allNavbarItems = allBreakpointLayouts(layout).flatMap((l) => l.navbar?.items || []);
 	const diskPaths = allNavbarItems
 		.filter((item): item is NavbarDiskItem => item.type === 'navbar-disk')
 		.flatMap((item) => item.config?.disks || []);

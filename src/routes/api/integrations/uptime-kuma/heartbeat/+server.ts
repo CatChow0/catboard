@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { getIntegrations, getLayout } from '$lib/server/config';
+import { getIntegrations, getLayout, allBreakpointLayouts } from '$lib/server/config';
 import type { UptimeKumaStatusPageItem, NavbarUptimeKumaStatusPageItem, UptimeKumaMonitor, UptimeKumaStatusPageData } from '$lib/types';
 
 export const GET: RequestHandler = async ({ request }) => {
@@ -8,8 +8,8 @@ export const GET: RequestHandler = async ({ request }) => {
 
 	const layout = await getLayout();
 	const slugs = new Set<string>();
-	const allItems = Object.values(layout.layouts || {}).flatMap((l) => l.items || []);
-	const allNavbarItems = Object.values(layout.layouts || {}).flatMap((l) => l.navbar?.items || []);
+	const allItems = allBreakpointLayouts(layout).flatMap((l) => l.items || []);
+	const allNavbarItems = allBreakpointLayouts(layout).flatMap((l) => l.navbar?.items || []);
 
 	for (const item of allItems) {
 		if (item.type === 'uptime-kuma-status-page' && (item as UptimeKumaStatusPageItem).config?.slug) {

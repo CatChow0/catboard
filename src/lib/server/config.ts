@@ -1,10 +1,11 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import { randomUUID } from 'crypto';
 import type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, DashboardItem, NavbarItemBase,
-	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, IntegrationsConfig
+	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, IntegrationsConfig, DashboardMeta
 } from '$lib/types';
 
 export type {
@@ -216,11 +217,92 @@ export async function getLayout(): Promise<Layout> {
 		}
 	}
 
+	if (normalizeDashboards(data)) await setLayout(data);
+
 	return data;
 }
 
 export async function setLayout(data: Layout): Promise<void> {
 	return writeConfig('layout.json', data);
+}
+
+// --- Dashboards ---
+// layout.json keeps the first ("main") dashboard in `layouts` (the historical
+// format) and the others in `pages[id]`; `dashboards` holds their order and
+// names. The API serves one dashboard at a time in `layouts`.
+
+export const MAIN_DASHBOARD = 'main';
+
+export function dashboardList(layout: Layout): DashboardMeta[] {
+	return layout.dashboards?.length ? layout.dashboards : [{ id: MAIN_DASHBOARD, name: 'Home' }];
+}
+
+/** The per-breakpoint layouts of a dashboard (main when unknown). */
+export function dashboardLayouts(layout: Layout, id: string): Record<string, PerBreakpointLayout> {
+	if (id !== MAIN_DASHBOARD && layout.pages?.[id]) return layout.pages[id];
+	return layout.layouts;
+}
+
+export function setDashboardLayouts(layout: Layout, id: string, layouts: Record<string, PerBreakpointLayout>): void {
+	if (id === MAIN_DASHBOARD) layout.layouts = layouts;
+	else (layout.pages ??= {})[id] = layouts;
+}
+
+/** Resolve a requested dashboard id to an existing one (main when unknown). */
+export function resolveDashboard(layout: Layout, id: string | null | undefined): string {
+	const list = dashboardList(layout);
+	return id && list.some((d) => d.id === id) ? id : list[0].id;
+}
+
+/** Every breakpoint layout of every dashboard: for routes that look for widgets anywhere. */
+export function allBreakpointLayouts(layout: Layout): PerBreakpointLayout[] {
+	return dashboardList(layout).flatMap((d) => Object.values(dashboardLayouts(layout, d.id) || {}));
+}
+
+/** The title widget is mandatory: it carries the dashboard switcher. Returns true when changed. */
+export function ensureTitle(navbar: PerBreakpointLayout['navbar']): boolean {
+	const items = navbar.items;
+	const titles = items.filter((i) => i.type === 'navbar-title');
+	if (titles.length === 1) return false;
+	if (titles.length > 1) {
+		navbar.items = items.filter((i) => i.type !== 'navbar-title' || i === titles[0]);
+		return true;
+	}
+	const columns = navbar.columns || 12;
+	const span = 2;
+	let col = items.reduce((m, i) => Math.max(m, i.col + i.colSpan), 0);
+	for (let c = 0; c <= columns - span; c++) {
+		if (!items.some((i) => c < i.col + i.colSpan && c + span > i.col)) {
+			col = c;
+			break;
+		}
+	}
+	items.push({ id: `title-${randomUUID()}`, type: 'navbar-title', col, colSpan: span });
+	return true;
+}
+
+/** Make every dashboard complete (a layout per breakpoint, one title per navbar). */
+export function normalizeDashboards(layout: Layout): boolean {
+	let changed = false;
+	const breakpoints = layout.grid?.breakpoints || [];
+	if (layout.dashboards?.length && !layout.dashboards.some((d) => d.id === MAIN_DASHBOARD)) {
+		// "main" must stay in the list: it owns `layouts`.
+		layout.dashboards.unshift({ id: MAIN_DASHBOARD, name: 'Home' });
+		changed = true;
+	}
+	for (const d of dashboardList(layout)) {
+		const layouts = d.id === MAIN_DASHBOARD ? layout.layouts : ((layout.pages ??= {})[d.id] ??= {});
+		for (const bp of breakpoints) {
+			if (!layouts[bp.id]) {
+				layouts[bp.id] = { items: [], navbar: { columns: 12, items: [] } };
+				changed = true;
+			}
+			layouts[bp.id].navbar ??= { columns: 12, items: [] };
+			layouts[bp.id].navbar.items ??= [];
+			if (ensureTitle(layouts[bp.id].navbar)) changed = true;
+		}
+	}
+	return changed;
 }
 
 export async function getSettings(): Promise<Settings> {

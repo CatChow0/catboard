@@ -230,9 +230,26 @@ export interface PerBreakpointLayout {
 	navbar: NavbarLayout;
 }
 
+/** A dashboard: its own grid items and navbar for every breakpoint. */
+export interface DashboardMeta {
+	id: string;
+	name: string;
+}
+
 export interface Layout {
 	grid: GridConfig;
+	/**
+	 * Per-breakpoint layouts. In layout.json these belong to the "main"
+	 * dashboard; the API returns the requested dashboard's layouts here, so the
+	 * client always works on "the" layout of the active dashboard.
+	 */
 	layouts: Record<string, PerBreakpointLayout>;
+	/** Order and names of the dashboards (absent: just "main"). */
+	dashboards?: DashboardMeta[];
+	/** Storage of the other dashboards' layouts, by dashboard id (server side only). */
+	pages?: Record<string, Record<string, PerBreakpointLayout>>;
+	/** Id of the dashboard whose layouts were returned (API reads). */
+	dashboard?: string;
 }
 
 // --- Styling ---
