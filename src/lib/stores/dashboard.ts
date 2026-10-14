@@ -1,5 +1,6 @@
 import { writable, get, derived } from 'svelte/store';
 import { findNextAvailablePosition, hasCollision } from '$lib/utils/grid';
+import { initIconCache } from './icons';
 import type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
@@ -166,7 +167,9 @@ export async function loadDashboard(windowWidth?: number) {
 		api<{ services: Service[] }>('/api/services'),
 		fetchInitialLayout(),
 		api<Settings>('/api/settings'),
-		api<{ authenticated: boolean; needsSetup: boolean; username?: string; role?: string }>('/api/auth/check')
+		api<{ authenticated: boolean; needsSetup: boolean; username?: string; role?: string }>('/api/auth/check'),
+		// Icons stored by this browser are ready before the tiles render (result unused).
+		initIconCache()
 	]);
 
 	// Merge grid config from settings into layout

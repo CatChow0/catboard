@@ -4,6 +4,7 @@
 		dashboards, activeDashboardId, fetchDashboardLayout, saveLayoutSettings, refreshActiveDashboard, getBreakpointLabel, GRID_DEFAULTS
 	} from '$lib/stores/dashboard';
 	import type { Layout } from '$lib/types';
+	import { clearBrowserIconCache } from '$lib/stores/icons';
 	import { themePresets, customPaletteDefaults, themeDefaults } from '$lib/themes';
 	import type { CustomPalette } from '$lib/stores/dashboard';
 	import AdminPanel from './AdminPanel.svelte';
@@ -223,6 +224,7 @@
 		cacheRebuildResult = null;
 		try {
 			await fetch('/api/cache', { method: 'DELETE' });
+			await clearBrowserIconCache();
 			await loadCacheStats();
 		} catch {}
 		cacheClearing = false;
@@ -235,6 +237,8 @@
 			const res = await fetch('/api/cache', { method: 'POST' });
 			const data = await res.json();
 			cacheRebuildResult = data;
+			// Tiles fetch the rebuilt icons again.
+			await clearBrowserIconCache();
 			await loadCacheStats();
 		} catch {}
 		cacheRebuilding = false;

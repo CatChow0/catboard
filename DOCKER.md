@@ -397,10 +397,13 @@ dashboard.example.com {
 }
 ```
 
+**Enable HTTP/2 on the proxy** (Nginx Proxy Manager: "HTTP/2 Support" in the SSL tab; Caddy and Traefik use it by default). The dashboard keeps a few live streams open; over HTTP/1.1 browsers allow only 6 connections per site, so other requests (widgets, images) can wait in line.
+
 **Nginx:**
 ```nginx
 server {
     listen 443 ssl;
+    http2 on;
     server_name dashboard.example.com;
 
     ssl_certificate /path/to/cert.pem;

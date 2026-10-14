@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.10.0-blue)
+![Version](https://img.shields.io/badge/version-2.10.1-blue)
 
 ## Features
 
@@ -153,7 +153,7 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **AdGuard Home Stats** | DNS queries, blocked requests, blocked domains, and latency |
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
-| **Arr Releases** | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter |
+| **Arr Releases** | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter. Posters are loaded through CatBoard, so the API keys never reach the browser |
 | **Stacker** | Live hardware monitor from a Stacker server; choose CPU, Memory, GPU, Disk and Network sections; adapts from one-line gauges to full graphs as the tile grows |
 | **Jellyfin Now Playing** | Active streams: title, user and device, progress, paused state, Direct/Transcode badge (codec and reason on hover); one line per stream on 1-row tiles |
 | **Jellyseerr Requests** | Pending or all recent requests with poster, requester and status; approve/decline buttons for admins |
@@ -190,7 +190,7 @@ The **Icon** field of a service (Add > Services, or the edit button of a tile) h
 - **URL:** any image URL, downloaded once.
 - **Upload:** a PNG, SVG, WebP, JPEG, GIF or ICO file up to 1 MB, stored in `config/icons`.
 
-Icons are downloaded by the server, kept in `config/icons` and served from CatBoard (cached 7 days by browsers), so tiles show them instantly and without Internet access from the browser. Icons that cannot be found are retried after a day. **Settings > Cache** shows the cache and can clear it (uploads are kept) or rebuild it for every service.
+Icons are downloaded by the server and kept in `config/icons`. Each browser also keeps a copy (IndexedDB) filled by one grouped request per dashboard, so tiles show their icons instantly on reload and when switching dashboards, without Internet access from the browser. Icons that cannot be found are retried after a day. **Settings > Cache** shows the cache and can clear it (uploads are kept) or rebuild it for every service.
 
 ### Export & Import
 
@@ -263,6 +263,8 @@ Backup and restore your dashboard:
 | `GET` | `/api/version` | Current vs latest Docker image version |
 | `GET` | `/api/icon` | Service icon, resolved and cached by the server (`icon`, `name`, `url`) |
 | `GET` | `/api/icons/catalog` | selfh.st + homarr icon catalogs (icon picker) |
+| `POST` | `/api/icons/batch` | Several service icons at once (base64), for the browser icon cache |
+| `GET` | `/api/integrations/arr/image` | Radarr / Sonarr / Lidarr poster, fetched with the API key on the server |
 | `POST` | `/api/icons/upload` | Upload a custom icon (raw image body, max 1 MB) |
 | `GET/DELETE/POST` | `/api/cache` | Icon cache stats / clear / rebuild for all services |
 | `GET` | `/api/export` | Export dashboard config |

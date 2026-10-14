@@ -2,7 +2,7 @@
 	import StatusDot from './StatusDot.svelte';
 	import type { Service } from '$lib/stores/dashboard';
 	import { serviceStatuses, isEditing } from '$lib/stores/dashboard';
-	import { iconSrc } from '$lib/utils/icons';
+	import { serviceIcons, iconKey, requestIcon } from '$lib/stores/icons';
 
 	let { service, colSpan = 1, rowSpan = 1, onedit, ondelete }: {
 		service: Service;
@@ -14,16 +14,18 @@
 
 	let status = $derived($serviceStatuses[service.id] || 'checking');
 
-	// One URL: the server resolves and caches the icon. If it has none, a legacy
-	// icon name may still be one of the icons bundled in /icons, else the initial.
-	let iconFailed = $state(false);
-	let triedLocal = $state(false);
-	let iconUrl = $derived(iconSrc(service));
-	// Settings changed: try again.
+	// Icons come from the browser-side cache (memory + IndexedDB, filled by
+	// grouped requests). undefined = loading, null = the server has none: then a
+	// legacy icon name may still be one of the icons bundled in /icons, else the
+	// initial is shown.
+	let entry = $derived($serviceIcons.get(iconKey(service)));
+	let legacy = $derived(service.icon && !service.icon.includes(':') ? service.icon : '');
+	let localFailed = $state(false);
+	let broken = $state(false);
 	$effect(() => {
-		void iconUrl;
-		iconFailed = false;
-		triedLocal = false;
+		requestIcon(service);
+		localFailed = false;
+		broken = false;
 	});
 
 	let initial = $derived(service.name ? service.name.charAt(0).toUpperCase() : '?');
@@ -55,16 +57,6 @@
 		'1.2rem'
 	);
 
-	function handleIconError(e: Event) {
-		const img = e.target as HTMLImageElement;
-		const legacy = service.icon && !service.icon.includes(':') ? service.icon : '';
-		if (legacy && !triedLocal) {
-			triedLocal = true;
-			img.src = `/icons/${legacy}.svg`;
-		} else {
-			iconFailed = true;
-		}
-	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -79,10 +71,15 @@
 >
 	<div class="tile-content">
 		<div class="tile-icon">
-			{#if iconFailed}
-				<div class="tile-initial" style="width: {iconSize}px; height: {iconSize}px; font-size: {iconSize * 0.5}px;">{initial}</div>
+			{#if entry && !broken}
+				<img src={entry.src} alt={service.name} onerror={() => (broken = true)} style="width: {iconSize}px; height: {iconSize}px;" />
+			{:else if entry === null && legacy && !localFailed}
+				<img src="/icons/{legacy}.svg" alt={service.name} onerror={() => (localFailed = true)} style="width: {iconSize}px; height: {iconSize}px;" />
+			{:else if entry === undefined && !broken}
+				<!-- Loading: keep the space so the tile does not jump. -->
+				<div class="tile-icon-pending" style="width: {iconSize}px; height: {iconSize}px;"></div>
 			{:else}
-				<img src={iconUrl} alt={service.name} onerror={handleIconError} style="width: {iconSize}px; height: {iconSize}px;" />
+				<div class="tile-initial" style="width: {iconSize}px; height: {iconSize}px; font-size: {iconSize * 0.5}px;">{initial}</div>
 			{/if}
 		</div>
 		{#if showText}
@@ -163,6 +160,11 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+
+	.tile-icon-pending {
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--text-muted) 10%, transparent);
 	}
 
 	.tile-icon img {

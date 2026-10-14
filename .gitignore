@@ -10,3 +10,6 @@ config/
 CLAUDE.md
 
 .mcp.json
+
+# Browser network captures (contain session cookies and API keys)
+*.har

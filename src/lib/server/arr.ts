@@ -26,12 +26,17 @@ export function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
 }
 
-export function resolveUrl(base: string, maybeRelative: string, apiKey: string): string {
+/**
+ * Browser URL of an *Arr image. Images served by the *Arr app itself go
+ * through CatBoard (/api/integrations/arr/image), which adds the API key
+ * server-side: the key never reaches the browser. Absolute URLs (TMDB...) are
+ * public and returned as they are.
+ */
+export function resolveUrl(source: ArrSource, maybeRelative: string): string {
 	if (!maybeRelative) return '';
-	if (maybeRelative.startsWith('http')) return maybeRelative;
-	const url = normalizeUrl(base) + '/' + maybeRelative.replace(/^\/+/, '');
-	const sep = url.includes('?') ? '&' : '?';
-	return `${url}${sep}apikey=${encodeURIComponent(apiKey)}`;
+	if (/^https?:\/\//i.test(maybeRelative)) return maybeRelative;
+	const path = '/' + maybeRelative.replace(/^\/+/, '').replace(/([?&])apikey=[^&]*&?/i, '$1').replace(/[?&]$/, '');
+	return `/api/integrations/arr/image?source=${source}&path=${encodeURIComponent(path)}`;
 }
 
 function toDay(value: string | undefined): string {
@@ -65,7 +70,6 @@ async function arrGet(conn: ArrConnection, path: string, label: string): Promise
 
 export async function fetchRadarrCalendar(conn: ArrConnection, start: string, end: string, mode: ArrDateMode = 'calendar'): Promise<FetchResult> {
 	try {
-		const base = normalizeUrl(conn.url);
 		const { data, error } = await arrGet(conn, `/api/v3/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&unmonitored=true`, 'Radarr');
 		if (!data) return { entries: [], error };
 		const today = new Date().toISOString().split('T')[0];
@@ -78,7 +82,7 @@ export async function fetchRadarrCalendar(conn: ArrConnection, start: string, en
 				subtitle: item.year ? String(item.year) : undefined,
 				date: pickRadarrDate(item, mode, today),
 				hasFile: !!item.hasFile,
-				posterUrl: resolveUrl(base, rawPoster, conn.apiKey) || undefined
+				posterUrl: resolveUrl('radarr', rawPoster) || undefined
 			};
 		}).filter((e: ArrCalendarEntry) => e.date);
 		return { entries };
@@ -90,7 +94,6 @@ export async function fetchRadarrCalendar(conn: ArrConnection, start: string, en
 
 export async function fetchSonarrCalendar(conn: ArrConnection, start: string, end: string): Promise<FetchResult> {
 	try {
-		const base = normalizeUrl(conn.url);
 		const { data, error } = await arrGet(conn, `/api/v3/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&unmonitored=true&includeSeries=true`, 'Sonarr');
 		if (!data) return { entries: [], error };
 		const entries = data.map((item: any) => {
@@ -101,8 +104,8 @@ export async function fetchSonarrCalendar(conn: ArrConnection, start: string, en
 				: '';
 			// Fallback poster via seriesId if no image URL provided
 			const resolvedPoster = rawPoster
-				? resolveUrl(base, rawPoster, conn.apiKey)
-				: seriesId ? resolveUrl(base, `/api/v3/MediaCover/${seriesId}/poster.jpg`, conn.apiKey) : '';
+				? resolveUrl('sonarr', rawPoster)
+				: seriesId ? resolveUrl('sonarr', `/api/v3/MediaCover/${seriesId}/poster.jpg`) : '';
 			const code = item.seasonNumber != null && item.episodeNumber != null
 				? `S${String(item.seasonNumber).padStart(2, '0')}E${String(item.episodeNumber).padStart(2, '0')}`
 				: '';
@@ -125,7 +128,6 @@ export async function fetchSonarrCalendar(conn: ArrConnection, start: string, en
 
 export async function fetchLidarrCalendar(conn: ArrConnection, start: string, end: string): Promise<FetchResult> {
 	try {
-		const base = normalizeUrl(conn.url);
 		const { data, error } = await arrGet(conn, `/api/v1/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&unmonitored=true&includeArtist=true`, 'Lidarr');
 		if (!data) return { entries: [], error };
 		const entries = data.map((item: any) => {
@@ -135,8 +137,8 @@ export async function fetchLidarrCalendar(conn: ArrConnection, start: string, en
 				? item.artist?.images?.find((img: any) => img.coverType === 'poster')?.url || ''
 				: '';
 			const resolvedPoster = rawPoster
-				? resolveUrl(base, rawPoster, conn.apiKey)
-				: artistId ? resolveUrl(base, `/api/v1/MediaCover/${artistId}/poster.jpg`, conn.apiKey) : '';
+				? resolveUrl('lidarr', rawPoster)
+				: artistId ? resolveUrl('lidarr', `/api/v1/MediaCover/${artistId}/poster.jpg`) : '';
 			return {
 				id: String(item.id || Math.random()),
 				type: 'lidarr' as const,
