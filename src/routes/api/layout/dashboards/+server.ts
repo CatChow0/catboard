@@ -15,15 +15,10 @@ function uniqueName(list: DashboardMeta[], wanted: string, exceptId?: string): s
 	return name;
 }
 
-/** New dashboard: same navbars as `from` (fresh ids, so it keeps the title and widgets), empty grids. */
+/** New dashboard: empty grids and navbars (normalizeDashboards then adds the mandatory title). */
 function blankFrom(layouts: Record<string, PerBreakpointLayout>): Record<string, PerBreakpointLayout> {
 	const out: Record<string, PerBreakpointLayout> = {};
-	for (const [bp, l] of Object.entries(layouts)) {
-		out[bp] = {
-			items: [],
-			navbar: { columns: l.navbar?.columns || 12, items: (l.navbar?.items || []).map((i) => ({ ...structuredClone(i), id: `${i.type}-${randomUUID()}` })) }
-		};
-	}
+	for (const [bp, l] of Object.entries(layouts)) out[bp] = { items: [], navbar: { columns: l.navbar?.columns || 12, items: [] } };
 	return out;
 }
 
@@ -38,7 +33,31 @@ function extract(items: DashboardItem[], ids: Set<string>, out: DashboardItem[])
 	return kept;
 }
 
-/** POST {action, ...} — create / rename / move / delete dashboards, or move tiles to another dashboard. */
+/** Find the items with these ids (root or group children) without removing them. */
+function collect(items: DashboardItem[], ids: Set<string>, out: DashboardItem[]) {
+	for (const item of items) {
+		if (ids.has(item.id)) out.push(item);
+		else if ('children' in item && Array.isArray(item.children)) collect(item.children, ids, out);
+	}
+}
+
+/** Deep copy with fresh ids (group children too); services keep their serviceId. */
+function cloneWithNewIds(item: DashboardItem): DashboardItem {
+	const copy = structuredClone(item) as DashboardItem;
+	const renew = (it: DashboardItem) => {
+		it.id = randomUUID();
+		if ('children' in it && Array.isArray(it.children)) it.children.forEach(renew);
+	};
+	renew(copy);
+	return copy;
+}
+
+const bounded = (v: unknown, min: number, max: number): number | undefined => {
+	const n = Number(v);
+	return v === null || v === undefined || v === '' || !Number.isFinite(n) ? undefined : Math.round(Math.min(max, Math.max(min, n)));
+};
+
+/** POST {action, ...} — manage dashboards, copy / move tiles between them, and per-breakpoint layout settings. */
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json().catch(() => ({}));
 	const data: Layout = await getLayout();
@@ -91,22 +110,50 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 			break;
 		}
-		case 'moveItems': {
-			const from = String(body.from || ''), to = String(body.to || ''), bp = String(body.breakpoint || '');
+		case 'transferItems': {
+			// Copy or move tiles to any dashboard x breakpoint (possibly the same dashboard).
+			const from = String(body.from || ''), to = String(body.to || '');
+			const fromBp = String(body.fromBreakpoint || ''), toBp = String(body.toBreakpoint || fromBp);
+			const copy = body.copy === true;
 			const ids = new Set<string>(Array.isArray(body.itemIds) ? body.itemIds.map(String) : []);
-			if (index(from) < 0 || index(to) < 0 || from === to) return json({ error: 'Unknown dashboard' }, { status: 404 });
-			const src = dashboardLayouts(data, from)[bp];
-			const dst = dashboardLayouts(data, to)[bp];
-			if (!src || !dst || ids.size === 0) return json({ error: 'Nothing to move' }, { status: 400 });
-			const moved: DashboardItem[] = [];
-			src.items = extract(src.items, ids, moved);
-			const cols = Math.min(48, Math.max(1, Number(body.columns) || data.grid.breakpoints.find((b) => b.id === bp)?.columns || 12));
-			for (const it of moved) {
+			if (index(from) < 0 || index(to) < 0) return json({ error: 'Unknown dashboard' }, { status: 404 });
+			if (!copy && from === to && fromBp === toBp) return json({ error: 'Already there' }, { status: 400 });
+			const src = dashboardLayouts(data, from)[fromBp];
+			const dst = dashboardLayouts(data, to)[toBp];
+			if (!src || !dst || ids.size === 0) return json({ error: 'Nothing to transfer' }, { status: 400 });
+			let picked: DashboardItem[] = [];
+			if (copy) collect(src.items, ids, picked);
+			else src.items = extract(src.items, ids, picked);
+			if (copy) picked = picked.map(cloneWithNewIds);
+			const cols = Math.min(48, Math.max(1, data.grid.breakpoints.find((b) => b.id === toBp)?.columns || Number(body.columns) || 12));
+			for (const it of picked) {
 				const colSpan = Math.min(it.colSpan, cols);
 				const p = findNextAvailablePosition(dst.items, colSpan, it.rowSpan, cols);
 				dst.items.push({ ...it, col: p.col, row: p.row, colSpan } as DashboardItem);
 			}
-			result = { moved: moved.length };
+			result = { count: picked.length, copy };
+			break;
+		}
+		case 'layoutSettings': {
+			// Grid and navbar settings of one dashboard, at one breakpoint or all of them.
+			const i = index(body.id);
+			if (i < 0) return json({ error: 'Unknown dashboard' }, { status: 404 });
+			const layouts = dashboardLayouts(data, body.id);
+			const targets = body.allBreakpoints ? Object.keys(layouts) : [String(body.breakpoint || '')];
+			if (!targets.every((bp) => layouts[bp])) return json({ error: 'Unknown breakpoint' }, { status: 400 });
+			const g = body.grid || {}, n = body.navbar || {};
+			for (const bp of targets) {
+				const l = layouts[bp];
+				const grid = { cellSize: bounded(g.cellSize, 40, 300), gap: bounded(g.gap, 0, 48) };
+				l.grid = grid.cellSize === undefined && grid.gap === undefined ? undefined : grid;
+				if (!l.grid) delete l.grid;
+				l.navbar.columns = bounded(n.columns, 4, 48) ?? l.navbar.columns ?? 12;
+				l.navbar.rowHeight = bounded(n.rowHeight, 28, 120);
+				l.navbar.marginTop = bounded(n.marginTop, 0, 48);
+				l.navbar.marginBottom = bounded(n.marginBottom, 0, 48);
+				for (const k of ['rowHeight', 'marginTop', 'marginBottom'] as const) if (l.navbar[k] === undefined) delete l.navbar[k];
+			}
+			result = { breakpoints: targets };
 			break;
 		}
 		default:

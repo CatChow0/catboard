@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.8.0-blue)
+![Version](https://img.shields.io/badge/version-2.9.0-blue)
 
 ## Features
 
@@ -107,8 +107,11 @@ Each dashboard has its own grid and its own navbar (for every breakpoint). The *
 
 - **Switch:** click a square, scroll the mouse wheel over the title widget, swipe left/right on the grid (touch screens), or press **←** / **→**. The dashboard slides in from the side (no animation with the animation level set to None).
 - **Link:** the URL ends with `#name-of-the-dashboard`, so a bookmark opens that dashboard; the last one used is remembered per browser.
-- **Manage (edit mode):** the **+** square creates a dashboard (with a copy of the current navbar and an empty grid). Click the active square to rename it, move it left/right or delete it (the last dashboard cannot be deleted).
-- **Move tiles:** in edit mode, drag a tile (or a selection, or a tile out of a group) onto another dashboard's square to move it there.
+- **Manage (edit mode):** the **+** square creates a dashboard (empty grid, navbar with only the title). Click the active square to rename it, move it left/right or delete it (the last dashboard cannot be deleted).
+- **Copy / move / delete (edit mode):** right-click a tile (or a selection, tiles inside groups included; long-press on touch screens) for **Copy to…**, **Move to…** (any dashboard, then any breakpoint, e.g. copy a desktop tile to the Tablet layout) and **Delete**.
+- **Search:** the navbar search lists matching tiles from every dashboard, grouped by dashboard; pick one (or press Enter) to switch to its dashboard and highlight it. With no match anywhere, Enter searches the web.
+- **Layout per dashboard:** in **Settings > Layout**, pick a dashboard and a breakpoint to set its cell height, gap and navbar (columns, row height, top/bottom margin), previewed live. Breakpoints themselves (name, minimum width, grid columns) are shared by all dashboards.
+- The navbar slides in with its dashboard.
 - The Title widget is mandatory: it can be moved and resized but not removed, and every navbar has exactly one.
 
 ### Navbar Widgets
@@ -118,7 +121,7 @@ Add widgets to the navbar via Add > Navbar tab:
 | Widget | Description |
 |---|---|
 | **Title** | Dashboard title from settings, with the dashboard switcher squares under it (always present, cannot be removed) |
-| **Search** | Search bar to filter services |
+| **Search** | Highlights matching tiles on the dashboard shown and lists matches from every dashboard |
 | **CPU** | CPU usage bar + temperature (configurable sensor) |
 | **RAM** | RAM usage bar + swap bar |
 | **Disk** | Disk usage bars with click-to-cycle pagination |
@@ -154,7 +157,7 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **Jellyfin Now Playing** | Active streams: title, user and device, progress, paused state, Direct/Transcode badge (codec and reason on hover); one line per stream on 1-row tiles |
 | **Jellyseerr Requests** | Pending or all recent requests with poster, requester and status; approve/decline buttons for admins |
 | **qBittorrent** | Speeds and 60 s graph, counts per state, torrent list with progress/ETA; per-torrent and global pause/resume for admins |
-| **Spoolman** | Recently used spools and spools running low / empty: colour swatch (multi-colour supported), name, vendor and material, remaining weight bar; thresholds (% and/or grams) and archived spools configurable |
+| **Spoolman** | Scrollable list of available spools (sorted by name, remaining filament or last use): colour swatch (multi-colour supported), name, vendor and material, remaining weight bar. Optional **Recently used** and **Running low / empty** sections, **Show only** to keep just those sections, and the order of the blocks (e.g. Recently used above the list); thresholds (% and/or grams) and archived spools configurable |
 | **3D Print Status** | Elegoo Centauri Carbon 2: model preview, state, progress, time left and end time, elapsed time, layers, nozzle/bed/chamber temperatures and speed mode; temperature cards with target; pause/resume/stop for admins. When idle the layout stays (empty preview, `--` values, disabled buttons); one line on a 1-row tile |
 | **Notes** | Markdown note (headings, bold/italic, links, lists, code, quotes, `- [ ]` checklists); edit with the Edit button, Ctrl+Enter to save |
 
@@ -213,7 +216,8 @@ Backup and restore your dashboard:
 | `POST` | `/api/auth/logout` | Sign out |
 | `GET/PUT` | `/api/settings` | Global settings |
 | `GET/PUT` | `/api/layout` | Layout of one dashboard (`?dashboard=<id>`, default the first), with the dashboard list |
-| `POST` | `/api/layout/dashboards` | Create, rename, move or delete dashboards; move tiles between dashboards |
+| `POST` | `/api/layout/dashboards` | Create, rename, move or delete dashboards; copy / move tiles to any dashboard and breakpoint (`transferItems`); grid and navbar settings of a dashboard (`layoutSettings`) |
+| `GET` | `/api/layout/search` | Tiles of every dashboard at a breakpoint (`breakpoint`), for the search |
 | `GET/POST` | `/api/services` | List/register services |
 | `GET/PUT/DELETE` | `/api/services/[id]` | Service CRUD |
 | `GET/PUT/DELETE` | `/api/users` | User management (admin) |

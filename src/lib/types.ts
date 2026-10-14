@@ -223,11 +223,18 @@ export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | Na
 export interface NavbarLayout {
 	columns: number;
 	items: NavbarItem[];
+	/** Minimum row height in px (default 44). */
+	rowHeight?: number;
+	/** Space above / below the navbar in px (default 8). */
+	marginTop?: number;
+	marginBottom?: number;
 }
 
 export interface PerBreakpointLayout {
 	items: DashboardItem[];
 	navbar: NavbarLayout;
+	/** Grid of this dashboard at this breakpoint (missing values: the global defaults). */
+	grid?: { cellSize?: number; gap?: number };
 }
 
 /** A dashboard: its own grid items and navbar for every breakpoint. */
@@ -622,14 +629,28 @@ export interface SpoolInfo {
 
 export interface SpoolmanData {
 	url: string; // Spoolman web UI, for links
+	/** Spools with filament left (sorted as asked), for the main list. */
+	available: SpoolInfo[];
 	recent: SpoolInfo[];
 	low: SpoolInfo[];
 	empty: SpoolInfo[];
 	total: number;
 }
 
+export type SpoolmanSection = 'list' | 'recent' | 'low';
+
 export interface SpoolmanConfig {
 	title?: string;
+	/** Extra sections under the spool list. */
+	showRecent?: boolean;
+	showLow?: boolean;
+	/** Only the enabled sections, without the spool list. */
+	showOnly?: boolean;
+	/** Order of the spool list. */
+	sort?: 'name' | 'remaining' | 'lastUsed';
+	/** Display order of the blocks (default: list, recent, low). */
+	order?: SpoolmanSection[];
+	/** @deprecated before V2.9: which lists to show (migrated to showRecent / showLow / showOnly). */
 	show?: 'recent' | 'low' | 'both';
 	limit?: number;
 	/** "Running low" below this share of the initial weight (default 15). */

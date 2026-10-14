@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { isEditing, layout, activeBreakpointId, manualBreakpointId, settings, saveNavbarLayout, removeNavbarItem, getBreakpointLabel, searchQuery, services } from '$lib/stores/dashboard';
+	import { isEditing, layout, activeBreakpointId, manualBreakpointId, settings, saveNavbarLayout, removeNavbarItem, getBreakpointLabel, searchQuery, services, activeDashboardId, dashboardDirection, activeGrid } from '$lib/stores/dashboard';
+	import { fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import type { NavbarItem } from '$lib/types';
 	import NavbarTitle from './navbar/NavbarTitle.svelte';
 	import NavbarSearch from './navbar/NavbarSearch.svelte';
@@ -26,13 +28,17 @@
 		isEditing.update((v) => !v);
 	}
 
+	/** The navbar of the new dashboard slides in from the side the dashboard comes from. */
+	function navIn(node: HTMLElement) {
+		const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if ($settings.animations === 'none' || reduced) return { duration: 0 };
+		return fly(node, { x: $dashboardDirection * 40, duration: 220, easing: cubicOut, opacity: 0 });
+	}
+
+	/** Enter with no matching tile on any dashboard (NavbarSearch decides): search the web. */
 	function handleSearchEnter(query: string) {
-		const q = query.trim().toLowerCase();
-		if (!q) return;
-		const hasMatch = $services.some((s) => s.name.toLowerCase().includes(q));
-		if (!hasMatch) {
-			window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query.trim())}`, '_blank');
-		}
+		const q = query.trim();
+		if (q) window.open(`https://duckduckgo.com/?q=${encodeURIComponent(q)}`, '_blank');
 	}
 
 	let dragState = $state<{
@@ -154,12 +160,20 @@
 
 <svelte:window onpointermove={handlePointerMove} onpointerup={handlePointerUp} />
 
-<header class="navbar" class:editing={$isEditing} class:dragging={!!dragState} class:resizing={!!resizeState}>
+<header
+	class="navbar"
+	class:editing={$isEditing}
+	class:dragging={!!dragState}
+	class:resizing={!!resizeState}
+	style="--nb-row: {$activeGrid.navbar.rowHeight}px; --nb-mt: {$activeGrid.navbar.marginTop}px; --nb-mb: {$activeGrid.navbar.marginBottom}px;"
+>
+	{#key $activeDashboardId}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={navbarEl}
 		class="navbar-items"
 		style="grid-template-columns: repeat({activeNavbar?.columns || 12}, 1fr);"
+		in:navIn
 	>
 		{#each activeNavbar?.items || [] as item (item.id)}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -228,6 +242,7 @@
 			</div>
 		{/each}
 	</div>
+	{/key}
 	<div class="navbar-controls">
 					{#if $isEditing}
 				<div class="layout-select-wrapper">
@@ -271,7 +286,8 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding: 8px 16px;
+		/* Margins and row height are set per dashboard and breakpoint (Settings > Layout). */
+		padding: var(--nb-mt, 8px) 16px var(--nb-mb, 8px);
 	}
 
 	.navbar.dragging,
@@ -284,7 +300,7 @@
 		min-width: 0;
 		display: grid;
 		/* Rows grow when a widget's icon/text size is turned up. */
-		grid-auto-rows: minmax(44px, auto);
+		grid-auto-rows: minmax(var(--nb-row, 44px), auto);
 		gap: 4px;
 		align-items: center;
 	}

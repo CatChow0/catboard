@@ -4,7 +4,7 @@
 	import LocationSearch from './LocationSearch.svelte';
 	import DockerLogo from './icons/DockerLogo.svelte';
 	import UptimeKumaLogo from './icons/UptimeKumaLogo.svelte';
-	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, getActiveColumns, getIntegrations, setIntegrations, currentUser } from '$lib/stores/dashboard';
+	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, activeGrid, getIntegrations, setIntegrations, currentUser } from '$lib/stores/dashboard';
 	import IconPicker from './IconPicker.svelte';
 
 	let { onclose }: { onclose: () => void } = $props();
@@ -110,7 +110,8 @@
 
 	let spoolmanUrl = $state('');
 	let spoolmanSaving = $state(false);
-	let spoolmanShow = $state<NonNullable<SpoolmanConfig['show']>>('both');
+	let spoolmanRecent = $state(false);
+	let spoolmanLow = $state(false);
 	let spoolmanColSpan = $state(4);
 	let spoolmanRowSpan = $state(4);
 	let elegooPrinters = $state<ElegooPrinter[]>([]);
@@ -197,9 +198,9 @@
 		}
 	}
 
+	/** Columns of the breakpoint shown (it may have been picked by hand in edit mode). */
 	function getMaxCols(): number {
-		const bps = $layout?.grid?.breakpoints || [{ minWidth: 0, columns: 4 }];
-		return getActiveColumns(bps, window.innerWidth);
+		return $activeGrid.columns;
 	}
 
 	async function handleRegister(e: Event) {
@@ -452,7 +453,8 @@
 
 	async function handleAddSpoolmanWidget() {
 		close();
-		await addWidgetToDashboard('spoolman', '', spoolmanColSpan, spoolmanRowSpan, getMaxCols(), { show: spoolmanShow, limit: 5, lowPercent: 15 });
+		const config: SpoolmanConfig = { showRecent: spoolmanRecent || undefined, showLow: spoolmanLow || undefined, limit: 5, lowPercent: 15 };
+		await addWidgetToDashboard('spoolman', '', spoolmanColSpan, spoolmanRowSpan, getMaxCols(), config as Record<string, unknown>);
 	}
 
 	function addElegooPrinter() {
@@ -1672,13 +1674,12 @@
 					{#if !spoolmanUrl}
 						<p class="hint">Configure the Spoolman connection first.</p>
 					{:else}
-						<div class="field">
-							<label for="spoolman-show">Show</label>
-							<select id="spoolman-show" bind:value={spoolmanShow}>
-								<option value="both">Recently used and running low</option>
-								<option value="recent">Recently used only</option>
-								<option value="low">Running low / empty only</option>
-							</select>
+						<div class="navbar-options">
+							<span class="field-label">The widget lists the available spools. Extra sections:</span>
+							<div class="disk-list">
+								<label class="disk-check"><input type="checkbox" bind:checked={spoolmanRecent} /><span>Recently used</span></label>
+								<label class="disk-check"><input type="checkbox" bind:checked={spoolmanLow} /><span>Running low / empty</span></label>
+							</div>
 						</div>
 						<div class="size-row">
 							<div class="field">

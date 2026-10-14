@@ -3,10 +3,8 @@
 	// title (the active one is wider and accent-coloured); click a square or use
 	// the mouse wheel over the widget to switch. In edit mode a "+" square adds a
 	// dashboard, and clicking the active square opens rename / move / delete.
-	// During a tile drag, the square under the pointer lights up: dropping there
-	// moves the tile to that dashboard (handled by the dashboard drag controller).
 	import {
-		settings, isEditing, dashboards, activeDashboardId, dashboardDropTarget,
+		settings, isEditing, dashboards, activeDashboardId,
 		switchDashboard, createDashboard, renameDashboard, moveDashboard, deleteDashboard
 	} from '$lib/stores/dashboard';
 	import NavbarPopover from './NavbarPopover.svelte';
@@ -94,7 +92,6 @@
 					<button
 						bind:this={activeDot}
 						class="nt-dot active"
-						class:drop={$dashboardDropTarget === d.id}
 						data-dashboard-id={d.id}
 						role="tab"
 						aria-selected="true"
@@ -106,7 +103,6 @@
 				{:else}
 					<button
 						class="nt-dot"
-						class:drop={$dashboardDropTarget === d.id}
 						data-dashboard-id={d.id}
 						role="tab"
 						aria-selected="false"
@@ -196,12 +192,6 @@
 	.nt-dot.active {
 		width: calc(18px * var(--nb-icon, 1));
 		background: var(--accent);
-	}
-
-	.nt-dot.drop {
-		background: var(--accent);
-		transform: scale(1.6);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 	}
 
 	.nt-dot:focus-visible {

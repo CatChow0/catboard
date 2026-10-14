@@ -53,7 +53,9 @@ async function allSpools(base: string, includeArchived: boolean): Promise<SpoolI
 	return spools;
 }
 
-export async function spoolmanData(base: string, opts: { limit: number; lowPercent: number; lowGrams: number; includeArchived: boolean }): Promise<SpoolmanData> {
+export type SpoolSort = 'name' | 'remaining' | 'lastUsed';
+
+export async function spoolmanData(base: string, opts: { limit: number; lowPercent: number; lowGrams: number; includeArchived: boolean; sort: SpoolSort }): Promise<SpoolmanData> {
 	const spools = await allSpools(base, opts.includeArchived);
 	const isEmpty = (s: SpoolInfo) => s.remaining != null && s.remaining <= 1;
 	const isLow = (s: SpoolInfo) =>
@@ -66,5 +68,13 @@ export async function spoolmanData(base: string, opts: { limit: number; lowPerce
 	const low = spools.filter(isLow).sort((a, b) => (a.remaining ?? 0) - (b.remaining ?? 0));
 	// Archived spools are usually the finished ones; only listed when asked for.
 	const empty = spools.filter((s) => isEmpty(s) && (opts.includeArchived || !s.archived)).sort((a, b) => Date.parse(b.lastUsed || '0') - Date.parse(a.lastUsed || '0'));
-	return { url: base, recent, low: low.slice(0, opts.limit), empty: empty.slice(0, opts.limit), total: spools.length };
+	// Main list: every spool that still has filament (unknown weight counts as available).
+	const byName = (a: SpoolInfo, b: SpoolInfo) => a.name.localeCompare(b.name) || a.vendor.localeCompare(b.vendor);
+	const order: Record<SpoolSort, (a: SpoolInfo, b: SpoolInfo) => number> = {
+		name: byName,
+		remaining: (a, b) => (a.remaining ?? Infinity) - (b.remaining ?? Infinity) || byName(a, b),
+		lastUsed: (a, b) => Date.parse(b.lastUsed || '0') - Date.parse(a.lastUsed || '0') || byName(a, b)
+	};
+	const available = spools.filter((s) => !isEmpty(s) && (opts.includeArchived || !s.archived)).sort(order[opts.sort]);
+	return { url: base, available, recent, low: low.slice(0, opts.limit), empty: empty.slice(0, opts.limit), total: spools.length };
 }

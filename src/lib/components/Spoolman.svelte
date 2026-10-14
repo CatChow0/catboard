@@ -1,7 +1,8 @@
 <script lang="ts">
-	// Spoolman: recently used spools, and spools running low or empty.
-	// A one-row tile shows a summary line instead of the lists.
-	import type { SpoolInfo, SpoolmanConfig, SpoolmanData } from '$lib/types';
+	// Spoolman: the list of available spools (scrollable), plus optional
+	// "Recently used" and "Running low / empty" sections. "Show only" hides the
+	// list and keeps just the enabled sections. A one-row tile shows a summary.
+	import type { SpoolInfo, SpoolmanConfig, SpoolmanData, SpoolmanSection } from '$lib/types';
 	import { updateDashboardItem } from '$lib/stores/dashboard';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetModal from './widget/WidgetModal.svelte';
@@ -16,7 +17,28 @@
 	} = $props();
 
 	const POLL_MS = 60_000;
-	const show = $derived(config?.show ?? 'both');
+
+	/** Sections to show; widgets saved before V2.9 used `show` (they keep their look). */
+	function sectionsOf(c?: SpoolmanConfig) {
+		if (c?.show && c.showRecent === undefined && c.showLow === undefined) {
+			return { recent: c.show !== 'low', low: c.show !== 'recent', only: true };
+		}
+		const recent = !!c?.showRecent, low = !!c?.showLow;
+		return { recent, low, only: !!c?.showOnly && (recent || low) };
+	}
+
+	const sections = $derived(sectionsOf(config));
+
+	const DEFAULT_ORDER: SpoolmanSection[] = ['list', 'recent', 'low'];
+	const SECTION_NAMES: Record<SpoolmanSection, string> = { list: 'Spool list', recent: 'Recently used', low: 'Running low / empty' };
+
+	/** Saved order, cleaned up: known blocks once each, missing ones appended. */
+	function orderOf(c?: SpoolmanConfig): SpoolmanSection[] {
+		const saved = (c?.order ?? []).filter((k, i, a) => DEFAULT_ORDER.includes(k) && a.indexOf(k) === i);
+		return [...saved, ...DEFAULT_ORDER.filter((k) => !saved.includes(k))];
+	}
+	const order = $derived(orderOf(config));
+	const sort = $derived(config?.sort ?? 'name');
 	const limit = $derived(config?.limit ?? 5);
 	const lowPercent = $derived(config?.lowPercent ?? 15);
 	const lowGrams = $derived(config?.lowGrams ?? 0);
@@ -27,7 +49,7 @@
 	let error = $state('');
 
 	$effect(() => {
-		const q = `limit=${limit}&lowPercent=${lowPercent}&lowGrams=${lowGrams}&archived=${archived ? 1 : 0}`;
+		const q = `limit=${limit}&lowPercent=${lowPercent}&lowGrams=${lowGrams}&archived=${archived ? 1 : 0}&sort=${sort}`;
 		let stopped = false;
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		async function load() {
@@ -72,14 +94,30 @@
 	// --- Settings ---
 	let showEdit = $state(false);
 	let editTitle = $state('');
-	let editShow = $state<NonNullable<SpoolmanConfig['show']>>('both');
+	let editRecent = $state(false);
+	let editLow = $state(false);
+	let editOnly = $state(false);
+	let editSort = $state<NonNullable<SpoolmanConfig['sort']>>('name');
+	let editOrder = $state<SpoolmanSection[]>([...DEFAULT_ORDER]);
+	function moveSection(i: number, dir: -1 | 1) {
+		const next = [...editOrder];
+		[next[i], next[i + dir]] = [next[i + dir], next[i]];
+		editOrder = next;
+	}
+	/** Whether a block would be shown with the settings being edited. */
+	const editShown = (k: SpoolmanSection) => (k === 'list' ? !(canShowOnly && editOnly) : k === 'recent' ? editRecent : editLow);
 	let editLimit = $state(5);
 	let editLowPercent = $state(15);
 	let editLowGrams = $state(0);
 	let editArchived = $state(false);
+	const canShowOnly = $derived(editRecent || editLow);
 	function openEdit() {
 		editTitle = config?.title ?? '';
-		editShow = show;
+		editRecent = sections.recent;
+		editLow = sections.low;
+		editOnly = sections.only;
+		editSort = sort;
+		editOrder = [...order];
 		editLimit = limit;
 		editLowPercent = lowPercent;
 		editLowGrams = lowGrams;
@@ -90,7 +128,11 @@
 		showEdit = false;
 		const next: SpoolmanConfig = {
 			title: editTitle.trim() || undefined,
-			show: editShow,
+			showRecent: editRecent || undefined,
+			showLow: editLow || undefined,
+			showOnly: (canShowOnly && editOnly) || undefined,
+			sort: editSort === 'name' ? undefined : editSort,
+			order: editOrder.join() === DEFAULT_ORDER.join() ? undefined : editOrder,
 			limit: Math.min(50, Math.max(1, editLimit || 5)),
 			lowPercent: Math.min(100, Math.max(0, editLowPercent || 0)),
 			lowGrams: Math.max(0, editLowGrams || 0) || undefined,
@@ -100,7 +142,7 @@
 	}
 </script>
 
-{#snippet row(s: SpoolInfo, kind: 'recent' | 'low')}
+{#snippet row(s: SpoolInfo, kind: 'list' | 'recent' | 'low')}
 	{@const lv = level(s)}
 	<li class="sp-row">
 		<span class="sp-swatch" style={swatch(s)} title={s.colors.join(', ') || 'No colour'}></span>
@@ -115,7 +157,7 @@
 			<div class="sp-meta">
 				<span class="sp-sub">{meta(s)}{s.location ? ` · ${s.location}` : ''}</span>
 				<span class="sp-weight">{grams(s.remaining)}{s.percent != null ? ` · ${Math.round(s.percent)}%` : ''}</span>
-				{#if kind === 'recent' && s.lastUsed}<span class="sp-when">{timeAgo(s.lastUsed)}</span>{/if}
+				{#if (kind === 'recent' || (kind === 'list' && sort === 'lastUsed')) && s.lastUsed}<span class="sp-when">{timeAgo(s.lastUsed)}</span>{/if}
 			</div>
 		</div>
 	</li>
@@ -133,7 +175,7 @@
 				<span class="sp-counts">
 					{#if data.empty.length}<span class="empty">{data.empty.length} empty</span>{/if}
 					{#if data.low.length}<span class="low">{data.low.length} low</span>{/if}
-					<span>{data.total} spools</span>
+					<span>{data.available.length} available</span>
 				</span>
 			{/if}
 		</div>
@@ -143,36 +185,47 @@
 		{:else if !data}
 			<p class="sp-msg">Loading…</p>
 		{:else if compact}
-			{#if data.recent[0]}
+			{@const first = sections.only && sections.recent ? data.recent[0] : data.available[0]}
+			{#if first}
 				<div class="sp-summary">
-					<span class="sp-swatch" style={swatch(data.recent[0])}></span>
-					<span class="sp-name">{data.recent[0].name}</span>
-					<span class="sp-weight">{grams(data.recent[0].remaining)}</span>
+					<span class="sp-swatch" style={swatch(first)}></span>
+					<span class="sp-name">{first.name}</span>
+					<span class="sp-weight">{grams(first.remaining)}</span>
 				</div>
 			{/if}
 		{:else}
 			{#if error}<p class="sp-inline-error">{error}</p>{/if}
-			<div class="sp-sections" class:two={show === 'both'}>
-				{#if show !== 'low'}
-					<section>
-						<h3>Recently used</h3>
-						{#if data.recent.length}
-							<ul class="sp-list">{#each data.recent as s (s.id)}{@render row(s, 'recent')}{/each}</ul>
-						{:else}
-							<p class="sp-msg">No spool used yet</p>
-						{/if}
-					</section>
-				{/if}
-				{#if show !== 'recent'}
-					<section>
-						<h3>Running low / empty</h3>
-						{#if lowAndEmpty.length}
-							<ul class="sp-list">{#each lowAndEmpty as s (s.id)}{@render row(s, 'low')}{/each}</ul>
-						{:else}
-							<p class="sp-msg ok">All spools have enough filament</p>
-						{/if}
-					</section>
-				{/if}
+			<div class="sp-sections">
+				{#each order as key (key)}
+					{#if key === 'list' && !sections.only}
+						<section>
+							{#if sections.recent || sections.low}<h3>Spools</h3>{/if}
+							{#if data.available.length}
+								<ul class="sp-list">{#each data.available as s (s.id)}{@render row(s, 'list')}{/each}</ul>
+							{:else}
+								<p class="sp-msg">No spool with filament left</p>
+							{/if}
+						</section>
+					{:else if key === 'recent' && sections.recent}
+						<section>
+							<h3>Recently used</h3>
+							{#if data.recent.length}
+								<ul class="sp-list">{#each data.recent as s (s.id)}{@render row(s, 'recent')}{/each}</ul>
+							{:else}
+								<p class="sp-msg">No spool used yet</p>
+							{/if}
+						</section>
+					{:else if key === 'low' && sections.low}
+						<section>
+							<h3>Running low / empty</h3>
+							{#if lowAndEmpty.length}
+								<ul class="sp-list">{#each lowAndEmpty as s (s.id)}{@render row(s, 'low')}{/each}</ul>
+							{:else}
+								<p class="sp-msg ok">All spools have enough filament</p>
+							{/if}
+						</section>
+					{/if}
+				{/each}
 			</div>
 		{/if}
 	</div>
@@ -186,15 +239,44 @@
 			<input type="text" bind:value={editTitle} placeholder="Spoolman" />
 		</label>
 		<label class="field">
-			<span>Show</span>
-			<select bind:value={editShow}>
-				<option value="both">Recently used and running low</option>
-				<option value="recent">Recently used only</option>
-				<option value="low">Running low / empty only</option>
+			<span>Sort the spool list by</span>
+			<select bind:value={editSort}>
+				<option value="name">Name</option>
+				<option value="remaining">Remaining filament (least first)</option>
+				<option value="lastUsed">Last used</option>
 			</select>
 		</label>
+		<p class="sp-group-title">Extra sections</p>
+		<label class="toggle-switch">
+			<input type="checkbox" bind:checked={editRecent} />
+			<span class="toggle-slider"></span>
+			<span class="toggle-label">Recently used</span>
+		</label>
+		<label class="toggle-switch">
+			<input type="checkbox" bind:checked={editLow} />
+			<span class="toggle-slider"></span>
+			<span class="toggle-label">Running low / empty</span>
+		</label>
+		<label class="toggle-switch" class:sp-disabled={!canShowOnly} title={canShowOnly ? undefined : 'Enable a section first'}>
+			<input type="checkbox" bind:checked={editOnly} disabled={!canShowOnly} />
+			<span class="toggle-slider"></span>
+			<span class="toggle-label">Show only these sections (hide the spool list)</span>
+		</label>
+		<div class="sp-order">
+			<p class="sp-group-title">Order</p>
+			<ol>
+				{#each editOrder as key, i (key)}
+					<li class:sp-hidden={!editShown(key)}>
+						<span class="sp-order-name">{SECTION_NAMES[key]}</span>
+						{#if !editShown(key)}<span class="sp-order-off">hidden</span>{/if}
+						<button type="button" class="sp-order-btn" disabled={i === 0} onclick={() => moveSection(i, -1)} aria-label="Move {SECTION_NAMES[key]} up">↑</button>
+						<button type="button" class="sp-order-btn" disabled={i === editOrder.length - 1} onclick={() => moveSection(i, 1)} aria-label="Move {SECTION_NAMES[key]} down">↓</button>
+					</li>
+				{/each}
+			</ol>
+		</div>
 		<label class="field">
-			<span>Spools per list</span>
+			<span>Spools per section</span>
 			<input type="number" min="1" max="50" bind:value={editLimit} />
 		</label>
 		<label class="field">
@@ -428,5 +510,73 @@
 	.sp-inline-error {
 		margin: 0;
 		font-size: 0.72rem;
+	}
+
+	.sp-group-title {
+		margin: 4px 0 8px;
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: var(--text-muted);
+	}
+
+	.sp-disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.sp-order {
+		margin-bottom: 12px;
+	}
+
+	.sp-order ol {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.sp-order li {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 5px 6px 5px 10px;
+		border-radius: var(--radius-sm);
+		background: var(--bg-primary);
+		border: 1px solid var(--border);
+		font-size: 0.85rem;
+		color: var(--text-primary);
+	}
+
+	.sp-order li.sp-hidden {
+		opacity: 0.5;
+	}
+
+	.sp-order-name {
+		flex: 1;
+	}
+
+	.sp-order-off {
+		font-size: 0.7rem;
+		color: var(--text-muted);
+	}
+
+	.sp-order-btn {
+		width: 26px;
+		height: 24px;
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
+		background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+	}
+
+	.sp-order-btn:hover:not(:disabled) {
+		color: var(--text-primary);
+		background: color-mix(in srgb, var(--accent) 25%, transparent);
+	}
+
+	.sp-order-btn:disabled {
+		opacity: 0.35;
+		cursor: default;
 	}
 </style>

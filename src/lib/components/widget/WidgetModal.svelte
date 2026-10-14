@@ -139,6 +139,63 @@
 		color: var(--text-muted);
 	}
 
+	/* Switches: <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span><span class="toggle-label">…</span></label> */
+	.wm-body :global(.toggle-switch) {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 12px;
+		cursor: pointer;
+	}
+
+	.wm-body :global(.toggle-switch input) {
+		position: absolute;
+		width: 0;
+		height: 0;
+		opacity: 0;
+	}
+
+	.wm-body :global(.toggle-slider) {
+		position: relative;
+		flex-shrink: 0;
+		width: 36px;
+		height: 20px;
+		border-radius: 20px;
+		background: var(--border);
+		transition: background var(--transition);
+	}
+
+	.wm-body :global(.toggle-slider::after) {
+		content: '';
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: white;
+		transition: transform var(--transition);
+	}
+
+	.wm-body :global(.toggle-switch input:checked + .toggle-slider) {
+		background: var(--accent);
+	}
+
+	.wm-body :global(.toggle-switch input:checked + .toggle-slider::after) {
+		transform: translateX(16px);
+	}
+
+	.wm-body :global(.toggle-switch input:focus-visible + .toggle-slider) {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.wm-body :global(.toggle-label) {
+		font-size: 0.85rem;
+		color: var(--text-secondary);
+	}
+
 	@keyframes wm-fade {
 		from { opacity: 0; }
 		to { opacity: 1; }

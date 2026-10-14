@@ -177,6 +177,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="child-wrapper"
+				data-child-id={child.id}
 				class:editing={$isEditing}
 				class:dragging={dragView?.ghostIds.has(child.id)}
 				class:selected={selectedChildIds?.has(child.id) && !dragView}

@@ -1,4 +1,4 @@
-import { writable, get } from 'svelte/store';
+import { writable, get, derived } from 'svelte/store';
 import { findNextAvailablePosition, hasCollision } from '$lib/utils/grid';
 import type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
@@ -46,10 +46,10 @@ export const dashboards = writable<DashboardMeta[]>([{ id: 'main', name: 'Home' 
 export const activeDashboardId = writable<string>('main');
 /** +1 when moving to a later dashboard, -1 to an earlier one (slide direction). */
 export const dashboardDirection = writable<1 | -1>(1);
-/** Dashboard square under a dragged tile (drop moves the tile there). */
-export const dashboardDropTarget = writable<string | null>(null);
 /** Set while a tile is dragged: switching then would lose the drag. */
 export const dashboardSwitchBlocked = writable(false);
+/** Tile to scroll to and pulse once (search result picked). */
+export const highlightItem = writable<string | null>(null);
 
 function layoutUrl(id = get(activeDashboardId)): string {
 	return `/api/layout?dashboard=${encodeURIComponent(id)}`;
@@ -280,7 +280,7 @@ async function fetchInitialLayout(): Promise<Layout> {
 }
 
 /** Show another dashboard: an id, or the next / previous one (wrapping around). */
-export async function switchDashboard(target: string): Promise<void> {
+export async function switchDashboard(target: string, opts: { keepSearch?: boolean } = {}): Promise<void> {
 	if (get(dashboardSwitchBlocked)) return;
 	const list = get(dashboards);
 	const current = list.findIndex((d) => d.id === get(activeDashboardId));
@@ -292,9 +292,51 @@ export async function switchDashboard(target: string): Promise<void> {
 	const view = mergeGridConfig(await api<Layout>(layoutUrl(next.id)));
 	if (view.dashboards?.length) dashboards.set(view.dashboards);
 	activeDashboardId.set(view.dashboard || next.id);
-	searchQuery.set('');
+	if (!opts.keepSearch) searchQuery.set('');
 	layout.set(view);
 	rememberDashboard();
+}
+
+/** Grid and navbar settings of the active dashboard at the active breakpoint (with defaults). */
+export interface ActiveGrid {
+	columns: number;
+	cellSize: number;
+	gap: number;
+	navbar: { columns: number; rowHeight: number; marginTop: number; marginBottom: number };
+}
+
+export const GRID_DEFAULTS = { cellSize: 80, gap: 12, navbarColumns: 12, navbarRowHeight: 44, navbarMarginTop: 8, navbarMarginBottom: 8 };
+
+export function gridFor(l: Layout, bpId: string): ActiveGrid {
+	const bp = l.grid?.breakpoints?.find((b) => b.id === bpId);
+	const per = l.layouts?.[bpId];
+	const nav = per?.navbar;
+	return {
+		columns: bp?.columns || 4,
+		cellSize: per?.grid?.cellSize ?? l.grid?.cellSize ?? GRID_DEFAULTS.cellSize,
+		gap: per?.grid?.gap ?? l.grid?.gap ?? GRID_DEFAULTS.gap,
+		navbar: {
+			columns: nav?.columns || GRID_DEFAULTS.navbarColumns,
+			rowHeight: nav?.rowHeight ?? GRID_DEFAULTS.navbarRowHeight,
+			marginTop: nav?.marginTop ?? GRID_DEFAULTS.navbarMarginTop,
+			marginBottom: nav?.marginBottom ?? GRID_DEFAULTS.navbarMarginBottom
+		}
+	};
+}
+
+/** Follows the active dashboard and breakpoint (the breakpoint may be picked by hand). */
+export const activeGrid = derived([layoutStore, activeBreakpointId], ([l, bp]) => gridFor(l, bp));
+
+/** Search index: every dashboard's tiles at the active breakpoint. */
+export async function fetchSearchIndex(): Promise<{ id: string; name: string; items: DashboardItem[] }[]> {
+	return api(`/api/layout/search?breakpoint=${encodeURIComponent(get(activeBreakpointId))}`);
+}
+
+/** Open a search result: switch dashboard if needed, then scroll to and pulse the tile. */
+export async function revealItem(dashboardId: string, itemId: string) {
+	if (dashboardId !== get(activeDashboardId)) await switchDashboard(dashboardId, { keepSearch: true });
+	highlightItem.set(null);
+	queueMicrotask(() => highlightItem.set(itemId));
 }
 
 /** Back/forward or an edited hash: follow it. */
@@ -319,7 +361,7 @@ async function reloadActiveDashboard() {
 	rememberDashboard();
 }
 
-/** New dashboard (same navbar as the current one, empty grid), then open it. */
+/** New dashboard (empty grid, navbar with only the title), then open it. */
 export async function createDashboard(name?: string) {
 	const res = await dashboardsAction<{ id: string }>({ action: 'create', name, from: get(activeDashboardId) });
 	await switchDashboard(res.id);
@@ -352,9 +394,45 @@ export async function deleteDashboard(id: string) {
 	}
 }
 
-/** Move tiles (root or group children) of the current breakpoint to another dashboard. */
-export async function moveItemsToDashboard(itemIds: string[], to: string, columns: number) {
-	await dashboardsAction({ action: 'moveItems', from: get(activeDashboardId), to, breakpoint: get(activeBreakpointId), itemIds, columns });
+/** Copy or move tiles (root or group children) of the current view to a dashboard x breakpoint. */
+export async function transferItems(itemIds: string[], to: string, toBreakpoint: string, copy: boolean): Promise<number> {
+	const res = await dashboardsAction<{ count: number }>({
+		action: 'transferItems',
+		from: get(activeDashboardId),
+		fromBreakpoint: get(activeBreakpointId),
+		to,
+		toBreakpoint,
+		itemIds,
+		copy
+	});
+	await reloadActiveDashboard();
+	return res.count;
+}
+
+/** Save the grid / navbar settings of a dashboard (one breakpoint, or all of them). */
+export async function saveLayoutSettings(
+	id: string,
+	breakpoint: string,
+	values: { cellSize?: number; gap?: number; navbarColumns?: number; rowHeight?: number; marginTop?: number; marginBottom?: number },
+	allBreakpoints = false
+) {
+	await dashboardsAction({
+		action: 'layoutSettings',
+		id,
+		breakpoint,
+		allBreakpoints,
+		grid: { cellSize: values.cellSize, gap: values.gap },
+		navbar: { columns: values.navbarColumns, rowHeight: values.rowHeight, marginTop: values.marginTop, marginBottom: values.marginBottom }
+	});
+}
+
+/** Another dashboard's layouts (settings editor). */
+export async function fetchDashboardLayout(id: string): Promise<Layout> {
+	return mergeGridConfig(await api<Layout>(layoutUrl(id)));
+}
+
+/** Re-read the dashboard on screen (after its settings were saved elsewhere). */
+export async function refreshActiveDashboard() {
 	await reloadActiveDashboard();
 }
 

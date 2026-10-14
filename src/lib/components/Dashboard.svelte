@@ -15,19 +15,21 @@
 		manualBreakpointId,
 		removeDashboardItem,
 		commitLayout,
-		getActiveColumns,
 		resolveActiveBreakpointId,
 		getBreakpointLabel,
 		searchQuery,
 		dashboards,
 		activeDashboardId,
 		dashboardDirection,
-		dashboardDropTarget,
+		activeGrid,
+		highlightItem,
 		dashboardSwitchBlocked,
 		switchDashboard,
 		followDashboardHash,
-		moveItemsToDashboard
+		transferItems
 	} from '$lib/stores/dashboard';
+	import ContextMenu, { type MenuItem } from './ContextMenu.svelte';
+	import { matchingItemIds } from '$lib/utils/search';
 	import SettingsModal from './SettingsModal.svelte';
 	import type { Service, DashboardItem as DashboardItemType, Layout } from '$lib/stores/dashboard';
 	import {
@@ -49,9 +51,10 @@
 	let editingService = $state<Service | null>(null);
 	let windowWidth = $state(1200);
 
-	let columns = $derived(getActiveColumns($layout?.grid?.breakpoints || [{ minWidth: 0, columns: 4 }], windowWidth));
-	let cellSize = $derived($layout?.grid?.cellSize || 80);
-	let gap = $derived($layout?.grid?.gap || 12);
+	// Columns of the active breakpoint; cell height and gap of this dashboard at that breakpoint.
+	let columns = $derived($activeGrid.columns);
+	let cellSize = $derived($activeGrid.cellSize);
+	let gap = $derived($activeGrid.gap);
 
 	let gridEl: HTMLElement | undefined = $state();
 	let selectedItemIds = $state<Set<string>>(new Set());
@@ -70,44 +73,7 @@
 
 	let query = $derived($searchQuery.trim().toLowerCase());
 
-	function itemMatchesQuery(item: DashboardItemType, q: string): boolean {
-		if (!q) return false;
-		const lc = q.toLowerCase();
-		if (item.type === 'service') {
-			const svc = $services.find((s) => s.id === item.serviceId);
-			return svc ? svc.name.toLowerCase().includes(lc) : false;
-		}
-		if (item.type === 'calendar' && 'calendar'.includes(lc)) return true;
-		if (item.type === 'clock' && 'clock'.includes(lc)) return true;
-		if (item.type === 'weather' && 'weather'.includes(lc)) return true;
-		if (item.type === 'docker' && 'docker'.includes(lc)) return true;
-		if (item.type === 'uptime-kuma-status-page' && 'uptime'.includes(lc)) return true;
-		if (item.type === 'adguard-home' && 'adguard'.includes(lc)) return true;
-		if (item.type === 'adguard-home-control' && 'adguard'.includes(lc)) return true;
-		if (item.type === 'jellyfin-latest' && 'jellyfin'.includes(lc)) return true;
-		if (item.type === 'jellyfin-now-playing' && ('jellyfin'.includes(lc) || 'playing'.includes(lc))) return true;
-		if (item.type === 'jellyseerr-requests' && ('jellyseerr'.includes(lc) || 'overseerr'.includes(lc) || 'requests'.includes(lc))) return true;
-		if (item.type === 'qbittorrent' && ('qbittorrent'.includes(lc) || 'torrent'.includes(lc))) return true;
-		if (item.type === 'notes' && ('notes'.includes(lc) || (item.config?.title ?? '').toLowerCase().includes(lc))) return true;
-		if (item.type === 'spoolman' && ('spoolman'.includes(lc) || 'filament'.includes(lc) || (item.config?.title ?? '').toLowerCase().includes(lc))) return true;
-		if (item.type === 'elegoo-print' && ('printer'.includes(lc) || 'print'.includes(lc) || 'elegoo'.includes(lc))) return true;
-		if (item.type === 'arr-releases' && ('releases'.includes(lc) || 'arr'.includes(lc))) return true;
-		if (item.type === 'stacker' && ('stacker'.includes(lc) || 'system'.includes(lc))) return true;
-		if ((item.type === 'group-collapsible' || item.type === 'group-standard') && item.title?.toLowerCase().includes(lc)) return true;
-		return false;
-	}
-
-	function computeMatchingIds(itemsList: DashboardItemType[], q: string): Set<string> {
-		const ids = new Set<string>();
-		function visit(it: DashboardItemType) {
-			if (itemMatchesQuery(it, q)) ids.add(it.id);
-			if ('children' in it) it.children.forEach(visit);
-		}
-		itemsList.forEach(visit);
-		return ids;
-	}
-
-	let matchingIds = $derived(query ? computeMatchingIds(items, query) : new Set<string>());
+	let matchingIds = $derived(query ? matchingItemIds(items, query, $services) : new Set<string>());
 
 	// Update active breakpoint when window width changes (unless manually overridden)
 	$effect(() => {
@@ -173,8 +139,6 @@
 		avatar: { item: DashboardItemType; left: number; top: number; width: number; height: number } | null;
 		clientDx: number;
 		clientDy: number;
-		// Dashboard square (under the title) the pointer is over: dropping moves the tiles there.
-		targetDashboard: string | null;
 	} | null>(null);
 
 	let resize = $state<{
@@ -380,8 +344,7 @@
 			hasGroup,
 			avatar: pd.source !== null ? { item: pd.anchor, left: r.left, top: r.top, width: r.width, height: r.height } : null,
 			clientDx: 0,
-			clientDy: 0,
-			targetDashboard: null
+			clientDy: 0
 		};
 		dashboardSwitchBlocked.set(true);
 		try {
@@ -435,21 +398,6 @@
 		d.dy = y - d.startY + (window.scrollY - d.startScrollY);
 		d.clientDx = x - d.startX;
 		d.clientDy = y - d.startY;
-
-		// Over another dashboard's square (under the title): drop moves the tiles
-		// there. elementsFromPoint, because the dragged tile itself is under the pointer.
-		const dot = document
-			.elementsFromPoint(x, y)
-			.map((el) => (el as HTMLElement).closest?.('[data-dashboard-id]') as HTMLElement | null)
-			.find((el) => !!el);
-		const dotId = dot?.dataset.dashboardId ?? null;
-		d.targetDashboard = dotId && dotId !== $activeDashboardId ? dotId : null;
-		dashboardDropTarget.set(d.targetDashboard);
-		if (d.targetDashboard) {
-			d.target = d.source;
-			d.preview = null;
-			return;
-		}
 
 		const target = pickTarget(d, x, y);
 		if (target !== null && !groupGridEl(target)) {
@@ -544,7 +492,6 @@
 		cancelAnimationFrame(scrollRaf);
 		drag = null;
 		dashboardSwitchBlocked.set(false);
-		dashboardDropTarget.set(null);
 		swallowClick();
 	}
 
@@ -553,14 +500,6 @@
 		endDrag();
 		if (!d) return;
 
-		if (d.targetDashboard) {
-			const to = d.targetDashboard;
-			const name = $dashboards.find((x) => x.id === to)?.name ?? 'dashboard';
-			moveItemsToDashboard(d.ids, to, columns)
-				.then(() => showToast(`${d.ids.length > 1 ? `${d.ids.length} tiles` : 'Tile'} moved to "${name}"`))
-				.catch((e) => showToast(e instanceof Error ? e.message : 'Move failed'));
-			return;
-		}
 
 		const next: Layout = JSON.parse(JSON.stringify($layout)) as Layout;
 		const bp = next.layouts[activeBreakpointIdValue];
@@ -754,6 +693,140 @@
 		toastTimer = setTimeout(() => (toast = ''), 2600);
 	}
 
+	// --- Edit-mode context menu: copy / move to a dashboard x breakpoint, delete ---
+
+	let menu = $state<{ x: number; y: number; ids: string[] } | null>(null);
+	let longPress: ReturnType<typeof setTimeout> | undefined;
+
+	/** Ids of every selected tile (root and inside groups). */
+	function selectedIds(): string[] {
+		return [...selectedItemIds, ...[...selectedChildIds.values()].flatMap((s) => [...s])];
+	}
+
+	/** Right-click (or long press) on a tile: select it unless it is already part of the selection. */
+	function openMenuAt(target: HTMLElement, x: number, y: number) {
+		const child = target.closest('[data-child-id]') as HTMLElement | null;
+		const root = target.closest('[data-item-id]') as HTMLElement | null;
+		const id = child?.dataset.childId ?? root?.dataset.itemId;
+		if (!id) return false;
+		if (!selectedIds().includes(id)) {
+			if (child) {
+				const groupId = (child.closest('[data-group-id]') as HTMLElement | null)?.dataset.groupId ?? '';
+				selectedItemIds = new Set();
+				selectedChildIds = new Map([[groupId, new Set([id])]]);
+			} else {
+				selectedChildIds = new Map();
+				selectedItemIds = new Set([id]);
+			}
+		}
+		menu = { x, y, ids: selectedIds() };
+		return true;
+	}
+
+	function handleContextMenu(e: MouseEvent) {
+		if (!$isEditing || drag || resize) return;
+		if ((e.target as HTMLElement).closest('input, textarea, select, .modal-overlay, .edit-modal')) return;
+		if (openMenuAt(e.target as HTMLElement, e.clientX, e.clientY)) e.preventDefault();
+	}
+
+	function handleLongPressStart(e: PointerEvent) {
+		if (e.pointerType !== 'touch' || !$isEditing) return;
+		const target = e.target as HTMLElement;
+		const { clientX, clientY } = e;
+		clearTimeout(longPress);
+		longPress = setTimeout(() => {
+			if (drag || resize) return;
+			pending = null;
+			openMenuAt(target, clientX, clientY);
+		}, 550);
+	}
+
+	function cancelLongPress() {
+		clearTimeout(longPress);
+	}
+
+	async function runTransfer(ids: string[], to: string, toBp: string, copy: boolean) {
+		const dash = $dashboards.find((d) => d.id === to)?.name ?? '';
+		const bpName = getBreakpointLabel($layout.grid.breakpoints, toBp);
+		try {
+			const n = await transferItems(ids, to, toBp, copy);
+			selectedItemIds = new Set();
+			selectedChildIds = new Map();
+			showToast(`${n > 1 ? `${n} tiles` : 'Tile'} ${copy ? 'copied' : 'moved'} to ${dash} · ${bpName}`);
+		} catch (err) {
+			showToast(err instanceof Error ? err.message : 'Failed');
+		}
+	}
+
+	async function deleteSelection(ids: string[]) {
+		if (ids.length > 1 && !confirm(`Delete ${ids.length} tiles?`)) return;
+		for (const id of ids) await removeDashboardItem(id);
+		selectedItemIds = new Set();
+		selectedChildIds = new Map();
+	}
+
+	/** Dashboards (current first) > breakpoints (current first). */
+	function targetsMenu(ids: string[], copy: boolean): MenuItem[] {
+		const bps = [...$layout.grid.breakpoints].sort((a, b) => (a.id === $activeBreakpointId ? -1 : b.id === $activeBreakpointId ? 1 : b.minWidth - a.minWidth));
+		const dashes = [...$dashboards].sort((a, b) => (a.id === $activeDashboardId ? -1 : b.id === $activeDashboardId ? 1 : 0));
+		return dashes.map((d) => ({
+			label: d.name,
+			hint: d.id === $activeDashboardId ? 'current' : undefined,
+			children: bps.map((bp) => {
+				const here = d.id === $activeDashboardId && bp.id === $activeBreakpointId;
+				return {
+					label: getBreakpointLabel($layout.grid.breakpoints, bp.id),
+					hint: here ? (copy ? 'duplicate' : 'here') : bp.id === $activeBreakpointId ? 'current' : undefined,
+					disabled: here && !copy,
+					onselect: () => runTransfer(ids, d.id, bp.id, copy)
+				};
+			})
+		}));
+	}
+
+	// The menu closes (menu = null) before running an action: actions capture the ids.
+	function buildMenu(ids: string[]): MenuItem[] {
+		return [
+			{ label: 'Copy to', children: targetsMenu(ids, true) },
+			{ label: 'Move to', children: targetsMenu(ids, false) },
+			{ label: ids.length > 1 ? `Delete ${ids.length} tiles` : 'Delete', danger: true, onselect: () => deleteSelection(ids) }
+		];
+	}
+
+	const menuItems = $derived<MenuItem[]>(menu ? buildMenu(menu.ids) : []);
+
+	// --- Search result picked: scroll to the tile and pulse it once -------------
+
+	$effect(() => {
+		const id = $highlightItem;
+		if (!id) return;
+		// Wait for the dashboard slide to render the tile.
+		const timer = setTimeout(() => {
+			const el =
+				(document.querySelector(`.dashboard-page:last-child [data-child-id="${CSS.escape(id)}"]`) as HTMLElement | null) ??
+				(document.querySelector(`.dashboard-page:last-child [data-item-id="${CSS.escape(id)}"]`) as HTMLElement | null);
+			// A tile inside a collapsed group is not rendered: point at the group instead.
+			const target = el ?? (findGroupOf(id) ? (document.querySelector(`[data-group-id="${CSS.escape(findGroupOf(id)!)}"]`) as HTMLElement | null) : null);
+			if (!target) return;
+			target.scrollIntoView({ block: 'center', behavior: $settings.animations === 'none' ? 'auto' : 'smooth' });
+			target.animate(
+				[
+					{ boxShadow: '0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent)', scale: '1' },
+					{ boxShadow: '0 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent)', scale: '1.03' },
+					{ boxShadow: '0 0 0 0 transparent', scale: '1' }
+				],
+				{ duration: 900, iterations: 2, easing: 'ease-out' }
+			);
+			highlightItem.set(null);
+		}, 360);
+		return () => clearTimeout(timer);
+	});
+
+	function findGroupOf(childId: string): string | null {
+		for (const it of items) if ('children' in it && it.children.some((c) => c.id === childId)) return it.id;
+		return null;
+	}
+
 	// --- Rendering helpers ---------------------------------------------------------
 
 	const isDragged = (id: string, container: Container) => !!drag && drag.source === container && drag.origin.has(id);
@@ -795,6 +868,7 @@
 			window.removeEventListener('hashchange', followDashboardHash);
 			cancelAnimationFrame(scrollRaf);
 			clearTimeout(toastTimer);
+			clearTimeout(longPress);
 		};
 	});
 
@@ -833,20 +907,23 @@
 						bind:this={gridEl}
 						class="dashboard-grid"
 						style="grid-template-columns: repeat({columns}, 1fr); grid-auto-rows: {cellSize}px; gap: {gap}px;"
-						onpointerdown={handleGridPointerDown}
+						onpointerdown={(e) => { handleGridPointerDown(e); handleLongPressStart(e); }}
+						onpointerup={cancelLongPress}
+						onpointercancel={cancelLongPress}
+						oncontextmenu={handleContextMenu}
 					>
 						{#each items as item (item.id)}
 							{@const r = itemRect(item)}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div
 								class="item-wrapper"
+								data-item-id={item.id}
 								class:editing={$isEditing}
 								class:dragging={isDragged(item.id, null)}
 								class:drag-source={drag?.source === item.id}
 								class:selected={selectedItemIds.has(item.id) && !drag}
 								class:drop-target={drag?.target === item.id && drag?.source !== item.id}
 								class:drop-refused={drag?.target === item.id && drag?.source !== item.id && !drag?.preview && !drag?.collapsedTarget}
-								class:to-dashboard={!!drag?.targetDashboard && isDragged(item.id, null)}
 								class:dimmed={query && !matchingIds.has(item.id)}
 								class:highlighted={query && matchingIds.has(item.id)}
 								style={getItemStyle(item)}
@@ -903,7 +980,6 @@
 			<!-- Floating copy of a tile dragged out of a group (scrolling groups clip their content). -->
 			<div
 				class="drag-avatar"
-				class:to-dashboard={!!drag.targetDashboard}
 				style="left: {drag.avatar.left + drag.clientDx}px; top: {drag.avatar.top + drag.clientDy}px; width: {drag.avatar.width}px; height: {drag.avatar.height}px;"
 				aria-hidden="true"
 			>
@@ -914,6 +990,10 @@
 
 		{#if toast}
 			<div class="dash-toast" role="status">{toast}</div>
+		{/if}
+
+		{#if menu}
+			<ContextMenu x={menu.x} y={menu.y} title={menu.ids.length > 1 ? `${menu.ids.length} selected tiles` : '1 selected tile'} items={menuItems} onclose={() => (menu = null)} />
 		{/if}
 	</main>
 </div>
@@ -972,16 +1052,6 @@
 	.dashboard-grid {
 		display: grid;
 		width: 100%;
-	}
-
-	/* Dragged over a dashboard square: the tile shrinks to show it will leave. */
-	.item-wrapper.to-dashboard,
-	.drag-avatar.to-dashboard {
-		opacity: 0.55;
-		scale: 0.6;
-		/* Shrink toward the grabbed corner so the tile stays under the pointer. */
-		transform-origin: top left;
-		transition: scale 0.15s ease, opacity 0.15s ease;
 	}
 
 	.dash-toast {

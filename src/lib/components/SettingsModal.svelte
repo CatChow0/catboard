@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { settings, layout, activeBreakpointId, saveSettings, saveNavbarLayout, currentUser, exportDashboard, importDashboard } from '$lib/stores/dashboard';
+	import {
+		settings, layout, activeBreakpointId, saveSettings, currentUser, exportDashboard, importDashboard,
+		dashboards, activeDashboardId, fetchDashboardLayout, saveLayoutSettings, refreshActiveDashboard, getBreakpointLabel, GRID_DEFAULTS
+	} from '$lib/stores/dashboard';
+	import type { Layout } from '$lib/types';
 	import { themePresets, customPaletteDefaults, themeDefaults } from '$lib/themes';
 	import type { CustomPalette } from '$lib/stores/dashboard';
 	import AdminPanel from './AdminPanel.svelte';
@@ -10,8 +14,6 @@
 	let closing = $state(false);
 
 	let title = $state($settings.title);
-	let cellSize = $state($settings.layout?.cellSize || 80);
-	let gap = $state($settings.layout?.gap || 12);
 	let breakpoints = $state([...($settings.layout?.breakpoints || [{ id: 'mobile', name: 'Mobile', minWidth: 0, columns: 4 }, { id: 'tablet', name: 'Tablet', minWidth: 800, columns: 6 }, { id: 'desktop', name: 'Desktop', minWidth: 1200, columns: 10 }])].map((bp, i) => bp.id ? bp : { ...bp, id: `bp-${bp.minWidth}-${i}` }));
 	let selectedTheme = $state($settings.theme);
 	let bgType = $state($settings.background?.type || 'none');
@@ -19,7 +21,6 @@
 	let stylePreset = $state($settings.stylePreset || 'default');
 	let animations = $state($settings.animations || 'subtle');
 	let scrollbarStyle = $state($settings.scrollbarStyle || 'thin');
-	let navbarColumns = $state($settings.navbar?.columns || 12);
 	let customPalette = $state<CustomPalette>(
 		$settings.customPalette || { ...customPaletteDefaults['dark'] }
 	);
@@ -51,6 +52,90 @@
 		breakpoints = breakpoints.filter((_, i) => i !== index);
 	}
 
+	// --- Layout of each dashboard x breakpoint ---------------------------------
+	// Empty fields (null) mean "default". Changes stay pending (edits) until Save;
+	// the pair on screen is previewed live and restored on Cancel.
+
+	type PairValues = { cellSize: number | null; gap: number | null; navbarColumns: number | null; rowHeight: number | null; marginTop: number | null; marginBottom: number | null };
+
+	const defaultCellSize = $settings.layout?.cellSize || GRID_DEFAULTS.cellSize;
+	const defaultGap = $settings.layout?.gap ?? GRID_DEFAULTS.gap;
+	const originalLayout: Layout = JSON.parse(JSON.stringify($layout));
+	let saved = false;
+
+	let selDash = $state($activeDashboardId);
+	let selBp = $state($activeBreakpointId);
+	let dashLayouts = $state<Record<string, Layout>>({ [$activeDashboardId]: JSON.parse(JSON.stringify($layout)) });
+	let edits = $state<Record<string, PairValues>>({});
+	const pairKey = (d: string, b: string) => `${d}|${b}`;
+	const isLivePair = $derived(selDash === $activeDashboardId && selBp === $activeBreakpointId);
+
+	function storedValues(d: string, b: string): PairValues {
+		const per = dashLayouts[d]?.layouts?.[b];
+		return {
+			cellSize: per?.grid?.cellSize ?? null,
+			gap: per?.grid?.gap ?? null,
+			navbarColumns: per?.navbar?.columns ?? null,
+			rowHeight: per?.navbar?.rowHeight ?? null,
+			marginTop: per?.navbar?.marginTop ?? null,
+			marginBottom: per?.navbar?.marginBottom ?? null
+		};
+	}
+
+	let form = $state<PairValues>(storedValues($activeDashboardId, $activeBreakpointId));
+
+	async function selectPair(d: string, b: string) {
+		selDash = d;
+		selBp = b;
+		if (!dashLayouts[d]) {
+			try {
+				dashLayouts = { ...dashLayouts, [d]: await fetchDashboardLayout(d) };
+			} catch {
+				// keep the defaults
+			}
+		}
+		if (selDash === d && selBp === b) form = { ...(edits[pairKey(d, b)] ?? storedValues(d, b)) };
+	}
+
+	/** Field changed: remember it and preview it when it is the dashboard on screen. */
+	function changed() {
+		edits = { ...edits, [pairKey(selDash, selBp)]: { ...form } };
+		if (isLivePair) preview(selBp, form);
+	}
+
+	function preview(bp: string, v: PairValues) {
+		layout.update((l) => {
+			const per = l.layouts[bp];
+			if (!per) return l;
+			per.grid = { cellSize: v.cellSize ?? undefined, gap: v.gap ?? undefined };
+			per.navbar = {
+				...per.navbar,
+				columns: v.navbarColumns ?? GRID_DEFAULTS.navbarColumns,
+				rowHeight: v.rowHeight ?? undefined,
+				marginTop: v.marginTop ?? undefined,
+				marginBottom: v.marginBottom ?? undefined
+			};
+			return l;
+		});
+	}
+
+	function resetPair() {
+		form = { cellSize: null, gap: null, navbarColumns: null, rowHeight: null, marginTop: null, marginBottom: null };
+		changed();
+	}
+
+	/** Same values for every breakpoint of the selected dashboard. */
+	function copyToAllBreakpoints() {
+		const next = { ...edits };
+		for (const bp of breakpoints) next[pairKey(selDash, bp.id)] = { ...form };
+		edits = next;
+		if (selDash === $activeDashboardId) preview($activeBreakpointId, form);
+		copiedNotice = true;
+		setTimeout(() => (copiedNotice = false), 1800);
+	}
+	let copiedNotice = $state(false);
+	const pendingCount = $derived(Object.keys(edits).length);
+
 	function applyTheme(themeName: string) {
 		if (themeName === 'custom') {
 			const baseTheme = selectedTheme === 'custom' ? 'dark' : selectedTheme;
@@ -80,8 +165,7 @@
 			stylePreset,
 			animations,
 			scrollbarStyle,
-			navbar: { columns: navbarColumns },
-			layout: { cellSize, gap, breakpoints }
+			layout: { cellSize: defaultCellSize, gap: defaultGap, breakpoints }
 		};
 		if (selectedTheme === 'custom') {
 			data.customPalette = customPalette;
@@ -89,14 +173,25 @@
 			delete data.customPalette;
 		}
 		await saveSettings(data);
-		const activeNavbar = $layout?.layouts?.[$activeBreakpointId]?.navbar;
-		if (activeNavbar) {
-			await saveNavbarLayout({ ...activeNavbar, columns: navbarColumns });
+		for (const [key, v] of Object.entries(edits)) {
+			const [d, b] = key.split('|');
+			await saveLayoutSettings(d, b, {
+				cellSize: v.cellSize ?? undefined,
+				gap: v.gap ?? undefined,
+				navbarColumns: v.navbarColumns ?? GRID_DEFAULTS.navbarColumns,
+				rowHeight: v.rowHeight ?? undefined,
+				marginTop: v.marginTop ?? undefined,
+				marginBottom: v.marginBottom ?? undefined
+			});
 		}
+		saved = true;
+		await refreshActiveDashboard();
 		close();
 	}
 
 	function close() {
+		// Closing without saving: drop the live preview.
+		if (!saved && Object.keys(edits).length) layout.set(originalLayout);
 		closing = true;
 		const duration = $settings.animations === 'none' ? 0 : 200;
 		setTimeout(() => onclose(), duration);
@@ -380,43 +475,24 @@
 				</div>
 
 				<div class="settings-section">
-					<h3>Navbar</h3>
-					<div class="field-row">
-						<label>Columns</label>
-						<input type="number" bind:value={navbarColumns} min="4" max="48" />
-					</div>
-				</div>
-
-				<div class="settings-section">
-					<h3>Grid Settings</h3>
-					<div class="field-row">
-						<label>Cell Size (px)</label>
-						<input type="number" bind:value={cellSize} min="40" max="200" />
-					</div>
-					<div class="field-row">
-						<label>Gap (px)</label>
-						<input type="number" bind:value={gap} min="0" max="40" />
-					</div>
-				</div>
-
-				<div class="settings-section">
 					<h3>Breakpoints</h3>
+					<p class="section-hint">Screen sizes shared by every dashboard: the widest breakpoint whose minimum width fits the window is used. Columns set the grid width.</p>
 					<div class="breakpoints-list">
-						{#each breakpoints as bp, i}
+						{#each breakpoints as bp, i (bp.id)}
 							<div class="breakpoint-row">
 								<div class="field-row">
-									<label>Name</label>
-									<input type="text" bind:value={bp.name} placeholder="Layout name" />
+									<label for="bp-name-{bp.id}">Name</label>
+									<input id="bp-name-{bp.id}" type="text" bind:value={bp.name} placeholder="Layout name" />
 								</div>
 								<div class="field-row">
-									<label>Min Width</label>
-									<input type="number" bind:value={bp.minWidth} min="0" />
+									<label for="bp-min-{bp.id}">Min Width</label>
+									<input id="bp-min-{bp.id}" type="number" bind:value={bp.minWidth} min="0" />
 								</div>
 								<div class="field-row">
-									<label>Columns</label>
-									<input type="number" bind:value={bp.columns} min="1" max="20" />
+									<label for="bp-cols-{bp.id}">Columns</label>
+									<input id="bp-cols-{bp.id}" type="number" bind:value={bp.columns} min="1" max="20" />
 								</div>
-								<button class="btn-remove" onclick={() => removeBreakpoint(i)} disabled={breakpoints.length <= 1} title="Remove">
+								<button class="btn-remove" onclick={() => removeBreakpoint(i)} disabled={breakpoints.length <= 1} title="Remove" aria-label="Remove breakpoint">
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 										<path d="M18 6L6 18M6 6l12 12" />
 									</svg>
@@ -425,6 +501,77 @@
 						{/each}
 					</div>
 					<button class="btn-add-bp" onclick={addBreakpoint}>Add Breakpoint</button>
+				</div>
+
+				<div class="settings-section">
+					<h3>Dashboard Layout</h3>
+					<p class="section-hint">Each dashboard has its own grid and navbar settings for every breakpoint. Empty fields use the default shown in grey.</p>
+					<div class="pair-picker">
+						<label class="pair-dash">
+							<span>Dashboard</span>
+							<select value={selDash} onchange={(e) => selectPair((e.currentTarget as HTMLSelectElement).value, selBp)}>
+								{#each $dashboards as d (d.id)}
+									<option value={d.id}>{d.name}{d.id === $activeDashboardId ? ' (shown)' : ''}</option>
+								{/each}
+							</select>
+						</label>
+						<div class="bp-tabs" role="tablist" aria-label="Breakpoint">
+							{#each breakpoints as bp (bp.id)}
+								<button
+									class="bp-tab"
+									class:active={selBp === bp.id}
+									class:edited={!!edits[pairKey(selDash, bp.id)]}
+									role="tab"
+									aria-selected={selBp === bp.id}
+									onclick={() => selectPair(selDash, bp.id)}
+								>
+									{bp.name || getBreakpointLabel(breakpoints, bp.id)}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<div class="pair-grid">
+						<fieldset>
+							<legend>Grid</legend>
+							<div class="field-row">
+								<label for="lay-cell">Cell height (px)</label>
+								<input id="lay-cell" type="number" min="40" max="300" placeholder={String(defaultCellSize)} bind:value={form.cellSize} oninput={changed} />
+							</div>
+							<div class="field-row">
+								<label for="lay-gap">Gap (px)</label>
+								<input id="lay-gap" type="number" min="0" max="48" placeholder={String(defaultGap)} bind:value={form.gap} oninput={changed} />
+							</div>
+						</fieldset>
+						<fieldset>
+							<legend>Navbar</legend>
+							<div class="field-row">
+								<label for="lay-nbcols">Columns</label>
+								<input id="lay-nbcols" type="number" min="4" max="48" placeholder={String(GRID_DEFAULTS.navbarColumns)} bind:value={form.navbarColumns} oninput={changed} />
+							</div>
+							<div class="field-row">
+								<label for="lay-nbrow">Row height (px)</label>
+								<input id="lay-nbrow" type="number" min="28" max="120" placeholder={String(GRID_DEFAULTS.navbarRowHeight)} bind:value={form.rowHeight} oninput={changed} />
+							</div>
+							<div class="field-row">
+								<label for="lay-nbmt">Top margin (px)</label>
+								<input id="lay-nbmt" type="number" min="0" max="48" placeholder={String(GRID_DEFAULTS.navbarMarginTop)} bind:value={form.marginTop} oninput={changed} />
+							</div>
+							<div class="field-row">
+								<label for="lay-nbmb">Bottom margin (px)</label>
+								<input id="lay-nbmb" type="number" min="0" max="48" placeholder={String(GRID_DEFAULTS.navbarMarginBottom)} bind:value={form.marginBottom} oninput={changed} />
+							</div>
+						</fieldset>
+					</div>
+
+					<div class="pair-actions">
+						<button class="btn-add-bp" onclick={copyToAllBreakpoints}>{copiedNotice ? 'Copied to every breakpoint' : 'Copy to every breakpoint'}</button>
+						<button class="btn-add-bp" onclick={resetPair}>Reset to defaults</button>
+					</div>
+					<p class="section-hint">
+						{#if isLivePair}Previewed live on the dashboard behind.{:else}This breakpoint is not the one on screen: changes apply after saving.{/if}
+						{#if pendingCount}<b>{pendingCount} unsaved {pendingCount > 1 ? 'layouts' : 'layout'}.</b>{/if}
+					</p>
 				</div>
 			{:else if activeTab === 'cache'}
 				<div class="settings-section">
@@ -947,6 +1094,104 @@
 	.field-row input:focus,
 	.field-row select:focus {
 		border-color: var(--accent);
+	}
+
+	.section-hint {
+		margin: -4px 0 10px;
+		font-size: 0.78rem;
+		color: var(--text-muted);
+	}
+
+	.section-hint b {
+		color: var(--warning);
+		font-weight: 600;
+	}
+
+	.pair-picker {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: 12px;
+		margin-bottom: 12px;
+	}
+
+	.pair-dash {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.pair-dash select {
+		padding: 7px 10px;
+		background: var(--bg-primary);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		color: var(--text-primary);
+		min-width: 180px;
+	}
+
+	.bp-tabs {
+		display: flex;
+		gap: 4px;
+		padding: 3px;
+		border-radius: var(--radius-sm);
+		background: var(--bg-primary);
+		border: 1px solid var(--border);
+	}
+
+	.bp-tab {
+		position: relative;
+		padding: 5px 12px;
+		border-radius: calc(var(--radius-sm) - 2px);
+		font-size: 0.8rem;
+		color: var(--text-secondary);
+	}
+
+	.bp-tab.active {
+		color: white;
+		background: var(--accent);
+	}
+
+	.bp-tab.edited::after {
+		content: '';
+		position: absolute;
+		top: 3px;
+		right: 3px;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--warning);
+	}
+
+	.pair-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 12px;
+	}
+
+	.pair-grid fieldset {
+		margin: 0;
+		padding: 10px 12px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+	}
+
+	.pair-grid legend {
+		padding: 0 6px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--text-muted);
+	}
+
+	.pair-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin: 12px 0 6px;
 	}
 
 	.breakpoints-list {
