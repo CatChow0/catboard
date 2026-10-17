@@ -1,31 +1,33 @@
 <script lang="ts">
 	// Settings modal shared by widgets: header, body (snippet), Cancel / Save.
-	// Body content can use the .field, .hint and .toggle-switch classes.
+	// The body is a .cb-form: use the shared .field, .hint, .toggle-switch,
+	// .seg and .chips classes (theme.css). On phones it is a bottom sheet.
 	import type { Snippet } from 'svelte';
 
-	let { title, onclose, onsave, saveDisabled = false, children }: {
+	let { title, onclose, onsave, saveDisabled = false, saveLabel = 'Save', children }: {
 		title: string;
 		onclose: () => void;
 		onsave: () => void;
 		saveDisabled?: boolean;
+		saveLabel?: string;
 		children: Snippet;
 	} = $props();
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-<div class="wm-overlay" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" onclick={onclose} onpointerdown={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && onclose()}>
+<div class="wm-overlay modal-overlay" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" onclick={onclose} onpointerdown={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && onclose()}>
 	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div class="wm" onclick={(e) => e.stopPropagation()}>
+	<div class="wm modal" role="presentation" onclick={(e) => e.stopPropagation()}>
 		<div class="wm-header">
 			<h2>{title}</h2>
 			<button class="wm-close" onclick={onclose} aria-label="Close">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
 			</button>
 		</div>
-		<div class="wm-body">{@render children()}</div>
+		<div class="wm-body cb-form">{@render children()}</div>
 		<div class="wm-actions">
 			<button class="wm-cancel" onclick={onclose}>Cancel</button>
-			<button class="wm-save" onclick={onsave} disabled={saveDisabled}>Save</button>
+			<button class="wm-save" onclick={onsave} disabled={saveDisabled}>{saveLabel}</button>
 		</div>
 	</div>
 </div>
@@ -110,90 +112,6 @@
 
 	.wm-save:disabled {
 		opacity: 0.5;
-	}
-
-	/* Shared form styles for modal bodies. */
-	.wm-body :global(.field) {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		margin-bottom: 14px;
-		font-size: 0.85rem;
-		color: var(--text-secondary);
-	}
-
-	.wm-body :global(.field input),
-	.wm-body :global(.field select),
-	.wm-body :global(.field textarea) {
-		padding: 8px 10px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		font: inherit;
-	}
-
-	.wm-body :global(.hint) {
-		margin: 0;
-		font-size: 0.8rem;
-		color: var(--text-muted);
-	}
-
-	/* Switches: <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span><span class="toggle-label">…</span></label> */
-	.wm-body :global(.toggle-switch) {
-		position: relative;
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		margin-bottom: 12px;
-		cursor: pointer;
-	}
-
-	.wm-body :global(.toggle-switch input) {
-		position: absolute;
-		width: 0;
-		height: 0;
-		opacity: 0;
-	}
-
-	.wm-body :global(.toggle-slider) {
-		position: relative;
-		flex-shrink: 0;
-		width: 36px;
-		height: 20px;
-		border-radius: 20px;
-		background: var(--border);
-		transition: background var(--transition);
-	}
-
-	.wm-body :global(.toggle-slider::after) {
-		content: '';
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 16px;
-		height: 16px;
-		border-radius: 50%;
-		background: white;
-		transition: transform var(--transition);
-	}
-
-	.wm-body :global(.toggle-switch input:checked + .toggle-slider) {
-		background: var(--accent);
-	}
-
-	.wm-body :global(.toggle-switch input:checked + .toggle-slider::after) {
-		transform: translateX(16px);
-	}
-
-	.wm-body :global(.toggle-switch input:focus-visible + .toggle-slider) {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.wm-body :global(.toggle-label) {
-		font-size: 0.85rem;
-		color: var(--text-secondary);
 	}
 
 	@keyframes wm-fade {

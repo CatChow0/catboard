@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.11.0-blue)
+![Version](https://img.shields.io/badge/version-3.0.0-blue)
 
 ## Features
 
@@ -101,9 +101,18 @@ Toggle edit mode with the pencil button in the navbar. In edit mode you can:
 - **Resize** items by dragging the corner handle (neighbours are pushed down)
 - **Edit** services via the blue pencil button (bottom-left of tile)
 - **Remove** items via the red X button (top-left of tile)
-- **Add** new services, widgets, or navbar items via the "Add" button
+- **Add** services and widgets via the "Add" button (see below)
 
 Edit/delete buttons only appear when hovering over an item in edit mode.
+
+### Adding services and widgets
+
+The **Add** button opens two tabs:
+
+- **Services:** the registered services, with a search box (name, URL, description) and a sort menu (oldest or newest first, name A→Z or Z→A; the choice is remembered by the browser). **New service** registers one (name, URL, icon, description) and adds it to the dashboard; each card can be added again, edited or deleted.
+- **Widgets:** one catalog for every widget, dashboard and navbar alike, with a search box and categories (Basics, System, Monitoring, Media, Downloads, 3D printing, Network). Pick a widget to open its settings form, choose **Dashboard** or **Navbar** when it exists in both, set its size, then add it. A widget whose connection is not set up yet is greyed out with a **Set up** button that opens **Settings > Integrations** on that connection.
+
+The edit button of a widget opens the same settings form, so a widget has the same options when added and when edited.
 
 ### Dashboards
 
@@ -120,7 +129,7 @@ Each dashboard has its own grid and its own navbar (for every breakpoint). The *
 
 ### Navbar Widgets
 
-Add widgets to the navbar via Add > Navbar tab:
+Add them from **Add > Widgets** (badge *Navbar* or *Dashboard + navbar*; choose **Navbar** in the settings step):
 
 | Widget | Description |
 |---|---|
@@ -140,7 +149,7 @@ Each navbar widget can be resized and reordered in edit mode. Click the edit but
 
 ### Dashboard Widgets
 
-Add widgets via Add > Widgets tab:
+Add them from **Add > Widgets**:
 
 | Widget | Description |
 |---|---|
@@ -156,7 +165,7 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **AdGuard Home Stats** | DNS queries, blocked requests, blocked domains, and latency |
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
-| **Arr Releases** | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter. Posters are loaded through CatBoard, so the API keys never reach the browser |
+| **New releases** (Arr) | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter. Posters are loaded through CatBoard, so the API keys never reach the browser |
 | **Stacker** | Live hardware monitor from a Stacker server; choose CPU, Memory, GPU, Disk and Network sections; adapts from one-line gauges to full graphs as the tile grows |
 | **Jellyfin Now Playing** | Active streams: title, user and device, progress, paused state, Direct/Transcode badge (codec and reason on hover); one line per stream on 1-row tiles |
 | **Jellyseerr Requests** | Pending or all recent requests with poster, requester and status; approve/decline buttons for admins |
@@ -167,113 +176,24 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 
 ### Integrations
 
-Add integrations via Add > Integrations tab:
+Connections to external services are set up in **Settings > Integrations**: a searchable list grouped by category, with a status dot per connection (grey: not set up, blue: set up, green: last test passed, red: last test failed), and the form of the selected one.
 
-1. **Connections** sub-tab -- Configure external services:
-   - **Uptime Kuma:** Enter your instance URL
-   - **Docker:** Add environments (name + socket path or TCP URL)
-   - **AdGuard Home:** Enter your instance URL, username, and password
-   - **Radarr / Sonarr / Lidarr:** Enter instance URL and API key for each
-   - **Jellyfin:** Enter instance URL and API key
-   - **Stacker:** Add servers (name + URL, optional basic-auth credentials)
-   - **Jellyseerr / Overseerr:** Enter instance URL and API key
-   - **qBittorrent:** Enter the Web UI URL, username and password
-   - **Spoolman:** Enter the Spoolman URL
-   - **Elegoo printers:** Add a Centauri Carbon 2 (name, IP, access code if set); **Detect** reads its serial number. The printer must be in **LAN Only** mode (Settings > Network)
-2. **Widgets** sub-tab -- Add widgets that use configured integrations
+| Connection | Fields |
+|---|---|
+| **Uptime Kuma** | URL (status pages must be public) |
+| **Docker** | Environments: name + socket path or TCP URL |
+| **Stacker** | Servers: name + URL, optional basic-auth credentials |
+| **Radarr / Sonarr / Lidarr** | URL and API key |
+| **Jellyfin** | URL and API key |
+| **Jellyseerr / Overseerr** | URL and API key |
+| **qBittorrent** | Web UI URL, username, password |
+| **Spoolman** | URL |
+| **Elegoo printers** | Centauri Carbon 2: name, IP, access code (if set); **Detect** reads the serial number. The printer must be in **LAN Only** mode (Settings > Network) |
+| **AdGuard Home** | URL, username, password |
 
-Only admins (admin and mini-admin roles) can change connections or use widget actions (approve/decline, pause/resume/stop). Other users see the widgets, and integration secrets are hidden from them.
+**Test connection** tries the values typed, before saving them, from the CatBoard server (so it checks what the widgets will reach): the answer shows the version found (e.g. *Radarr 5.2.1*) or the reason of the failure (wrong key, connection refused, no answer within 5 s...). Lists (Docker, Stacker, printers) test every item. Each connection has its own **Save**; a dot in the list marks unsaved changes, and **Revert** drops them. Emptying a connection's URL and saving removes it.
 
-### Service Icons
-
-The **Icon** field of a service (Add > Services, or the edit button of a tile) has:
-
-- **Auto** (default): CatBoard looks for the service name in the [selfh.st](https://selfh.st/icons/) then [homarr dashboard-icons](https://github.com/homarr-labs/dashboard-icons) libraries (e.g. "Orca Slicer" -> `orca-slicer`), and falls back to the service's favicon (SVG, apple-touch-icon or the largest size, web manifest icons included).
-- **Libraries:** search both libraries (name, tags, categories; S / H badge for the library).
-- **URL:** any image URL, downloaded once.
-- **Upload:** a PNG, SVG, WebP, JPEG, GIF or ICO file up to 1 MB, stored in `config/icons`.
-
-Icons are downloaded by the server and kept in `config/icons`. Each browser also keeps a copy (IndexedDB) filled by one grouped request per dashboard, so tiles show their icons instantly on reload and when switching dashboards, without Internet access from the browser. Icons that cannot be found are retried after a day. **Settings > Cache** shows the cache and can clear it (uploads are kept) or rebuild it for every service.
-
-### Export & Import
-
-Backup and restore your dashboard:
-
-1. Open **Settings > Export**
-2. Click **Export Dashboard** to download a JSON backup
-3. Click **Select export file** to load a backup
-4. Choose which sections to import (services, layout, settings, integrations)
-
-### Keyboard Shortcuts
-
-- **Escape** -- Clear selection in edit mode, close modals
-- **Shift/Ctrl+Click** -- Multi-select items for batch dragging
-- **← / →** -- Previous / next dashboard (outside edit mode and text fields)
-
-### On a phone
-
-Screens up to 640px wide get a phone layout, in the browser and in the Android app:
-
-- **Top bar:** the dashboard title and its squares (tap to switch, or swipe the dashboard sideways), 🔍 when the navbar has a search widget, and ☰ for Edit, Settings and Logout.
-- **Widget strip:** the other navbar widgets of the active layout, in a row you scroll sideways. Their order and width follow the navbar columns; in edit mode, tap a widget to move it (◀ ▶), resize it (− +), edit or remove it.
-- **Edit mode:** a bottom bar holds the layout picker, **Add** and **Done**. Pages still scroll. **Hold a tile** until it lifts, then drag it; hold and release without moving to open its menu (copy / move to another dashboard, delete). The edit, delete and resize controls are always visible.
-- Dialogs open as bottom sheets; Settings and Add use the full screen with their tabs on top. On Android, the Back button closes the open sheet or dialog first.
-
-## Android App
-
-CatBoard has a lightweight Android client (Android 7.0+). It is a native WebView shell around your own CatBoard server, so every dashboard feature works as in the browser.
-
-### Install with Obtainium
-
-1. Install [Obtainium](https://github.com/ImranR98/Obtainium).
-2. **Add App** → source URL `https://github.com/CatChow0/catboard` → **Add**.
-3. Install the APK. Obtainium checks GitHub Releases for new versions.
-
-You can also download `catboard-v<version>.apk` from the [Releases](https://github.com/CatChow0/catboard/releases) page and install it manually.
-
-### First launch
-
-Enter your server address, e.g. `http://192.168.1.10:3000` or `https://dash.example.com`, then log in as usual. The app checks that the address answers like CatBoard before saving it. To switch servers later, long-press the app icon → **Change server**, or use the button shown when the server can't be reached.
-
-- Plain HTTP works on your local network. Use HTTPS (reverse proxy) when the server is reachable from the internet.
-- Servers with a private certificate authority work once its CA certificate is installed on the phone (Settings → Security → Install certificate). Self-signed certificates that are not installed are rejected.
-- Links to other services open in your browser. Config export asks where to save the file; icon upload and config import use the system file picker.
-
-### Building the APK (maintainers)
-
-**Prerequisites:** JDK 17+ and the Android SDK (install [Android Studio](https://developer.android.com/studio), or the command-line tools with `platforms;android-35` and `build-tools;35.0.0`). Set `ANDROID_HOME`, or create `android/local.properties` with `sdk.dir=C\:\Users\<you>\AppData\Local\Android\Sdk`.
-
-The APK version always follows `package.json` (`versionCode = major*10000 + minor*100 + patch`).
-
-**One-time signing setup.** Every release must be signed with the same key, or installed apps can't update.
-
-1. Create the keystore **outside the repo** and back it up somewhere safe. If you lose it, users have to uninstall and reinstall:
-   ```powershell
-   & "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -keystore C:\keys\catboard-release.jks -alias catboard -keyalg RSA -keysize 4096 -validity 10000
-   ```
-2. Copy `android/keystore.properties.example` to `android/keystore.properties` (gitignored) and fill in the path and passwords.
-
-**Release:**
-
-```powershell
-./scripts/build-android.ps1          # builds + verifies dist/android/catboard-v<version>.apk
-git tag v2.11.0; git push origin v2.11.0
-```
-
-Then on GitHub: **Releases → Draft a new release**, pick the tag, attach the APK and publish. With the [gh CLI](https://cli.github.com) installed, `./scripts/build-android.ps1 -Publish` creates the release for you.
-
-For CI (for example Jenkins), set `CATBOARD_KEYSTORE_PATH`, `CATBOARD_KEYSTORE_PASSWORD`, `CATBOARD_KEY_ALIAS` and `CATBOARD_KEY_PASSWORD` instead of using `keystore.properties`, and run the same script. For a quick unsigned debug build: `cd android; ./gradlew assembleDebug`.
-
-## Tech Stack
-
-- **Framework:** SvelteKit 2 + Svelte 5 (runes)
-- **Language:** TypeScript
-- **Build:** Vite 8
-- **Adapter:** @sveltejs/adapter-node
-- **System Monitoring:** systeminformation
-- **Auth:** bcryptjs + cookie-based sessions
-- **Icons:** [selfh.st icons](https://github.com/selfhst/icons) and [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (via jsDelivr), cached on the server
-- **Weather:** Open-Meteo API
+Only admins (admin and mini-admin roles) can change or test connections, or use widget actions (approve/decline, pause/resume/stop). Other users see the list read-only and the widgets, and integration secrets are hidden from them.
 
 ## API Endpoints
 
@@ -295,7 +215,8 @@ For CI (for example Jenkins), set `CATBOARD_KEYSTORE_PATH`, `CATBOARD_KEYSTORE_P
 | `GET` | `/api/system-stats` | SSE stream for CPU/RAM/disk |
 | `GET` | `/api/disks` | Available disk mount paths |
 | `GET` | `/api/temp-sensors` | Available temperature sensors |
-| `GET/PUT` | `/api/integrations` | Integration configurations |
+| `GET/PUT` | `/api/integrations` | Integration configurations (PUT replaces the keys sent; `null` removes a connection) |
+| `POST` | `/api/integrations/test` | Try a connection with unsaved values (`key`, `value`), returns `{ ok, message }` (admins) |
 | `GET` | `/api/integrations/uptime-kuma/heartbeat` | SSE stream for Uptime Kuma status |
 | `GET` | `/api/integrations/docker/heartbeat` | SSE stream for Docker container status |
 | `GET` | `/api/integrations/adguard-home/heartbeat` | SSE stream for AdGuard Home stats and status |

@@ -1,203 +1,28 @@
 <script lang="ts">
-	import { uid } from '$lib/utils/uid';
+	// "Add to dashboard": registered services (search, sort, register / edit),
+	// and the widget catalog (search, categories), whose cards open the widget's
+	// settings form before adding it. Connections live in Settings > Integrations.
+	import { onMount } from 'svelte';
 	import type { Service } from '$lib/stores/dashboard';
-	import type { StackerServer, StackerSections, WeatherLocation, ElegooPrinter, SpoolmanConfig } from '$lib/types';
-	import LocationSearch from './LocationSearch.svelte';
-	import DockerLogo from './icons/DockerLogo.svelte';
-	import UptimeKumaLogo from './icons/UptimeKumaLogo.svelte';
-	import { services, layout, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, activeGrid, getIntegrations, setIntegrations, currentUser } from '$lib/stores/dashboard';
+	import { services, registerService, updateService, deleteService, addServiceToDashboard, addWidgetToDashboard, addNavbarItem, activeGrid, openSettings } from '$lib/stores/dashboard';
+	import { integrations, loadIntegrations } from '$lib/stores/integrations';
+	import { integrationDef } from '$lib/integrations/registry';
+	import { WIDGETS, WIDGET_CATEGORIES, draftFor, configFrom, missingConnections, type WidgetCategory, type WidgetDef, type WidgetTarget } from '$lib/widgets/catalog';
+	import Glyph from '$lib/widgets/Glyph.svelte';
 	import IconPicker from './IconPicker.svelte';
 	import { iconSrc } from '$lib/utils/icons';
 
 	let { onclose }: { onclose: () => void } = $props();
 	let closing = $state(false);
-	let activeTab = $state<'services' | 'widgets' | 'navbar' | 'integrations'>('services');
-	let showRegisterForm = $state(false);
-	let newServiceName = $state('');
-	let newServiceUrl = $state('');
-	let newServiceIcon = $state('');
-	let newServiceDesc = $state('');
-	let addedServiceIds = $state<Set<string>>(new Set());
-	let editingServiceId = $state<string | null>(null);
-	let widgetType = $state<'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'notes'>('group-collapsible');
-	let widgetTitle = $state('');
-	let widgetColSpan = $state(6);
-	let adguardHomeUrl = $state('');
-	let adguardHomeUsername = $state('');
-	let adguardHomePassword = $state('');
-	let adguardHomeSaving = $state(false);
-	let adguardWidgetType = $state<'stats' | 'control'>('stats');
-	let adguardWidgetVersion = $state<'standard' | 'navbar'>('standard');
-	let adguardWidgetColSpan = $state(4);
-	let adguardWidgetRowSpan = $state(2);
-	let adguardWidgetAlign = $state<'left' | 'center' | 'right'>('center');
+	let activeTab = $state<'services' | 'widgets'>('services');
 
-
-	$effect(() => {
-		if (widgetType === 'clock') widgetColSpan = 2;
-		else if (widgetType === 'weather') widgetColSpan = 2;
-		else if (widgetType === 'calendar') widgetColSpan = 4;
-	});
-	let widgetCompact = $state(false);
-	let navbarWidgetType = $state<'navbar-title' | 'navbar-search' | 'navbar-cpu' | 'navbar-ram' | 'navbar-disk' | 'navbar-clock' | 'navbar-weather'>('navbar-cpu');
-	let navbarColSpan = $state(2);
-	let navbarClock = $state({ showSeconds: false, format12h: false, showDate: true, showFullDate: false });
-	let navbarWeatherLocation = $state<WeatherLocation | null>(null);
-	let diskPaths = $state<string[]>([]);
-	let availableDisks = $state<string[]>([]);
-	let tempSensors = $state<string[]>([]);
-	let selectedTempSensor = $state('');
-	let tempSensorsLoading = $state(false);
-	let tempSensorsDetected = $state(false);
-	let disksLoading = $state(false);
-	let disksDetected = $state(false);
-
-	let integrationSubTab = $state<'connections' | 'widgets'>('connections');
-	let uptimeKumaUrl = $state('');
-	let uptimeKumaUrlSaving = $state(false);
-	let uptimeKumaUrlSaved = $state(false);
-	let selectedStatusPageSlug = $state('');
-	let integrationWidgetVersion = $state<'standard' | 'navbar'>('standard');
-	let integrationWidgetColSpan = $state(4);
-	let integrationWidgetRowSpan = $state(2);
-	let dockerEnvironments = $state<{ id: string; name: string; url: string }[]>([]);
-	let dockerEnvSaving = $state(false);
-	let dockerWidgetEnvId = $state('');
-	let dockerWidgetVersion = $state<'standard' | 'navbar'>('standard');
-	let dockerWidgetColSpan = $state(4);
-	let dockerWidgetRowSpan = $state(2);
-	let dockerWidgetShowCpu = $state(false);
-	let dockerWidgetShowRam = $state(false);
-
-	let radarrUrl = $state('');
-	let radarrApiKey = $state('');
-	let radarrSaving = $state(false);
-	let sonarrUrl = $state('');
-	let sonarrApiKey = $state('');
-	let sonarrSaving = $state(false);
-	let lidarrUrl = $state('');
-	let lidarrApiKey = $state('');
-	let lidarrSaving = $state(false);
-
-	let jellyfinUrl = $state('');
-	let jellyfinApiKey = $state('');
-	let jellyfinSaving = $state(false);
-	let jellyfinWidgetColSpan = $state(4);
-	let jellyfinWidgetRowSpan = $state(3);
-
-	let arrReleasesWidgetColSpan = $state(4);
-	let arrReleasesWidgetRowSpan = $state(3);
-
-	let jellyseerrUrl = $state('');
-	let jellyseerrApiKey = $state('');
-	let jellyseerrSaving = $state(false);
-	let qbitUrl = $state('');
-	let qbitUsername = $state('');
-	let qbitPassword = $state('');
-	let qbitSaving = $state(false);
-	let nowPlayingColSpan = $state(4);
-	let nowPlayingRowSpan = $state(3);
-	let requestsColSpan = $state(4);
-	let requestsRowSpan = $state(4);
-	let qbitColSpan = $state(4);
-	let qbitRowSpan = $state(4);
-	const canEditConnections = $derived($currentUser?.role === 'admin' || $currentUser?.role === 'mini-admin');
-
-	let stackerServers = $state<StackerServer[]>([]);
-	let stackerSaving = $state(false);
-	let stackerWidgetServerId = $state('');
-	let stackerWidgetSections = $state<StackerSections>({ cpu: true, memory: true, gpu: true, disk: true, network: true });
-	let stackerWidgetColSpan = $state(4);
-	let stackerWidgetRowSpan = $state(4);
-
-	let spoolmanUrl = $state('');
-	let spoolmanSaving = $state(false);
-	let spoolmanRecent = $state(false);
-	let spoolmanLow = $state(false);
-	let spoolmanColSpan = $state(4);
-	let spoolmanRowSpan = $state(4);
-	let elegooPrinters = $state<ElegooPrinter[]>([]);
-	let elegooSaving = $state(false);
-	let elegooDetect = $state<Record<string, string>>({});
-	let printWidgetPrinterId = $state('');
-	let printWidgetVersion = $state<'standard' | 'navbar'>('standard');
-	let printWidgetColSpan = $state(4);
-	let printWidgetRowSpan = $state(3);
-
-	$effect(() => {
-		if (activeTab === 'integrations') loadIntegrationsConfig();
+	onMount(() => {
+		loadIntegrations(true);
 	});
 
-	async function loadTempSensors() {
-		tempSensorsLoading = true;
-		try {
-			const res = await fetch('/api/temp-sensors');
-			const data = await res.json();
-			tempSensors = data.sensors || [];
-			tempSensorsDetected = true;
-		} catch {
-			tempSensors = [];
-			tempSensorsDetected = true;
-		} finally {
-			tempSensorsLoading = false;
-		}
-	}
-
-	async function loadAvailableDisks() {
-		disksLoading = true;
-		try {
-			const res = await fetch('/api/disks');
-			const data = await res.json();
-			availableDisks = data.disks || [];
-			disksDetected = true;
-		} catch {
-			availableDisks = [];
-			disksDetected = true;
-		} finally {
-			disksLoading = false;
-		}
-	}
-
-	async function loadIntegrationsConfig() {
-		try {
-			const config = await getIntegrations();
-			if (config.uptimeKuma?.url) {
-				uptimeKumaUrl = config.uptimeKuma.url;
-				uptimeKumaUrlSaved = true;
-			}
-			dockerEnvironments = config.docker?.environments || [];
-			radarrUrl = config.radarr?.url || '';
-		if (config.adguardHome) {
-			adguardHomeUrl = config.adguardHome.url || '';
-			adguardHomeUsername = config.adguardHome.username || '';
-			adguardHomePassword = config.adguardHome.password || '';
-		}
-			radarrApiKey = config.radarr?.apiKey || '';
-			sonarrUrl = config.sonarr?.url || '';
-			sonarrApiKey = config.sonarr?.apiKey || '';
-			lidarrUrl = config.lidarr?.url || '';
-			lidarrApiKey = config.lidarr?.apiKey || '';
-			jellyfinUrl = config.jellyfin?.url || '';
-			jellyfinApiKey = config.jellyfin?.apiKey || '';
-			jellyseerrUrl = config.jellyseerr?.url || '';
-			jellyseerrApiKey = config.jellyseerr?.apiKey || '';
-			qbitUrl = config.qbittorrent?.url || '';
-			qbitUsername = config.qbittorrent?.username || '';
-			qbitPassword = config.qbittorrent?.password || '';
-			stackerServers = config.stacker?.servers || [];
-			spoolmanUrl = config.spoolman?.url || '';
-			elegooPrinters = config.elegoo?.printers || [];
-		} catch {
-			// ignore
-		}
-	}
-
-	function toggleDiskPath(path: string) {
-		if (diskPaths.includes(path)) {
-			diskPaths = diskPaths.filter(p => p !== path);
-		} else {
-			diskPaths = [...diskPaths, path];
-		}
+	function close() {
+		closing = true;
+		setTimeout(() => onclose(), 180);
 	}
 
 	/** Columns of the breakpoint shown (it may have been picked by hand in edit mode). */
@@ -205,350 +30,77 @@
 		return $activeGrid.columns;
 	}
 
+	// --- Services -----------------------------------------------------------------
+
+	type ServiceSort = 'oldest' | 'newest' | 'name-asc' | 'name-desc';
+	const SORT_KEY = 'catboard:services-sort';
+
+	let showRegisterForm = $state(false);
+	let newServiceName = $state('');
+	let newServiceUrl = $state('');
+	let newServiceIcon = $state('');
+	let newServiceDesc = $state('');
+	let editingServiceId = $state<string | null>(null);
+	let addedServiceIds = $state<Set<string>>(new Set());
+	let serviceQuery = $state('');
+	let serviceSort = $state<ServiceSort>(readSort());
+
+	function readSort(): ServiceSort {
+		try {
+			const v = localStorage.getItem(SORT_KEY);
+			if (v === 'oldest' || v === 'newest' || v === 'name-asc' || v === 'name-desc') return v;
+		} catch {
+			// storage unavailable
+		}
+		return 'oldest';
+	}
+
+	$effect(() => {
+		try {
+			localStorage.setItem(SORT_KEY, serviceSort);
+		} catch {
+			// storage unavailable: the choice lasts for this popup only
+		}
+	});
+
+	// services.json keeps registration order: oldest first.
+	const shownServices = $derived.by(() => {
+		const q = serviceQuery.trim().toLowerCase();
+		const list = q
+			? $services.filter((s) => `${s.name} ${s.url} ${s.description}`.toLowerCase().includes(q))
+			: [...$services];
+		if (serviceSort === 'newest') list.reverse();
+		else if (serviceSort === 'name-asc') list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+		else if (serviceSort === 'name-desc') list.sort((a, b) => b.name.localeCompare(a.name, undefined, { sensitivity: 'base' }));
+		return list;
+	});
+
+	function flashAdded(id: string) {
+		addedServiceIds.add(id);
+		addedServiceIds = new Set(addedServiceIds);
+		setTimeout(() => {
+			addedServiceIds.delete(id);
+			addedServiceIds = new Set(addedServiceIds);
+		}, 1500);
+	}
+
 	async function handleRegister(e: Event) {
 		e.preventDefault();
-		const name = newServiceName;
-		const url = newServiceUrl;
-		const icon = newServiceIcon;
-		const desc = newServiceDesc;
-		if (editingServiceId) {
-			await updateService(editingServiceId, { name, url, icon, description: desc });
-			resetForm();
+		const data = { name: newServiceName, url: newServiceUrl, icon: newServiceIcon, description: newServiceDesc };
+		const editing = editingServiceId;
+		resetForm();
+		if (editing) {
+			await updateService(editing, data);
 			return;
 		}
-		resetForm();
-		const svc = await registerService({
-			name,
-			url,
-			icon,
-			description: desc,
-			statusCheck: { enabled: true, method: 'HEAD' }
-		});
+		const svc = await registerService({ ...data, statusCheck: { enabled: true, method: 'HEAD' } });
 		await addServiceToDashboard(svc.id, getMaxCols());
-		addedServiceIds.add(svc.id);
-		setTimeout(() => {
-			addedServiceIds.delete(svc.id);
-			addedServiceIds = addedServiceIds;
-		}, 1500);
+		flashAdded(svc.id);
 	}
 
 	async function handleAddExisting(serviceId: string) {
 		await addServiceToDashboard(serviceId, getMaxCols());
-		addedServiceIds.add(serviceId);
-		setTimeout(() => {
-			addedServiceIds.delete(serviceId);
-			addedServiceIds = addedServiceIds;
-		}, 1500);
-	}
-
-	async function handleDeleteService(id: string) {
-		await deleteService(id);
-	}
-
-	async function handleAddWidget(e: Event) {
-		e.preventDefault();
-		const type = widgetType;
-		const title = widgetTitle || 'New Group';
-		const cols = widgetColSpan;
-		widgetTitle = '';
-		close();
-		if (type === 'calendar') {
-			await addWidgetToDashboard('calendar', '', cols, 2, getMaxCols());
-		} else if (type === 'clock') {
-			await addWidgetToDashboard('clock', '', cols, 1, getMaxCols());
-		} else if (type === 'weather') {
-			await addWidgetToDashboard('weather', '', cols, 1, getMaxCols());
-		} else if (type === 'notes') {
-			await addWidgetToDashboard('notes', '', cols, 3, getMaxCols(), { content: '' });
-		} else {
-			const config = type === 'group-standard' && widgetCompact ? { compact: true } : undefined;
-			await addWidgetToDashboard(type, title, cols, 3, getMaxCols(), config);
-		}
-	}
-
-	async function handleAddNavbarWidget() {
-		let config: Record<string, unknown> | undefined;
-		if (navbarWidgetType === 'navbar-disk') {
-			config = { disks: diskPaths.length > 0 ? diskPaths : undefined };
-		} else if (navbarWidgetType === 'navbar-cpu' && selectedTempSensor) {
-			config = { tempSensor: selectedTempSensor };
-		} else if (navbarWidgetType === 'navbar-clock') {
-			config = { ...navbarClock, dateFormat: 'DD/MM' };
-		} else if (navbarWidgetType === 'navbar-weather') {
-			config = navbarWeatherLocation ? { location: navbarWeatherLocation } : undefined;
-		}
-		close();
-		await addNavbarItem(navbarWidgetType, navbarColSpan, config);
-	}
-
-	function buildArrConnection(url: string, apiKey: string) {
-		return url ? { url: url.trim(), apiKey: apiKey.trim() } : undefined;
-	}
-
-	async function handleSaveUptimeKumaUrl() {
-		uptimeKumaUrlSaving = true;
-		try {
-			await setIntegrations({ uptimeKuma: { url: uptimeKumaUrl.trim() } });
-			uptimeKumaUrlSaved = true;
-		} catch {
-			// ignore
-		} finally {
-			uptimeKumaUrlSaving = false;
-		}
-	}
-
-	async function handleAddIntegrationWidget() {
-		if (!selectedStatusPageSlug.trim()) return;
-		close();
-		if (integrationWidgetVersion === 'standard') {
-			await addWidgetToDashboard('uptime-kuma-status-page', '', integrationWidgetColSpan, integrationWidgetRowSpan, getMaxCols(), { slug: selectedStatusPageSlug.trim() });
-		} else {
-			await addNavbarItem('navbar-uptime-kuma-status-page', integrationWidgetColSpan, { slug: selectedStatusPageSlug.trim() });
-		}
-	}
-
-	async function handleSaveDockerEnvironments() {
-		dockerEnvSaving = true;
-		try {
-			await setIntegrations({ docker: { environments: dockerEnvironments } });
-		} catch {
-			// ignore
-		} finally {
-			dockerEnvSaving = false;
-		}
-	}
-
-	function addDockerEnvironment() {
-		dockerEnvironments = [...dockerEnvironments, { id: uid(), name: '', url: '' }];
-	}
-
-	function removeDockerEnvironment(id: string) {
-		dockerEnvironments = dockerEnvironments.filter(e => e.id !== id);
-	}
-
-	async function handleAddDockerWidget() {
-		if (!dockerWidgetEnvId) return;
-		close();
-		const config = { environmentId: dockerWidgetEnvId, showCpu: dockerWidgetShowCpu || undefined, showRam: dockerWidgetShowRam || undefined };
-		if (dockerWidgetVersion === 'standard') {
-			await addWidgetToDashboard('docker', '', dockerWidgetColSpan, dockerWidgetRowSpan, getMaxCols(), config);
-		} else {
-			await addNavbarItem('navbar-docker', dockerWidgetColSpan, config);
-		}
-	}
-
-	async function handleSaveRadarr() {
-		radarrSaving = true;
-		try {
-			await setIntegrations({ radarr: buildArrConnection(radarrUrl, radarrApiKey) });
-		} catch {
-			// ignore
-		} finally {
-			radarrSaving = false;
-		}
-	}
-
-	async function handleSaveSonarr() {
-		sonarrSaving = true;
-		try {
-			await setIntegrations({ sonarr: buildArrConnection(sonarrUrl, sonarrApiKey) });
-		} catch {
-			// ignore
-		} finally {
-			sonarrSaving = false;
-		}
-	}
-
-	async function handleSaveLidarr() {
-		lidarrSaving = true;
-		try {
-			await setIntegrations({ lidarr: buildArrConnection(lidarrUrl, lidarrApiKey) });
-		} catch {
-			// ignore
-		} finally {
-			lidarrSaving = false;
-		}
-	}
-
-	async function handleSaveJellyfin() {
-		jellyfinSaving = true;
-		try {
-			await setIntegrations({ jellyfin: buildArrConnection(jellyfinUrl, jellyfinApiKey) });
-		} catch {
-			// ignore
-		} finally {
-			jellyfinSaving = false;
-		}
-	}
-
-	async function handleAddJellyfinWidget() {
-		close();
-		await addWidgetToDashboard('jellyfin-latest', '', jellyfinWidgetColSpan, jellyfinWidgetRowSpan, getMaxCols(), { instanceId: 'default', limit: 5 });
-	}
-
-	async function handleSaveStackerServers() {
-		stackerSaving = true;
-		try {
-			const servers = stackerServers
-				.filter((s) => s.url.trim())
-				.map((s) => ({ ...s, url: s.url.trim(), name: s.name.trim(), username: s.username?.trim() || undefined, password: s.username?.trim() ? s.password : undefined }));
-			await setIntegrations({ stacker: { servers } });
-			stackerServers = servers;
-		} catch {
-			// ignore
-		} finally {
-			stackerSaving = false;
-		}
-	}
-
-	function addStackerServer() {
-		stackerServers = [...stackerServers, { id: uid(), name: '', url: '' }];
-	}
-
-	function removeStackerServer(id: string) {
-		stackerServers = stackerServers.filter((s) => s.id !== id);
-	}
-
-	async function handleAddStackerWidget() {
-		if (!stackerWidgetServerId) return;
-		close();
-		await addWidgetToDashboard('stacker', '', stackerWidgetColSpan, stackerWidgetRowSpan, getMaxCols(), {
-			serverId: stackerWidgetServerId,
-			sections: { ...stackerWidgetSections },
-			graphs: true,
-			totals: true
-		});
-	}
-
-	async function handleSaveJellyseerr() {
-		jellyseerrSaving = true;
-		try {
-			await setIntegrations({ jellyseerr: buildArrConnection(jellyseerrUrl, jellyseerrApiKey) });
-		} catch {
-			// ignore
-		} finally {
-			jellyseerrSaving = false;
-		}
-	}
-
-	async function handleSaveQbit() {
-		qbitSaving = true;
-		try {
-			await setIntegrations({ qbittorrent: { url: qbitUrl.trim(), username: qbitUsername.trim(), password: qbitPassword } });
-		} catch {
-			// ignore
-		} finally {
-			qbitSaving = false;
-		}
-	}
-
-	async function handleSaveSpoolman() {
-		spoolmanSaving = true;
-		try {
-			await setIntegrations({ spoolman: spoolmanUrl.trim() ? { url: spoolmanUrl.trim() } : undefined });
-		} catch {
-			// ignore
-		} finally {
-			spoolmanSaving = false;
-		}
-	}
-
-	async function handleAddSpoolmanWidget() {
-		close();
-		const config: SpoolmanConfig = { showRecent: spoolmanRecent || undefined, showLow: spoolmanLow || undefined, limit: 5, lowPercent: 15 };
-		await addWidgetToDashboard('spoolman', '', spoolmanColSpan, spoolmanRowSpan, getMaxCols(), config as Record<string, unknown>);
-	}
-
-	function addElegooPrinter() {
-		elegooPrinters = [...elegooPrinters, { id: uid(), name: '', host: '' }];
-	}
-
-	function removeElegooPrinter(id: string) {
-		elegooPrinters = elegooPrinters.filter((p) => p.id !== id);
-	}
-
-	/** Ask the printer for its serial number and name (UDP discovery, done by the server). */
-	async function detectElegooPrinter(p: ElegooPrinter) {
-		elegooDetect = { ...elegooDetect, [p.id]: 'Detecting…' };
-		try {
-			const res = await fetch('/api/integrations/elegoo/discover', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ host: p.host.trim() })
-			});
-			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-			elegooPrinters = elegooPrinters.map((x) => (x.id === p.id ? { ...x, serial: body.sn, name: x.name || body.name || body.model } : x));
-			const code = body.tokenStatus === 1 ? 'an access code is set: enter it below' : 'no access code set';
-			elegooDetect = { ...elegooDetect, [p.id]: `Found ${body.model || 'printer'} (${body.sn}), ${code}` };
-		} catch (e) {
-			elegooDetect = { ...elegooDetect, [p.id]: e instanceof Error ? e.message : String(e) };
-		}
-	}
-
-	async function handleSaveElegooPrinters() {
-		elegooSaving = true;
-		try {
-			const printers = elegooPrinters
-				.filter((p) => p.host.trim())
-				.map((p) => ({ id: p.id, name: p.name.trim() || 'Centauri Carbon 2', host: p.host.trim(), accessCode: p.accessCode?.trim() || undefined, serial: p.serial?.trim() || undefined }));
-			await setIntegrations({ elegoo: { printers } });
-			elegooPrinters = printers;
-		} catch {
-			// ignore
-		} finally {
-			elegooSaving = false;
-		}
-	}
-
-	async function handleAddPrintWidget() {
-		if (!printWidgetPrinterId) return;
-		close();
-		const config = { printerId: printWidgetPrinterId, showThumbnail: true, showTemps: true };
-		if (printWidgetVersion === 'standard') {
-			await addWidgetToDashboard('elegoo-print', '', printWidgetColSpan, printWidgetRowSpan, getMaxCols(), config);
-		} else {
-			await addNavbarItem('navbar-elegoo-print', printWidgetColSpan, config);
-		}
-	}
-
-	async function handleAddIntegrationTile(type: 'jellyfin-now-playing' | 'jellyseerr-requests' | 'qbittorrent', cols: number, rows: number) {
-		close();
-		await addWidgetToDashboard(type, '', cols, rows, getMaxCols());
-	}
-
-	async function handleAddArrReleasesWidget() {
-		close();
-		await addWidgetToDashboard('arr-releases', '', arrReleasesWidgetColSpan, arrReleasesWidgetRowSpan, getMaxCols(), {
-			integrations: { radarr: !!radarrUrl, sonarr: !!sonarrUrl, lidarr: !!lidarrUrl },
-			days: 14,
-			limit: 10
-		});
-	}
-
-	async function handleSaveAdGuard() {
-		adguardHomeSaving = true;
-		try {
-			await setIntegrations({
-				adguardHome: adguardHomeUrl
-					? { url: adguardHomeUrl.trim(), username: adguardHomeUsername.trim(), password: adguardHomePassword.trim() }
-					: undefined
-			});
-		} catch {
-			// ignore
-		} finally {
-			adguardHomeSaving = false;
-		}
-	}
-
-	async function handleAddAdGuardWidget() {
-		close();
-		if (adguardWidgetVersion === 'standard') {
-			const type = adguardWidgetType === 'stats' ? 'adguard-home' : 'adguard-home-control';
-			await addWidgetToDashboard(type, '', adguardWidgetColSpan, adguardWidgetRowSpan, getMaxCols(), { instanceId: 'default' });
-		} else {
-			await addNavbarItem('navbar-adguard-home-control', adguardWidgetColSpan, { instanceId: 'default', align: adguardWidgetAlign });
-		}
+		flashAdded(serviceId);
 	}
 
 	function resetForm() {
@@ -582,18 +134,83 @@
 		}
 	}
 
-	function close() {
-		closing = true;
-		setTimeout(() => onclose(), 180);
+	// --- Widgets ------------------------------------------------------------------
+
+	let widgetQuery = $state('');
+	let category = $state<WidgetCategory | 'all'>('all');
+	let picked = $state<WidgetDef | null>(null);
+	let target = $state<WidgetTarget>('grid');
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let draft = $state<Record<string, any>>({});
+	let colSpan = $state(2);
+	let rowSpan = $state(1);
+
+	const catalog = $derived.by(() => {
+		const q = widgetQuery.trim().toLowerCase();
+		return WIDGETS.filter(
+			(w) =>
+				(category === 'all' || w.category === category) &&
+				(!q || `${w.name} ${w.description} ${w.category} ${(w.integrations ?? []).map((k) => integrationDef(k)?.name).join(' ')}`.toLowerCase().includes(q))
+		);
+	});
+	const categories = $derived(WIDGET_CATEGORIES.filter((c) => WIDGETS.some((w) => w.category === c)));
+
+	const placeLabel = (w: WidgetDef) => (w.grid && w.navbar ? 'Dashboard + navbar' : w.navbar ? 'Navbar' : '');
+	const needsLabel = (w: WidgetDef, missing: string[]) =>
+		missing.length > 1 ? `Needs ${missing.map((k) => integrationDef(k as never)?.name).join(', ').replace(/, ([^,]*)$/, ' or $1')}` : `Needs ${integrationDef(missing[0] as never)?.name ?? 'a connection'}`;
+
+	function sizeFor(def: WidgetDef, t: WidgetTarget) {
+		if (t === 'navbar') return { cols: def.navbar!.colSpan, rows: 1 };
+		return { cols: Math.min(def.grid!.colSpan, getMaxCols()), rows: def.grid!.rowSpan };
+	}
+
+	function pick(def: WidgetDef) {
+		picked = def;
+		target = def.grid ? 'grid' : 'navbar';
+		draft = draftFor(def, undefined, target, $integrations);
+		({ cols: colSpan, rows: rowSpan } = sizeFor(def, target));
+	}
+
+	function setTarget(t: WidgetTarget) {
+		if (!picked || t === target) return;
+		target = t;
+		({ cols: colSpan, rows: rowSpan } = sizeFor(picked, t));
+	}
+
+	function setUp(def: WidgetDef) {
+		const key = def.integrations?.[0];
+		close();
+		setTimeout(() => openSettings('integrations', key), 200);
+	}
+
+	const maxCols = $derived(target === 'navbar' ? $activeGrid.navbar.columns : $activeGrid.columns);
+	const minCols = $derived(target === 'grid' ? Math.min(picked?.grid?.minColSpan ?? 1, $activeGrid.columns) : 1);
+	const missing = $derived(picked?.missing?.(draft) ?? null);
+
+	async function addPicked() {
+		const def = picked;
+		if (!def || missing) return;
+		const d = $state.snapshot(draft);
+		const config = configFrom(def, d, target);
+		const cols = Math.min(maxCols, Math.max(minCols, Math.round(colSpan) || 1));
+		const rows = Math.min(12, Math.max(1, Math.round(rowSpan) || 1));
+		close();
+		if (target === 'navbar') {
+			await addNavbarItem(def.navbar!.type, cols, config);
+		} else if (def.group) {
+			await addWidgetToDashboard(def.grid!.type, String(d.title ?? '').trim() || 'New Group', cols, rows, getMaxCols(), d.compact ? { compact: true } : undefined);
+		} else {
+			await addWidgetToDashboard(def.grid!.type, '', cols, rows, getMaxCols(), config);
+		}
 	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-<div class="popup-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
-	<div class="popup sheet-full" onclick={(e) => e.stopPropagation()}>
+<div class="popup-overlay" class:closing role="dialog" aria-modal="true" aria-label="Add to dashboard" tabindex="-1" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
+	<div class="popup sheet-full" role="presentation" onclick={(e) => e.stopPropagation()}>
 		<div class="popup-header">
-			<h2>Add to Dashboard</h2>
-			<button class="btn-close" onclick={close}>
+			<h2>Add to dashboard</h2>
+			<button class="btn-close" onclick={close} aria-label="Close">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M18 6L6 18M6 6l12 12" />
 				</svg>
@@ -604,1167 +221,186 @@
 			<div class="sidebar">
 				<button class="tab" class:active={activeTab === 'services'} onclick={() => (activeTab = 'services')}>Services</button>
 				<button class="tab" class:active={activeTab === 'widgets'} onclick={() => (activeTab = 'widgets')}>Widgets</button>
-				<button class="tab" class:active={activeTab === 'navbar'} onclick={() => (activeTab = 'navbar')}>Navbar</button>
-				<button class="tab" class:active={activeTab === 'integrations'} onclick={() => (activeTab = 'integrations')}>Integrations</button>
 			</div>
 
-		{#if activeTab === 'services'}
-				<div class="tab-content">
-					{#if !showRegisterForm}
-						<button class="btn-register" onclick={() => (showRegisterForm = true)}>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M12 5v14M5 12h14" />
-							</svg>
-							{editingServiceId ? 'Edit Service' : 'Register New Service'}
-						</button>
-					{:else}
+			{#if activeTab === 'services'}
+				<div class="tab-content cb-form">
+					{#if showRegisterForm}
 						<form class="register-form" onsubmit={handleRegister}>
-							<h3>{editingServiceId ? 'Edit Service' : 'Register New Service'}</h3>
-							<div class="field">
-								<label>Name</label>
-								<input type="text" bind:value={newServiceName} required placeholder="Proxmox" />
+							<h3>{editingServiceId ? 'Edit service' : 'Register a service'}</h3>
+							<div class="field-row">
+								<label class="field">
+									<span>Name</span>
+									<input type="text" bind:value={newServiceName} required placeholder="Proxmox" />
+								</label>
+								<label class="field">
+									<span>URL</span>
+									<input type="url" bind:value={newServiceUrl} required placeholder="https://proxmox.home.local" />
+								</label>
 							</div>
 							<div class="field">
-								<label>URL</label>
-								<input type="url" bind:value={newServiceUrl} required placeholder="https://proxmox.home.local" />
-							</div>
-							<div class="field">
-								<label>Icon</label>
+								<span>Icon</span>
 								<IconPicker value={newServiceIcon} onchange={(v) => (newServiceIcon = v)} name={newServiceName} url={newServiceUrl} />
 							</div>
-							<div class="field">
-								<label>Description</label>
+							<label class="field">
+								<span>Description</span>
 								<input type="text" bind:value={newServiceDesc} placeholder="Hypervisor" />
-							</div>
+							</label>
 							<div class="form-actions">
 								<button type="button" class="btn-cancel" onclick={resetForm}>Cancel</button>
-								<button type="submit" class="btn-save">{editingServiceId ? 'Save' : 'Register & Add'}</button>
+								<button type="submit" class="btn-save">{editingServiceId ? 'Save' : 'Register & add'}</button>
 							</div>
 						</form>
 					{/if}
 
-					{#if $services.length > 0}
-							<div class="service-grid">
-								<h3>Registered Services</h3>
-								<div class="grid">
-									{#each $services as service (service.id)}
-										<div class="service-card" class:added={addedServiceIds.has(service.id)}>
-											<div class="card-icon-wrapper">
-												<img src={iconSrc(service)} alt={service.name} class="card-icon" loading="lazy" onerror={(e) => handleCardIconError(e, service)} />
-												<div class="card-icon-fallback" style="display: none;">{service.name.charAt(0).toUpperCase()}</div>
-											</div>
-											<span class="card-name">{service.name}</span>
-											<span class="card-desc">{service.description || service.url}</span>
-											<div class="card-actions">
-												<button class="btn-card-add" onclick={() => handleAddExisting(service.id)} title="Add to dashboard">
-													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-														<path d="M12 5v14M5 12h14" />
-													</svg>
-												</button>
-												<button class="btn-card-edit" onclick={() => handleEditService(service)} title="Edit service">
-													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-														<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-														<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-													</svg>
-												</button>
-												<button class="btn-card-delete" onclick={() => handleDeleteService(service.id)} title="Delete service">
-													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-														<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-													</svg>
-												</button>
-											</div>
-										</div>
-									{/each}
-								</div>
-							</div>
+					<div class="toolbar">
+						<div class="search">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+							<input type="search" bind:value={serviceQuery} placeholder="Search services" aria-label="Search services" />
+						</div>
+						<select class="sort" bind:value={serviceSort} aria-label="Sort services">
+							<option value="oldest">Oldest first</option>
+							<option value="newest">Newest first</option>
+							<option value="name-asc">Name A → Z</option>
+							<option value="name-desc">Name Z → A</option>
+						</select>
+						{#if !showRegisterForm}
+							<button class="btn-register" onclick={() => (showRegisterForm = true)}>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+								New service
+							</button>
 						{/if}
-				</div>{:else if activeTab === 'widgets'}
-			<div class="tab-content">
-				<form class="widget-form" onsubmit={handleAddWidget}>
-					<h3>Add Widget</h3>
-					<div class="widget-options">
-						<button type="button" class="widget-option" class:active={widgetType === 'group-collapsible'} onclick={() => (widgetType = 'group-collapsible')}>
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M9 18l6-6-6-6" />
-								<rect x="3" y="3" width="18" height="18" rx="2" />
-							</svg>
-							<span>Collapsible Group</span>
-						</button>
-						<button type="button" class="widget-option" class:active={widgetType === 'group-standard'} onclick={() => (widgetType = 'group-standard')}>
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<rect x="3" y="3" width="18" height="18" rx="2" />
-								<path d="M3 9h18" />
-							</svg>
-							<span>Standard Group</span>
-						</button>
-						<button type="button" class="widget-option" class:active={widgetType === 'calendar'} onclick={() => (widgetType = 'calendar')}>
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<rect x="3" y="4" width="18" height="18" rx="2" />
-								<path d="M16 2v4M8 2v4M3 10h18" />
-							</svg>
-							<span>Calendar</span>
-						</button>
-						<button type="button" class="widget-option" class:active={widgetType === 'clock'} onclick={() => (widgetType = 'clock')}>
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<circle cx="12" cy="12" r="10" />
-								<path d="M12 6v6l4 2" />
-							</svg>
-							<span>Clock</span>
-						</button>
-						<button type="button" class="widget-option" class:active={widgetType === 'weather'} onclick={() => (widgetType = 'weather')}>
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-							</svg>
-							<span>Weather</span>
-						</button>
-						<button type="button" class="widget-option" class:active={widgetType === 'notes'} onclick={() => (widgetType = 'notes')}>
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-								<path d="M14 3v6h6M8 13h8M8 17h5" />
-							</svg>
-							<span>Notes</span>
-						</button>
 					</div>
-					{#if widgetType !== 'calendar' && widgetType !== 'clock' && widgetType !== 'weather' && widgetType !== 'notes'}
-						<div class="field">
-							<label>Title</label>
-							<input type="text" bind:value={widgetTitle} placeholder="Infrastructure" />
+
+					{#if $services.length === 0}
+						<p class="empty">No service yet. Register your first one with <b>New service</b>.</p>
+					{:else if shownServices.length === 0}
+						<p class="empty">No service matches “{serviceQuery}”.</p>
+					{:else}
+						<p class="count">{shownServices.length === $services.length ? `${$services.length} services` : `${shownServices.length} of ${$services.length} services`}</p>
+						<div class="grid">
+							{#each shownServices as service (service.id)}
+								<div class="service-card" class:added={addedServiceIds.has(service.id)}>
+									<div class="card-icon-wrapper">
+										<img src={iconSrc(service)} alt={service.name} class="card-icon" loading="lazy" onerror={(e) => handleCardIconError(e, service)} />
+										<div class="card-icon-fallback" style="display: none;">{service.name.charAt(0).toUpperCase()}</div>
+									</div>
+									<span class="card-name">{service.name}</span>
+									<span class="card-desc">{service.description || service.url}</span>
+									<div class="card-actions">
+										<button class="btn-card-add" onclick={() => handleAddExisting(service.id)} title="Add to dashboard" aria-label="Add {service.name} to the dashboard">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+										</button>
+										<button class="btn-card-edit" onclick={() => handleEditService(service)} title="Edit service" aria-label="Edit {service.name}">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+										</button>
+										<button class="btn-card-delete" onclick={() => deleteService(service.id)} title="Delete service" aria-label="Delete {service.name}">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+										</button>
+									</div>
+								</div>
+							{/each}
 						</div>
 					{/if}
-					{#if widgetType === 'group-standard'}
-						<label class="toggle-switch">
-							<input type="checkbox" bind:checked={widgetCompact} />
-							<span class="toggle-slider"></span>
-							<span class="toggle-label">Compact mode (no header)</span>
+				</div>
+			{:else if picked}
+				<div class="tab-content cb-form configure">
+					<div class="cfg-head">
+						<button class="btn-back" onclick={() => (picked = null)} aria-label="Back to the widgets">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" /></svg>
+						</button>
+						<span class="cfg-icon"><Glyph name={picked.icon} size={24} /></span>
+						<div>
+							<h3>{picked.name}</h3>
+							<p>{picked.description}</p>
+						</div>
+					</div>
+
+					{#if picked.grid && picked.navbar}
+						<div class="field">
+							<span>Place in</span>
+							<div class="seg">
+								<button type="button" class:active={target === 'grid'} onclick={() => setTarget('grid')}>Dashboard</button>
+								<button type="button" class:active={target === 'navbar'} onclick={() => setTarget('navbar')}>Navbar</button>
+							</div>
+						</div>
+					{/if}
+
+					{#if picked.settings}
+						<picked.settings bind:config={draft} {target} {...picked.settingsProps} />
+					{/if}
+
+					<p class="group-title">Size</p>
+					<div class="field-row">
+						<label class="field">
+							<span>Width (columns)</span>
+							<input type="number" bind:value={colSpan} min={minCols} max={maxCols} />
 						</label>
-					{/if}
-					<div class="field">
-						<label>Width (columns)</label>
-						<input type="number" bind:value={widgetColSpan} min={(widgetType === "clock" || widgetType === "weather") ? 1 : 2} max="12" />
-					</div>
-					<button type="submit" class="btn-save">Add Widget</button>
-				</form>
-			</div>
-		{:else if activeTab === 'navbar'}
-			<div class="tab-content">
-				<h3>Add Navbar Widget</h3>
-				<div class="widget-options">
-					<!-- No Title option: every navbar always has exactly one (it holds the dashboard switcher). -->
-					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-search'} onclick={() => (navbarWidgetType = 'navbar-search')}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<circle cx="11" cy="11" r="8" />
-							<path d="M21 21l-4.35-4.35" />
-						</svg>
-						<span>Search</span>
-					</button>
-					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-cpu'} onclick={() => { navbarWidgetType = 'navbar-cpu'; loadTempSensors(); }}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<rect x="4" y="4" width="16" height="16" rx="2" />
-							<path d="M9 9h6v6H9z" />
-							<path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3" />
-						</svg>
-						<span>CPU</span>
-					</button>
-					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-ram'} onclick={() => (navbarWidgetType = 'navbar-ram')}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<rect x="2" y="6" width="20" height="12" rx="2" />
-							<path d="M6 6v-2M10 6v-2M14 6v-2M18 6v-2M6 18v2M10 18v2M14 18v2M18 18v2" />
-						</svg>
-						<span>RAM</span>
-					</button>
-					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-disk'} onclick={() => { navbarWidgetType = 'navbar-disk'; loadAvailableDisks(); }}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<ellipse cx="12" cy="5" rx="9" ry="3" />
-							<path d="M21 5v6c0 1.66-4.03 3-9 3s-9-1.34-9-3V5" />
-							<path d="M21 12v6c0 1.66-4.03 3-9 3s-9-1.34-9-3v-6" />
-						</svg>
-						<span>Disk</span>
-					</button>
-					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-clock'} onclick={() => (navbarWidgetType = 'navbar-clock')}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<circle cx="12" cy="12" r="10" />
-							<path d="M12 6v6l4 2" />
-						</svg>
-						<span>Clock</span>
-					</button>
-					<button type="button" class="widget-option" class:active={navbarWidgetType === 'navbar-weather'} onclick={() => (navbarWidgetType = 'navbar-weather')}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-						</svg>
-						<span>Weather</span>
-					</button>
-				</div>
-				{#if navbarWidgetType === 'navbar-clock'}
-					<div class="navbar-options">
-						<span class="field-label">Options</span>
-						<div class="disk-list">
-							<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.showSeconds} /><span>Seconds</span></label>
-							<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.format12h} /><span>12h (AM/PM)</span></label>
-							<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.showDate} /><span>Date</span></label>
-							{#if navbarClock.showDate}
-								<label class="disk-check"><input type="checkbox" bind:checked={navbarClock.showFullDate} /><span>Full date</span></label>
-							{/if}
-						</div>
-					</div>
-				{/if}
-				{#if navbarWidgetType === 'navbar-weather'}
-					<div class="navbar-options">
-						<span class="field-label">Location</span>
-						<LocationSearch bind:location={navbarWeatherLocation} />
-					</div>
-				{/if}
-				{#if navbarWidgetType === 'navbar-cpu'}
-					<div class="field">
-						<label>Temperature sensor</label>
-						{#if tempSensorsLoading}
-							<div class="detect-status">Detecting...</div>
-						{:else if tempSensorsDetected && tempSensors.length > 0}
-							<select bind:value={selectedTempSensor}>
-								<option value="">Auto (Main)</option>
-								{#each tempSensors as sensor}
-									<option value={sensor}>{sensor}</option>
-								{/each}
-							</select>
-						{:else if tempSensorsDetected && tempSensors.length === 0}
-							<div class="detect-status no-sensors">No temperature sensors found on this system</div>
-						{:else}
-							<button class="btn-detect" onclick={loadTempSensors}>Detect sensors</button>
+						{#if target === 'grid'}
+							<label class="field">
+								<span>Height (rows)</span>
+								<input type="number" bind:value={rowSpan} min="1" max="12" />
+							</label>
 						{/if}
 					</div>
-				{/if}
-				{#if navbarWidgetType === 'navbar-disk'}
-					<div class="field">
-						<label>Select disks to monitor</label>
-						{#if disksLoading}
-							<div class="detect-status">Detecting...</div>
-						{:else if disksDetected && availableDisks.length > 0}
-							<div class="disk-list">
-								{#each availableDisks as path}
-									<label class="disk-check">
-										<input type="checkbox" checked={diskPaths.includes(path)} onchange={() => toggleDiskPath(path)} />
-										<span>{path}</span>
-									</label>
-								{/each}
-							</div>
-						{:else if disksDetected && availableDisks.length === 0}
-							<div class="detect-status no-sensors">No disks found</div>
-						{:else}
-							<button class="btn-detect" onclick={loadAvailableDisks}>Detect disks</button>
-						{/if}
-					</div>
-				{/if}
-				<div class="field">
-					<label>Width (columns)</label>
-					<input type="number" bind:value={navbarColSpan} min="1" max="6" />
-				</div>
-				<button type="button" class="btn-save" onclick={handleAddNavbarWidget}>Add to Navbar</button>
-			</div>
-		{:else if activeTab === 'integrations'}
-			<div class="tab-content">
-				<div class="sub-tabs">
-					<button class="sub-tab" class:active={integrationSubTab === 'connections'} onclick={() => (integrationSubTab = 'connections')}>Connections</button>
-					<button class="sub-tab" class:active={integrationSubTab === 'widgets'} onclick={() => (integrationSubTab = 'widgets')}>Widgets</button>
-				</div>
+					<p class="hint">You can resize it later on the dashboard, in edit mode.</p>
 
-				{#if integrationSubTab === 'connections'}
-					{#if !canEditConnections}
-						<p class="hint">Only an admin can change connections. Ask an admin to set them up; you can still add widgets.</p>
-					{/if}
-					<div class="integration-card">
-						<div class="integration-header">
-							<div class="integration-icon">
-								<UptimeKumaLogo size={22} />
-							</div>
-							<div class="integration-info">
-								<span class="integration-name">Uptime Kuma</span>
-								<span class="integration-desc">Monitor your services uptime and display status pages</span>
-							</div>
+					<div class="cfg-actions">
+						{#if missing}<span class="missing">{missing}</span>{/if}
+						<button class="btn-cancel" onclick={() => (picked = null)}>Back</button>
+						<button class="btn-save" onclick={addPicked} disabled={!!missing}>{target === 'navbar' ? 'Add to navbar' : 'Add to dashboard'}</button>
+					</div>
+				</div>
+			{:else}
+				<div class="tab-content">
+					<div class="toolbar">
+						<div class="search">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+							<input type="search" bind:value={widgetQuery} placeholder="Search widgets" aria-label="Search widgets" />
 						</div>
-						<div class="field">
-							<label>Instance URL</label>
-							<input type="url" bind:value={uptimeKumaUrl} placeholder="https://uptime-kuma.example.com" />
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleSaveUptimeKumaUrl} disabled={uptimeKumaUrlSaving}>
-								{uptimeKumaUrlSaving ? 'Saving...' : (uptimeKumaUrlSaved ? 'Saved' : 'Save')}
-							</button>
-						</div>
+					</div>
+					<div class="chips-row" role="tablist" aria-label="Categories">
+						<button class="cat" class:active={category === 'all'} role="tab" aria-selected={category === 'all'} onclick={() => (category = 'all')}>All</button>
+						{#each categories as c (c)}
+							<button class="cat" class:active={category === c} role="tab" aria-selected={category === c} onclick={() => (category = c)}>{c}</button>
+						{/each}
 					</div>
 
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon docker-icon">
-							<DockerLogo size={22} />
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Docker</span>
-							<span class="integration-desc">Monitor container status across Docker environments</span>
-						</div>
-					</div>
-					{#if dockerEnvironments.length > 0}
-						<div class="env-list">
-							{#each dockerEnvironments as env, i}
-								<div class="env-row">
-									<div class="env-fields">
-										<input type="text" bind:value={env.name} placeholder="Name (e.g. Local)" class="env-name-input" />
-										<input type="text" bind:value={env.url} placeholder="Socket path or URL (e.g. /var/run/docker.sock)" class="env-url-input" />
-									</div>
-									<button type="button" class="btn-remove-env" onclick={() => removeDockerEnvironment(env.id)} title="Remove">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M18 6L6 18M6 6l12 12" />
-										</svg>
+					{#if catalog.length === 0}
+						<p class="empty">No widget matches “{widgetQuery}”.</p>
+					{:else}
+						<div class="catalog">
+							{#each catalog as w (w.id)}
+								{@const miss = missingConnections(w, $integrations)}
+								<div class="wcard" class:locked={miss.length > 0}>
+									<button class="wcard-main" onclick={() => pick(w)} disabled={miss.length > 0}>
+										<span class="wcard-icon"><Glyph name={w.icon} size={22} /></span>
+										<span class="wcard-text">
+											<span class="wcard-name">{w.name}</span>
+											<span class="wcard-desc">{w.description}</span>
+										</span>
+										{#if placeLabel(w)}<span class="badge">{placeLabel(w)}</span>{/if}
 									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-					<button type="button" class="btn-add-env" onclick={addDockerEnvironment}>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M12 5v14M5 12h14" />
-						</svg>
-						Add environment
-					</button>
-					<div class="form-actions">
-						<button type="button" class="btn-save" onclick={handleSaveDockerEnvironments} disabled={dockerEnvSaving}>
-							{dockerEnvSaving ? 'Saving...' : 'Save'}
-						</button>
-					</div>
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon stacker-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<rect x="2" y="3" width="20" height="18" rx="2" />
-								<path d="M5 16l3.5-5 3 3 3.5-6 4 5" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Stacker</span>
-							<span class="integration-desc">Live CPU, memory, GPU, disk and network from Stacker servers</span>
-						</div>
-					</div>
-					{#if stackerServers.length > 0}
-						<div class="env-list">
-							{#each stackerServers as srv (srv.id)}
-								<div class="env-row">
-									<div class="env-fields">
-										<input type="text" bind:value={srv.name} placeholder="Name (e.g. ShibaServer)" class="env-name-input" />
-										<input type="text" bind:value={srv.url} placeholder="URL (e.g. http://stacker:8080)" class="env-url-input" />
-										<details class="env-auth" open={!!srv.username}>
-											<summary>Basic auth (only if Stacker is behind a login)</summary>
-											<div class="env-auth-fields">
-												<input type="text" bind:value={srv.username} placeholder="Username" autocomplete="off" class="env-name-input" />
-												<input type="password" bind:value={srv.password} placeholder="Password" autocomplete="new-password" class="env-name-input" />
-											</div>
-										</details>
-									</div>
-									<button type="button" class="btn-remove-env" onclick={() => removeStackerServer(srv.id)} title="Remove">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M18 6L6 18M6 6l12 12" />
-										</svg>
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-					<button type="button" class="btn-add-env" onclick={addStackerServer}>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M12 5v14M5 12h14" />
-						</svg>
-						Add server
-					</button>
-					<div class="form-actions">
-						<button type="button" class="btn-save" onclick={handleSaveStackerServers} disabled={stackerSaving}>
-							{stackerSaving ? 'Saving...' : 'Save'}
-						</button>
-					</div>
-				</div>
-				
-
-					<div class="integration-card">
-						<div class="integration-header">
-							<div class="integration-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<rect x="2" y="2" width="20" height="20" rx="2.18" />
-									<line x1="7" y1="2" x2="7" y2="22" />
-									<path d="M17 8l-5 5-5-5" />
-								</svg>
-							</div>
-							<div class="integration-info">
-								<span class="integration-name">Radarr</span>
-								<span class="integration-desc">Track upcoming movie releases</span>
-							</div>
-						</div>
-						<div class="field">
-							<label>Instance URL</label>
-							<input type="url" bind:value={radarrUrl} placeholder="https://radarr.home.local" />
-						</div>
-						<div class="field">
-							<label>API Key</label>
-							<input type="password" bind:value={radarrApiKey} placeholder="Your Radarr API key" />
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleSaveRadarr} disabled={radarrSaving}>
-								{radarrSaving ? 'Saving...' : 'Save'}
-							</button>
-						</div>
-					</div>
-
-					<div class="integration-card">
-						<div class="integration-header">
-							<div class="integration-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<rect x="2" y="7" width="20" height="15" rx="2.18" />
-									<path d="M17 2l-5 5-5-5" />
-								</svg>
-							</div>
-							<div class="integration-info">
-								<span class="integration-name">Sonarr</span>
-								<span class="integration-desc">Track upcoming TV episode releases</span>
-							</div>
-						</div>
-						<div class="field">
-							<label>Instance URL</label>
-							<input type="url" bind:value={sonarrUrl} placeholder="https://sonarr.home.local" />
-						</div>
-						<div class="field">
-							<label>API Key</label>
-							<input type="password" bind:value={sonarrApiKey} placeholder="Your Sonarr API key" />
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleSaveSonarr} disabled={sonarrSaving}>
-								{sonarrSaving ? 'Saving...' : 'Save'}
-							</button>
-						</div>
-					</div>
-
-					<div class="integration-card">
-						<div class="integration-header">
-							<div class="integration-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<circle cx="12" cy="12" r="10" />
-									<circle cx="12" cy="12" r="3" />
-									<path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-								</svg>
-							</div>
-							<div class="integration-info">
-								<span class="integration-name">Lidarr</span>
-								<span class="integration-desc">Track upcoming music album releases</span>
-							</div>
-						</div>
-						<div class="field">
-							<label>Instance URL</label>
-							<input type="url" bind:value={lidarrUrl} placeholder="https://lidarr.home.local" />
-						</div>
-						<div class="field">
-							<label>API Key</label>
-							<input type="password" bind:value={lidarrApiKey} placeholder="Your Lidarr API key" />
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleSaveLidarr} disabled={lidarrSaving}>
-								{lidarrSaving ? 'Saving...' : 'Save'}
-							</button>
-						</div>
-					</div>
-
-										<div class="integration-card">
-						<div class="integration-header">
-							<div class="integration-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<rect x="2" y="2" width="20" height="20" rx="2.18" />
-									<circle cx="12" cy="12" r="5" />
-									<path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-								</svg>
-							</div>
-							<div class="integration-info">
-								<span class="integration-name">Jellyfin</span>
-								<span class="integration-desc">Display recently added media items</span>
-							</div>
-						</div>
-						<div class="field">
-							<label>Instance URL</label>
-							<input type="url" bind:value={jellyfinUrl} placeholder="https://jellyfin.home.local" />
-						</div>
-						<div class="field">
-							<label>API Key</label>
-							<input type="password" bind:value={jellyfinApiKey} placeholder="Your Jellyfin API key" />
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleSaveJellyfin} disabled={jellyfinSaving}>
-								{jellyfinSaving ? 'Saving...' : 'Save'}
-							</button>
-						</div>
-					</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M4 4h16v12H8l-4 4z" />
-								<path d="M9 10l2 2 4-4" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Jellyseerr / Overseerr</span>
-							<span class="integration-desc">Media requests: list, approve and decline</span>
-						</div>
-					</div>
-					<div class="field">
-						<label for="seerr-url">Instance URL</label>
-						<input id="seerr-url" type="url" bind:value={jellyseerrUrl} placeholder="http://jellyseerr:5055" />
-					</div>
-					<div class="field">
-						<label for="seerr-key">API Key</label>
-						<input id="seerr-key" type="password" bind:value={jellyseerrApiKey} placeholder="Settings > General > API Key" />
-					</div>
-					<div class="form-actions">
-						<button type="button" class="btn-save" onclick={handleSaveJellyseerr} disabled={jellyseerrSaving || !canEditConnections}>
-							{jellyseerrSaving ? 'Saving...' : 'Save'}
-						</button>
-					</div>
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M12 3v12M7 10l5 5 5-5" />
-								<path d="M4 19h16" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">qBittorrent</span>
-							<span class="integration-desc">Download speeds, torrents, pause and resume</span>
-						</div>
-					</div>
-					<div class="field">
-						<label for="qbit-url">Web UI URL</label>
-						<input id="qbit-url" type="url" bind:value={qbitUrl} placeholder="http://qbittorrent:8080" />
-					</div>
-					<div class="size-row">
-						<div class="field">
-							<label for="qbit-user">Username</label>
-							<input id="qbit-user" type="text" bind:value={qbitUsername} autocomplete="off" />
-						</div>
-						<div class="field">
-							<label for="qbit-pass">Password</label>
-							<input id="qbit-pass" type="password" bind:value={qbitPassword} autocomplete="new-password" />
-						</div>
-					</div>
-					<div class="form-actions">
-						<button type="button" class="btn-save" onclick={handleSaveQbit} disabled={qbitSaving || !canEditConnections}>
-							{qbitSaving ? 'Saving...' : 'Save'}
-						</button>
-					</div>
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<circle cx="12" cy="12" r="9" />
-								<circle cx="12" cy="12" r="5" />
-								<circle cx="12" cy="12" r="1.5" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Spoolman</span>
-							<span class="integration-desc">Filament spools: recently used, running low and empty</span>
-						</div>
-					</div>
-					<div class="field">
-						<label for="spoolman-url">URL</label>
-						<input id="spoolman-url" type="url" bind:value={spoolmanUrl} placeholder="http://spoolman:7912" />
-					</div>
-					<div class="form-actions">
-						<button type="button" class="btn-save" onclick={handleSaveSpoolman} disabled={spoolmanSaving || !canEditConnections}>
-							{spoolmanSaving ? 'Saving...' : 'Save'}
-						</button>
-					</div>
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-								<rect x="3" y="2.5" width="18" height="19" rx="2" />
-								<path d="M3 7.5h18M10 7.5v3h4v-3M12 10.5V12M7 18h10M9 18v-2.5h6V18" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Elegoo printers</span>
-							<span class="integration-desc">Centauri Carbon 2 print status over the LAN (enable LAN Only mode on the printer: Settings &gt; Network)</span>
-						</div>
-					</div>
-					{#if elegooPrinters.length > 0}
-						<div class="env-list">
-							{#each elegooPrinters as prn (prn.id)}
-								<div class="env-row">
-									<div class="env-fields">
-										<input type="text" bind:value={prn.name} placeholder="Name (e.g. Centauri)" class="env-name-input" />
-										<div class="env-auth-fields">
-											<input type="text" bind:value={prn.host} placeholder="Printer IP (e.g. 192.168.1.50)" class="env-url-input" />
-											<button type="button" class="btn-detect" onclick={() => detectElegooPrinter(prn)} disabled={!prn.host.trim() || !canEditConnections}>Detect</button>
+									{#if miss.length}
+										<div class="wcard-setup">
+											<span>{needsLabel(w, miss)}</span>
+											<button onclick={() => setUp(w)}>Set up</button>
 										</div>
-										<div class="env-auth-fields">
-											<input type="password" bind:value={prn.accessCode} placeholder="Access code (if set)" autocomplete="new-password" class="env-name-input" />
-											<input type="text" bind:value={prn.serial} placeholder="Serial number (auto)" autocomplete="off" class="env-name-input" />
-										</div>
-										{#if elegooDetect[prn.id]}<p class="hint detect-msg">{elegooDetect[prn.id]}</p>{/if}
-									</div>
-									<button type="button" class="btn-remove-env" onclick={() => removeElegooPrinter(prn.id)} title="Remove" aria-label="Remove printer">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M18 6L6 18M6 6l12 12" />
-										</svg>
-									</button>
+									{/if}
 								</div>
 							{/each}
 						</div>
 					{/if}
-					<button type="button" class="btn-add-env" onclick={addElegooPrinter}>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M12 5v14M5 12h14" />
-						</svg>
-						Add printer
-					</button>
-					<div class="form-actions">
-						<button type="button" class="btn-save" onclick={handleSaveElegooPrinters} disabled={elegooSaving || !canEditConnections}>
-							{elegooSaving ? 'Saving...' : 'Save'}
-						</button>
-					</div>
 				</div>
-
-
-<div class="integration-card">
-						<div class="integration-header">
-							<div class="integration-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-									<path d="M12 6v6l4 2" />
-									<circle cx="12" cy="12" r="3" />
-								</svg>
-							</div>
-							<div class="integration-info">
-								<span class="integration-name">AdGuard Home</span>
-								<span class="integration-desc">Monitor and control DNS filtering</span>
-							</div>
-						</div>
-						<div class="field">
-							<label>Instance URL</label>
-							<input type="url" bind:value={adguardHomeUrl} placeholder="http://adguard.home.local" />
-						</div>
-						<div class="field">
-							<label>Username</label>
-							<input type="text" bind:value={adguardHomeUsername} placeholder="Admin username" />
-						</div>
-						<div class="field">
-							<label>Password</label>
-							<input type="password" bind:value={adguardHomePassword} placeholder="Admin password" />
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleSaveAdGuard} disabled={adguardHomeSaving}>
-								{adguardHomeSaving ? 'Saving...' : 'Save'}
-							</button>
-						</div>
-					</div>
-
-					{:else}
-					<div class="integration-card">
-						<div class="integration-header">
-							<div class="integration-icon">
-								<UptimeKumaLogo size={22} />
-							</div>
-							<div class="integration-info">
-								<span class="integration-name">Uptime Kuma Status Page</span>
-								<span class="integration-desc">Display status page monitors with uptime percentages</span>
-							</div>
-						</div>
-						{#if !uptimeKumaUrl}
-							<p class="hint">Configure the Uptime Kuma connection first.</p>
-						{:else}
-							<div class="field">
-								<label>Status page slug</label>
-								<input type="text" bind:value={selectedStatusPageSlug} placeholder="e.g. default" />
-							</div>
-							<div class="field">
-								<label>Version</label>
-								<div class="side-toggle">
-									<button class="side-btn" class:active={integrationWidgetVersion === 'standard'} onclick={() => (integrationWidgetVersion = 'standard')}>Standard</button>
-									<button class="side-btn" class:active={integrationWidgetVersion === 'navbar'} onclick={() => (integrationWidgetVersion = 'navbar')}>Navbar</button>
-								</div>
-							</div>
-							{#if integrationWidgetVersion === 'standard'}
-								<div class="size-row">
-									<div class="field">
-										<label>Width (columns)</label>
-										<input type="number" bind:value={integrationWidgetColSpan} min="1" max="12" />
-									</div>
-									<div class="field">
-										<label>Height (rows)</label>
-										<input type="number" bind:value={integrationWidgetRowSpan} min="1" max="12" />
-									</div>
-								</div>
-							{:else}
-								<div class="field">
-									<label>Width (columns)</label>
-									<input type="number" bind:value={integrationWidgetColSpan} min="1" max="6" />
-								</div>
-							{/if}
-							<div class="form-actions">
-								<button type="button" class="btn-save" onclick={handleAddIntegrationWidget} disabled={!selectedStatusPageSlug.trim()}>Add Widget</button>
-							</div>
-						{/if}
-					</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon docker-icon">
-							<DockerLogo size={22} />
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Docker Containers</span>
-							<span class="integration-desc">Display container status with running/stopped counts</span>
-						</div>
-					</div>
-					{#if dockerEnvironments.length === 0}
-						<p class="hint">Configure Docker environments in the Connections tab first.</p>
-					{:else}
-						<div class="field">
-							<label>Environment</label>
-							<select bind:value={dockerWidgetEnvId}>
-								<option value="">Select environment</option>
-								{#each dockerEnvironments as env}
-									<option value={env.id}>{env.name || env.url}</option>
-								{/each}
-							</select>
-						</div>
-						<div class="navbar-options">
-							<span class="field-label">Per-container usage</span>
-							<div class="disk-list">
-								<label class="disk-check"><input type="checkbox" bind:checked={dockerWidgetShowCpu} /><span>CPU</span></label>
-								<label class="disk-check"><input type="checkbox" bind:checked={dockerWidgetShowRam} /><span>RAM</span></label>
-							</div>
-						</div>
-						<div class="field">
-							<label>Version</label>
-							<div class="side-toggle">
-								<button class="side-btn" class:active={dockerWidgetVersion === 'standard'} onclick={() => (dockerWidgetVersion = 'standard')}>Standard</button>
-								<button class="side-btn" class:active={dockerWidgetVersion === 'navbar'} onclick={() => (dockerWidgetVersion = 'navbar')}>Navbar</button>
-							</div>
-						</div>
-						{#if dockerWidgetVersion === 'standard'}
-							<div class="size-row">
-								<div class="field">
-									<label>Width (columns)</label>
-									<input type="number" bind:value={dockerWidgetColSpan} min="1" max="12" />
-								</div>
-								<div class="field">
-									<label>Height (rows)</label>
-									<input type="number" bind:value={dockerWidgetRowSpan} min="1" max="12" />
-								</div>
-							</div>
-						{:else}
-							<div class="field">
-								<label>Width (columns)</label>
-								<input type="number" bind:value={dockerWidgetColSpan} min="1" max="6" />
-							</div>
-						{/if}
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleAddDockerWidget} disabled={!dockerWidgetEnvId}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon stacker-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<rect x="2" y="3" width="20" height="18" rx="2" />
-								<path d="M5 16l3.5-5 3 3 3.5-6 4 5" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Stacker</span>
-							<span class="integration-desc">Live hardware gauges and graphs from a Stacker server</span>
-						</div>
-					</div>
-					{#if stackerServers.length === 0}
-						<p class="hint">Configure Stacker servers in the Connections tab first.</p>
-					{:else}
-						<div class="field">
-							<label for="stacker-server">Server</label>
-							<select id="stacker-server" bind:value={stackerWidgetServerId}>
-								<option value="">Select server</option>
-								{#each stackerServers as srv (srv.id)}
-									<option value={srv.id}>{srv.name || srv.url}</option>
-								{/each}
-							</select>
-						</div>
-						<div class="stacker-sections">
-							<span class="field-label">Show</span>
-							<div class="disk-list">
-								{#each [['cpu', 'CPU'], ['memory', 'Memory'], ['gpu', 'GPU'], ['disk', 'Disk'], ['network', 'Network']] as const as [key, label] (key)}
-									<label class="disk-check">
-										<input type="checkbox" bind:checked={stackerWidgetSections[key]} />
-										<span>{label}</span>
-									</label>
-								{/each}
-							</div>
-						</div>
-						<div class="size-row">
-							<div class="field">
-								<label for="stacker-cols">Width (columns)</label>
-								<input id="stacker-cols" type="number" bind:value={stackerWidgetColSpan} min="2" max="12" />
-							</div>
-							<div class="field">
-								<label for="stacker-rows">Height (rows)</label>
-								<input id="stacker-rows" type="number" bind:value={stackerWidgetRowSpan} min="1" max="12" />
-							</div>
-						</div>
-						<p class="hint">The widget adapts to its size: one line per section on small tiles, tables and graphs on larger ones.</p>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleAddStackerWidget} disabled={!stackerWidgetServerId}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-								<path d="M12 6v6l4 2" />
-								<circle cx="12" cy="12" r="3" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">AdGuard Home</span>
-							<span class="integration-desc">Display stats or control DNS filtering</span>
-						</div>
-					</div>
-					{#if !adguardHomeUrl}
-						<p class="hint">Configure the AdGuard Home connection first.</p>
-					{:else}
-							{#if adguardWidgetVersion === 'standard'}
-						<div class="field">
-							<label>Widget Type</label>
-							<div class="side-toggle">
-								<button class="side-btn" class:active={adguardWidgetType === 'stats'} onclick={() => (adguardWidgetType = 'stats')}>Stats</button>
-								<button class="side-btn" class:active={adguardWidgetType === 'control'} onclick={() => (adguardWidgetType = 'control')}>Control</button>
-							</div>
-						</div>
-							{/if}
-						<div class="field">
-							<label>Version</label>
-							<div class="side-toggle">
-								<button class="side-btn" class:active={adguardWidgetVersion === 'standard'} onclick={() => (adguardWidgetVersion = 'standard')}>Standard</button>
-								<button class="side-btn" class:active={adguardWidgetVersion === 'navbar'} onclick={() => (adguardWidgetVersion = 'navbar')}>Navbar</button>
-							</div>
-						</div>
-						{#if adguardWidgetVersion === 'standard'}
-							<div class="size-row">
-								<div class="field">
-									<label>Width (columns)</label>
-									<input type="number" bind:value={adguardWidgetColSpan} min="1" max="12" />
-								</div>
-								<div class="field">
-									<label>Height (rows)</label>
-									<input type="number" bind:value={adguardWidgetRowSpan} min="1" max="12" />
-								</div>
-							</div>
-						{:else}
-							<div class="field">
-								<label>Width (columns)</label>
-								<input type="number" bind:value={adguardWidgetColSpan} min="1" max="6" />
-							</div>
-							<div class="field">
-								<label>Alignment</label>
-								<div class="side-toggle">
-									<button class="side-btn" class:active={adguardWidgetAlign === 'left'} onclick={() => (adguardWidgetAlign = 'left')}>Left</button>
-									<button class="side-btn" class:active={adguardWidgetAlign === 'center'} onclick={() => (adguardWidgetAlign = 'center')}>Center</button>
-									<button class="side-btn" class:active={adguardWidgetAlign === 'right'} onclick={() => (adguardWidgetAlign = 'right')}>Right</button>
-								</div>
-							</div>
-						{/if}
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleAddAdGuardWidget}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<rect x="2" y="2" width="20" height="20" rx="2.18" />
-								<circle cx="12" cy="12" r="5" />
-								<path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Jellyfin Latest</span>
-							<span class="integration-desc">Display recently added media from Jellyfin</span>
-						</div>
-					</div>
-					{#if !jellyfinUrl}
-						<p class="hint">Configure the Jellyfin connection first.</p>
-					{:else}
-						<div class="size-row">
-							<div class="field">
-								<label>Width (columns)</label>
-								<input type="number" bind:value={jellyfinWidgetColSpan} min="1" max="12" />
-							</div>
-							<div class="field">
-								<label>Height (rows)</label>
-								<input type="number" bind:value={jellyfinWidgetRowSpan} min="1" max="12" />
-							</div>
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleAddJellyfinWidget}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<rect x="2" y="4" width="20" height="16" rx="2" />
-								<path d="M2 8h20M7 4v4M17 4v4" />
-								<path d="M10 12l4 2.5-4 2.5z" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Arr Releases</span>
-							<span class="integration-desc">Display recently released movies, episodes and albums from Radarr, Sonarr and Lidarr</span>
-						</div>
-					</div>
-					{#if !radarrUrl && !sonarrUrl && !lidarrUrl}
-						<p class="hint">Configure a Radarr, Sonarr or Lidarr connection first.</p>
-					{:else}
-						<div class="size-row">
-							<div class="field">
-								<label>Width (columns)</label>
-								<input type="number" bind:value={arrReleasesWidgetColSpan} min="1" max="12" />
-							</div>
-							<div class="field">
-								<label>Height (rows)</label>
-								<input type="number" bind:value={arrReleasesWidgetRowSpan} min="1" max="12" />
-							</div>
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleAddArrReleasesWidget}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<rect x="2" y="4" width="20" height="14" rx="2" />
-								<path d="M10 8.5l4.5 2.5-4.5 2.5zM8 21h8" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Jellyfin Now Playing</span>
-							<span class="integration-desc">Who is watching what, progress, direct play or transcode</span>
-						</div>
-					</div>
-					{#if !jellyfinUrl}
-						<p class="hint">Configure the Jellyfin connection first.</p>
-					{:else}
-						<div class="size-row">
-							<div class="field">
-								<label for="np-cols">Width (columns)</label>
-								<input id="np-cols" type="number" bind:value={nowPlayingColSpan} min="2" max="12" />
-							</div>
-							<div class="field">
-								<label for="np-rows">Height (rows)</label>
-								<input id="np-rows" type="number" bind:value={nowPlayingRowSpan} min="1" max="12" />
-							</div>
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={() => handleAddIntegrationTile('jellyfin-now-playing', nowPlayingColSpan, nowPlayingRowSpan)}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M4 4h16v12H8l-4 4z" />
-								<path d="M9 10l2 2 4-4" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Jellyseerr Requests</span>
-							<span class="integration-desc">Pending and recent media requests, approve or decline (admins)</span>
-						</div>
-					</div>
-					{#if !jellyseerrUrl}
-						<p class="hint">Configure the Jellyseerr / Overseerr connection first.</p>
-					{:else}
-						<div class="size-row">
-							<div class="field">
-								<label for="rq-cols">Width (columns)</label>
-								<input id="rq-cols" type="number" bind:value={requestsColSpan} min="2" max="12" />
-							</div>
-							<div class="field">
-								<label for="rq-rows">Height (rows)</label>
-								<input id="rq-rows" type="number" bind:value={requestsRowSpan} min="1" max="12" />
-							</div>
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={() => handleAddIntegrationTile('jellyseerr-requests', requestsColSpan, requestsRowSpan)}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M12 3v12M7 10l5 5 5-5" />
-								<path d="M4 19h16" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">qBittorrent</span>
-							<span class="integration-desc">Speeds with a live graph, busiest torrents, pause and resume (admins)</span>
-						</div>
-					</div>
-					{#if !qbitUrl}
-						<p class="hint">Configure the qBittorrent connection first.</p>
-					{:else}
-						<div class="size-row">
-							<div class="field">
-								<label for="qb-cols">Width (columns)</label>
-								<input id="qb-cols" type="number" bind:value={qbitColSpan} min="2" max="12" />
-							</div>
-							<div class="field">
-								<label for="qb-rows">Height (rows)</label>
-								<input id="qb-rows" type="number" bind:value={qbitRowSpan} min="1" max="12" />
-							</div>
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={() => handleAddIntegrationTile('qbittorrent', qbitColSpan, qbitRowSpan)}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<circle cx="12" cy="12" r="9" />
-								<circle cx="12" cy="12" r="5" />
-								<circle cx="12" cy="12" r="1.5" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">Spoolman</span>
-							<span class="integration-desc">Recently used filaments, spools running low and empty</span>
-						</div>
-					</div>
-					{#if !spoolmanUrl}
-						<p class="hint">Configure the Spoolman connection first.</p>
-					{:else}
-						<div class="navbar-options">
-							<span class="field-label">The widget lists the available spools. Extra sections:</span>
-							<div class="disk-list">
-								<label class="disk-check"><input type="checkbox" bind:checked={spoolmanRecent} /><span>Recently used</span></label>
-								<label class="disk-check"><input type="checkbox" bind:checked={spoolmanLow} /><span>Running low / empty</span></label>
-							</div>
-						</div>
-						<div class="size-row">
-							<div class="field">
-								<label for="sp-cols">Width (columns)</label>
-								<input id="sp-cols" type="number" bind:value={spoolmanColSpan} min="2" max="12" />
-							</div>
-							<div class="field">
-								<label for="sp-rows">Height (rows)</label>
-								<input id="sp-rows" type="number" bind:value={spoolmanRowSpan} min="1" max="12" />
-							</div>
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleAddSpoolmanWidget}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="integration-card">
-					<div class="integration-header">
-						<div class="integration-icon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-								<rect x="3" y="2.5" width="18" height="19" rx="2" />
-								<path d="M3 7.5h18M10 7.5v3h4v-3M12 10.5V12M7 18h10M9 18v-2.5h6V18" />
-							</svg>
-						</div>
-						<div class="integration-info">
-							<span class="integration-name">3D Print Status</span>
-							<span class="integration-desc">Centauri Carbon 2: progress, time left, layers, temperatures; pause / stop for admins</span>
-						</div>
-					</div>
-					{#if elegooPrinters.length === 0}
-						<p class="hint">Add your printer in the Connections tab first.</p>
-					{:else}
-						<div class="field">
-							<label for="print-printer">Printer</label>
-							<select id="print-printer" bind:value={printWidgetPrinterId}>
-								<option value="">Select printer</option>
-								{#each elegooPrinters as prn (prn.id)}
-									<option value={prn.id}>{prn.name || prn.host}</option>
-								{/each}
-							</select>
-						</div>
-						<div class="field">
-							<span class="field-label">Version</span>
-							<div class="side-toggle">
-								<button class="side-btn" class:active={printWidgetVersion === 'standard'} onclick={() => (printWidgetVersion = 'standard')}>Standard</button>
-								<button class="side-btn" class:active={printWidgetVersion === 'navbar'} onclick={() => (printWidgetVersion = 'navbar')}>Navbar</button>
-							</div>
-						</div>
-						{#if printWidgetVersion === 'standard'}
-							<div class="size-row">
-								<div class="field">
-									<label for="pr-cols">Width (columns)</label>
-									<input id="pr-cols" type="number" bind:value={printWidgetColSpan} min="2" max="12" />
-								</div>
-								<div class="field">
-									<label for="pr-rows">Height (rows)</label>
-									<input id="pr-rows" type="number" bind:value={printWidgetRowSpan} min="1" max="12" />
-								</div>
-							</div>
-						{:else}
-							<div class="field">
-								<label for="pr-nbcols">Width (columns)</label>
-								<input id="pr-nbcols" type="number" bind:value={printWidgetColSpan} min="1" max="6" />
-							</div>
-						{/if}
-						<div class="form-actions">
-							<button type="button" class="btn-save" onclick={handleAddPrintWidget} disabled={!printWidgetPrinterId}>Add Widget</button>
-						</div>
-					{/if}
-				</div>
-
-
-				{/if}
-			</div>
-		{/if}
-	</div>
+			{/if}
+		</div>
 	</div>
 </div>
 
 <style>
 	.popup-overlay {
 		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
+		inset: 0;
 		background: rgba(0, 0, 0, 0.6);
 		display: flex;
 		align-items: center;
@@ -1836,7 +472,6 @@
 		padding: 10px 12px;
 		font-weight: 500;
 		font-size: 0.9rem;
-		border-left: 3px solid transparent;
 		border-radius: var(--radius-sm);
 		color: var(--text-secondary);
 		background: none;
@@ -1864,79 +499,102 @@
 		min-width: 0;
 	}
 
-	.btn-register {
+	/* --- Toolbar (search, sort, new) --- */
+	.toolbar {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	.search {
+		flex: 1;
+		min-width: 0;
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		width: 100%;
-		padding: 10px;
+		padding: 0 10px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-primary);
+		color: var(--text-muted);
+	}
+
+	.search:focus-within {
+		border-color: var(--accent);
+	}
+
+	.search input {
+		flex: 1;
+		min-width: 0;
+		padding: 8px 0;
+		border: none;
+		background: none;
+		outline: none;
+		font-size: 0.9rem;
+		color: var(--text-primary);
+	}
+
+	.sort {
+		padding: 8px 10px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		font-size: 0.85rem;
+	}
+
+	.btn-register {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 14px;
 		background: var(--accent);
 		color: white;
 		border-radius: var(--radius-sm);
 		font-weight: 500;
-		margin-bottom: 16px;
+		font-size: 0.88rem;
+		white-space: nowrap;
 	}
 
 	.btn-register:hover {
 		background: var(--accent-hover);
 	}
 
+	.empty,
+	.count {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.empty {
+		padding: 24px 0;
+		text-align: center;
+	}
+
+	.count {
+		margin-bottom: 8px;
+		font-size: 0.75rem;
+	}
+
+	/* --- Register / edit form --- */
 	.register-form {
 		margin-bottom: 16px;
-	}
-
-	.register-form h3, .service-list h3, .widget-form h3 {
-		font-size: 0.9rem;
-		margin-bottom: 10px;
-		color: var(--text-secondary);
-	}
-
-	.field {
-		margin-bottom: 10px;
-	}
-
-	.field label {
-		display: block;
-		font-size: 0.8rem;
-		font-weight: 500;
-		color: var(--text-muted);
-		margin-bottom: 3px;
-	}
-
-	.field input {
-		width: 100%;
-		padding: 8px 10px;
-		background: var(--bg-primary);
+		padding: 14px 16px 2px;
 		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		outline: none;
-		font-size: 0.9rem;
+		border-radius: var(--radius);
+		background: var(--bg-card);
 	}
 
-	.field input:focus {
-		border-color: var(--accent);
-	}
-
-	.field select {
-		width: 100%;
-		padding: 8px 10px;
-		background: var(--bg-primary);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		outline: none;
-		font-size: 0.9rem;
-		color: var(--text-primary);
-	}
-
-	.field select:focus {
-		border-color: var(--accent);
+	.register-form h3 {
+		font-size: 0.95rem;
+		margin-bottom: 12px;
 	}
 
 	.form-actions {
 		display: flex;
 		gap: 8px;
 		justify-content: flex-end;
-		margin-top: 12px;
+		margin-bottom: 12px;
 	}
 
 	.btn-cancel {
@@ -1954,7 +612,7 @@
 		font-weight: 500;
 	}
 
-	.btn-save:hover {
+	.btn-save:hover:not(:disabled) {
 		background: var(--accent-hover);
 	}
 
@@ -1963,466 +621,7 @@
 		cursor: not-allowed;
 	}
 
-	.service-list {
-		border-top: 1px solid var(--border);
-		padding-top: 12px;
-	}
-
-	.service-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 8px 0;
-		border-bottom: 1px solid var(--border-light);
-	}
-
-	.service-info {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-		flex: 1;
-	}
-
-	.service-name {
-		font-weight: 500;
-		font-size: 0.9rem;
-	}
-
-	.service-url {
-		font-size: 0.75rem;
-		color: var(--text-muted);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.service-actions {
-		display: flex;
-		gap: 4px;
-		flex-shrink: 0;
-	}
-
-	.btn-add-existing, .btn-delete-svc {
-		padding: 6px;
-		border-radius: 4px;
-		display: flex;
-		border: 1px solid var(--border);
-	}
-
-	.btn-add-existing:hover {
-		background: var(--accent);
-		color: white;
-		border-color: var(--accent);
-	}
-
-	.btn-delete-svc:hover {
-		background: var(--danger);
-		color: white;
-		border-color: var(--danger);
-	}
-
-	.widget-options {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 8px;
-		margin-bottom: 12px;
-	}
-
-	.widget-option {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 6px;
-		padding: 14px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		transition: all var(--transition);
-		font-size: 0.85rem;
-		color: var(--text-secondary);
-	}
-
-	.widget-option:hover {
-		border-color: var(--accent);
-	}
-
-	.widget-option.active {
-		border-color: var(--accent);
-		background: rgba(79, 143, 255, 0.1);
-		color: var(--accent);
-	}
-
-	.disk-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-		margin-top: 4px;
-	}
-
-	.disk-check {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		font-size: 0.8rem;
-		color: var(--text-primary);
-		cursor: pointer;
-		padding: 4px 8px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		transition: all var(--transition);
-	}
-
-	.disk-check:hover {
-		border-color: var(--accent);
-	}
-
-	.disk-check input[type="checkbox"] {
-		accent-color: var(--accent);
-	}
-
-	.btn-detect {
-		padding: 6px 12px;
-		border: 1px dashed var(--border);
-		border-radius: var(--radius-sm);
-		color: var(--text-muted);
-		font-size: 0.8rem;
-		cursor: pointer;
-		transition: all var(--transition);
-	}
-
-	.btn-detect:hover {
-		border-color: var(--accent);
-		color: var(--accent);
-	}
-
-	.detect-status {
-		font-size: 0.8rem;
-		color: var(--text-muted);
-		padding: 6px 0;
-	}
-
-	.toggle-switch {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		cursor: pointer;
-		margin-bottom: 10px;
-		position: relative;
-	}
-
-	.toggle-switch input {
-		opacity: 0;
-		width: 0;
-		height: 0;
-		position: absolute;
-	}
-
-	.toggle-slider {
-		width: 36px;
-		height: 20px;
-		background: var(--border);
-		border-radius: 20px;
-		position: relative;
-		transition: background var(--transition);
-		flex-shrink: 0;
-	}
-
-	.toggle-slider::after {
-		content: '';
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 16px;
-		height: 16px;
-		background: white;
-		border-radius: 50%;
-		transition: transform var(--transition);
-	}
-
-	.toggle-switch input:checked + .toggle-slider {
-		background: var(--accent);
-	}
-
-	.toggle-switch input:checked + .toggle-slider::after {
-		transform: translateX(16px);
-	}
-
-	.toggle-label {
-		font-size: 0.85rem;
-		color: var(--text-secondary);
-	}
-
-	.detect-status.no-sensors {
-		color: var(--text-secondary);
-		font-style: italic;
-	}
-
-	.sub-tabs {
-		display: flex;
-		gap: 4px;
-		margin-bottom: 16px;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.sub-tab {
-		padding: 8px 16px;
-		font-size: 0.85rem;
-		font-weight: 500;
-		color: var(--text-secondary);
-		border-bottom: 2px solid transparent;
-		transition: all var(--transition);
-	}
-
-	.sub-tab.active {
-		color: var(--accent);
-		border-bottom-color: var(--accent);
-	}
-
-	.sub-tab:hover {
-		color: var(--text-primary);
-	}
-
-	.integration-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 16px;
-		margin-bottom: 16px;
-	}
-
-	.integration-header {
-		display: flex;
-		align-items: flex-start;
-		gap: 12px;
-		margin-bottom: 14px;
-	}
-
-	.integration-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 40px;
-		height: 40px;
-		border-radius: var(--radius-sm);
-		background: rgba(79, 143, 255, 0.1);
-		color: var(--accent);
-		flex-shrink: 0;
-	}
-
-	.integration-info {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.integration-name {
-		font-weight: 600;
-		font-size: 0.95rem;
-		color: var(--text-primary);
-	}
-
-	.integration-desc {
-		font-size: 0.8rem;
-		color: var(--text-muted);
-	}
-
-	.hint {
-		font-size: 0.85rem;
-		color: var(--text-secondary);
-		margin-bottom: 12px;
-	}
-
-	.side-toggle {
-		display: flex;
-		gap: 4px;
-	}
-
-	.side-btn {
-		flex: 1;
-		padding: 6px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		font-size: 0.85rem;
-		transition: all var(--transition);
-	}
-
-	.side-btn.active {
-		background: var(--accent);
-		color: white;
-		border-color: var(--accent);
-	}
-
-	.size-row {
-		display: flex;
-		gap: 12px;
-	}
-
-	.size-row .field {
-		flex: 1;
-	}
-
-	.docker-icon {
-		background: rgba(0, 150, 136, 0.1);
-		color: #009688;
-	}
-
-	.stacker-icon {
-		background: rgba(63, 182, 255, 0.1);
-		color: #3fb6ff;
-	}
-
-	.stacker-sections,
-	.navbar-options {
-		margin-bottom: 10px;
-	}
-
-	.field-label {
-		display: block;
-		font-size: 0.8rem;
-		font-weight: 500;
-		color: var(--text-muted);
-		margin-bottom: 3px;
-	}
-
-	.env-auth summary {
-		font-size: 0.75rem;
-		color: var(--text-muted);
-		cursor: pointer;
-		padding: 2px 0;
-	}
-
-	.env-auth-fields {
-		display: flex;
-		gap: 4px;
-		margin-top: 4px;
-	}
-
-	.env-auth-fields input {
-		flex: 1;
-		min-width: 0;
-	}
-
-	.btn-detect {
-		flex-shrink: 0;
-		padding: 0 12px;
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--border);
-		font-size: 0.8rem;
-		color: var(--text-secondary);
-		transition: background var(--transition), color var(--transition);
-	}
-
-	.btn-detect:hover:not(:disabled) {
-		color: var(--text-primary);
-		background: var(--bg-card-hover);
-	}
-
-	.btn-detect:disabled {
-		opacity: 0.5;
-	}
-
-	.detect-msg {
-		margin: 2px 0 0;
-		font-size: 0.75rem;
-	}
-
-	.env-list {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		margin-bottom: 10px;
-	}
-
-	.env-row {
-		display: flex;
-		align-items: flex-start;
-		gap: 6px;
-	}
-
-	.env-fields {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		flex: 1;
-		min-width: 0;
-	}
-
-	.env-name-input {
-		width: 100%;
-		padding: 6px 8px;
-		background: var(--bg-primary);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		outline: none;
-		font-size: 0.85rem;
-	}
-
-	.env-name-input:focus {
-		border-color: var(--accent);
-	}
-
-	.env-url-input {
-		width: 100%;
-		padding: 6px 8px;
-		background: var(--bg-primary);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		outline: none;
-		font-size: 0.8rem;
-		color: var(--text-secondary);
-	}
-
-	.env-url-input:focus {
-		border-color: var(--accent);
-	}
-
-	.btn-remove-env {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
-		border-radius: 4px;
-		flex-shrink: 0;
-		margin-top: 2px;
-		color: var(--text-muted);
-	}
-
-	.btn-remove-env:hover {
-		background: var(--danger);
-		color: white;
-	}
-
-	.btn-add-env {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 10px;
-		border: 1px dashed var(--border);
-		border-radius: var(--radius-sm);
-		color: var(--text-muted);
-		font-size: 0.8rem;
-		cursor: pointer;
-		transition: all var(--transition);
-		width: 100%;
-		margin-bottom: 10px;
-	}
-
-	.btn-add-env:hover {
-		border-color: var(--accent);
-		color: var(--accent);
-	}
-
-	.service-grid {
-		border-top: 1px solid var(--border);
-		padding-top: 12px;
-	}
-
-	.service-grid h3 {
-		font-size: 0.9rem;
-		margin-bottom: 10px;
-		color: var(--text-secondary);
-	}
-
+	/* --- Service cards --- */
 	.grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -2456,7 +655,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(128,128,128,0.12);
+		background: rgba(128, 128, 128, 0.12);
 		border: 1px solid var(--border);
 	}
 
@@ -2531,11 +730,222 @@
 		border-color: var(--danger);
 	}
 
+	/* --- Widget catalog --- */
+	.chips-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-bottom: 14px;
+	}
+
+	.cat {
+		padding: 5px 12px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		font-size: 0.8rem;
+		color: var(--text-secondary);
+		transition: all var(--transition);
+	}
+
+	.cat:hover {
+		border-color: var(--accent);
+		color: var(--text-primary);
+	}
+
+	.cat.active {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: white;
+	}
+
+	.catalog {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+		gap: 10px;
+	}
+
+	.wcard {
+		display: flex;
+		flex-direction: column;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-card);
+		overflow: hidden;
+		transition: border-color var(--transition), box-shadow var(--transition);
+	}
+
+	.wcard:not(.locked):hover {
+		border-color: var(--accent);
+		box-shadow: var(--shadow);
+	}
+
+	.wcard-main {
+		flex: 1;
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 12px 14px;
+		text-align: left;
+	}
+
+	.wcard-main:disabled {
+		cursor: default;
+	}
+
+	.wcard-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 38px;
+		height: 38px;
+		flex-shrink: 0;
+		border-radius: var(--radius-sm);
+		background: var(--accent-bg);
+		color: var(--accent);
+	}
+
+	.wcard.locked .wcard-icon {
+		background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+		color: var(--text-muted);
+	}
+
+	.wcard-text {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.wcard-name {
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	.wcard.locked .wcard-name {
+		color: var(--text-secondary);
+	}
+
+	.wcard-desc {
+		font-size: 0.76rem;
+		line-height: 1.35;
+		color: var(--text-muted);
+	}
+
+	.badge {
+		flex-shrink: 0;
+		padding: 2px 8px;
+		border-radius: 999px;
+		font-size: 0.66rem;
+		font-weight: 600;
+		white-space: nowrap;
+		background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+		color: var(--text-secondary);
+	}
+
+	.wcard-setup {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 7px 14px;
+		border-top: 1px dashed var(--border);
+		font-size: 0.76rem;
+		color: var(--text-muted);
+	}
+
+	.wcard-setup button {
+		padding: 3px 10px;
+		border: 1px solid var(--accent);
+		border-radius: var(--radius-sm);
+		font-size: 0.76rem;
+		font-weight: 600;
+		color: var(--accent);
+		white-space: nowrap;
+	}
+
+	.wcard-setup button:hover {
+		background: var(--accent);
+		color: white;
+	}
+
+	/* --- Configuration step --- */
+	.configure {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.configure > :not(.cfg-actions) {
+		max-width: 640px;
+	}
+
+	.cfg-head {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 18px;
+	}
+
+	.cfg-head h3 {
+		font-size: 1.05rem;
+	}
+
+	.cfg-head p {
+		margin-top: 2px;
+		font-size: 0.82rem;
+		color: var(--text-muted);
+	}
+
+	.btn-back {
+		display: flex;
+		padding: 6px;
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
+	}
+
+	.btn-back:hover {
+		background: var(--bg-card-hover);
+		color: var(--text-primary);
+	}
+
+	.cfg-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 42px;
+		height: 42px;
+		flex-shrink: 0;
+		border-radius: var(--radius-sm);
+		background: var(--accent-bg);
+		color: var(--accent);
+	}
+
+	.cfg-actions {
+		position: sticky;
+		bottom: -16px;
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 8px;
+		margin: auto -20px -16px;
+		padding: 12px 20px;
+		border-top: 1px solid var(--border);
+		background: var(--bg-modal);
+	}
+
+	.missing {
+		margin-right: auto;
+		font-size: 0.8rem;
+		color: var(--warning, #f59e0b);
+	}
+
 	@keyframes pulseGreen {
 		0% { outline-color: var(--success, #22c55e); }
 		70% { outline-color: var(--success, #22c55e); }
 		100% { outline-color: transparent; }
 	}
+
 	@keyframes fadeIn {
 		from { opacity: 0; }
 		to { opacity: 1; }
@@ -2551,12 +961,7 @@
 		to { opacity: 1; transform: translateY(0); }
 	}
 
-	@keyframes slideDown {
-		from { opacity: 1; transform: translateY(0); }
-		to { opacity: 0; transform: translateY(20px); }
-	}
-
-	/* Phone: full-screen sheet, tabs in a scrolling row on top, two-column cards. */
+	/* Phone: full-screen sheet, tabs in a row on top, two-column service cards. */
 	@media (max-width: 640px) {
 		.popup-header {
 			padding: 12px 16px;
@@ -2584,11 +989,12 @@
 		}
 
 		.tab {
-			flex-shrink: 0;
+			flex: 1;
 			padding: 9px 14px;
 			border-left: none;
 			border-bottom: 3px solid transparent;
 			border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+			text-align: center;
 			white-space: nowrap;
 		}
 
@@ -2600,14 +1006,28 @@
 			padding: 14px;
 		}
 
-		.sub-tabs {
-			overflow-x: auto;
-			scrollbar-width: none;
+		.toolbar {
+			flex-wrap: wrap;
 		}
 
-		.sub-tab {
+		.search {
+			flex-basis: 100%;
+		}
+
+		.sort {
+			flex: 1;
+		}
+
+		.chips-row {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			scrollbar-width: none;
+			margin: 0 -14px 14px;
+			padding: 0 14px;
+		}
+
+		.cat {
 			flex-shrink: 0;
-			white-space: nowrap;
 		}
 
 		.grid {
@@ -2615,15 +1035,22 @@
 			gap: 10px;
 		}
 
-		.size-row {
+		.catalog {
+			grid-template-columns: 1fr;
+		}
+
+		.cfg-actions {
+			bottom: -14px;
+			margin: auto -14px -14px;
+			padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
 			flex-wrap: wrap;
 		}
 
-		.size-row .field {
-			flex: 1 1 calc(50% - 12px);
+		.cfg-actions .missing {
+			flex-basis: 100%;
 		}
 
-		.form-actions button {
+		.cfg-actions button {
 			flex: 1;
 		}
 	}

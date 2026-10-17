@@ -1,50 +1,11 @@
 import type { RequestHandler } from './$types';
 import { getIntegrations, getLayout, allBreakpointLayouts } from '$lib/server/config';
 import type { DockerEnvironmentData, DockerContainerInfo, DockerEnvironment } from '$lib/types';
-import http from 'node:http';
-import net from 'node:net';
+import { dockerGet } from '$lib/server/docker';
 
 const POLL_MS = 30000;
 // Faster refresh while a widget shows CPU/RAM (one-shot stats are cheap).
 const STATS_POLL_MS = 10000;
-
-function fetchViaSocket(socketPath: string, path: string): Promise<{ ok: boolean; json(): Promise<any> }> {
-	return new Promise((resolve) => {
-		const req = http.request(
-			{
-				hostname: 'localhost',
-				path,
-				method: 'GET',
-				createConnection: () => net.createConnection(socketPath)
-			},
-			(res) => {
-				let body = '';
-				res.on('data', (chunk) => { body += chunk; });
-				res.on('end', () => {
-					resolve({
-						ok: res.statusCode != null && res.statusCode >= 200 && res.statusCode < 300,
-						json: async () => JSON.parse(body)
-					});
-				});
-			}
-		);
-		req.on('error', () => {
-			resolve({ ok: false, json: async () => { throw new Error('request failed'); } });
-		});
-		req.setTimeout(5000, () => {
-			req.destroy();
-			resolve({ ok: false, json: async () => { throw new Error('timeout'); } });
-		});
-		req.end();
-	});
-}
-
-/** GET on the Docker Engine API of an environment (unix socket or TCP/HTTP URL). */
-async function dockerGet(env: DockerEnvironment, path: string): Promise<{ ok: boolean; json(): Promise<any> }> {
-	if (env.url.startsWith('/')) return fetchViaSocket(env.url, path);
-	const base = env.url.replace(/\/+$/, '').replace(/^tcp:\/\//, 'http://');
-	return fetch(`${base}${path}`, { signal: AbortSignal.timeout(5000) });
-}
 
 /**
  * Which environments the dashboard shows, and which of them need per-container

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { StackerConfig, StackerSample, StackerSections, StackerServer, StackerStatic } from '$lib/types';
-	import { isEditing, updateDashboardItem, getIntegrations } from '$lib/stores/dashboard';
+	import { isEditing, getIntegrations } from '$lib/stores/dashboard';
+	import WidgetEditModal from './widget/WidgetEditModal.svelte';
 	import StackerGraph from './stacker/StackerGraph.svelte';
 	import { bits, bytes, bytesRate, ghz, niceMax, pct, split, swap, temp } from './stacker/format';
 
@@ -135,45 +136,7 @@
 		return Array.from({ length: n }, (_, i) => i < lit);
 	};
 
-	// --- Edit modal ---
 	let showEditModal = $state(false);
-	let closing = $state(false);
-	let editServerId = $state('');
-	let editSections = $state<StackerSections>({ ...ALL });
-	let editGraphs = $state(true);
-	let editTotals = $state(true);
-
-	function openEditModal() {
-		editServerId = config?.serverId ?? servers[0]?.id ?? '';
-		editSections = { ...ALL, ...config?.sections };
-		editGraphs = config?.graphs ?? true;
-		editTotals = config?.totals ?? true;
-		closing = false;
-		showEditModal = true;
-	}
-
-	function closeModal() {
-		closing = true;
-		setTimeout(() => {
-			showEditModal = false;
-			closing = false;
-		}, 180);
-	}
-
-	async function handleSaveEdit() {
-		showEditModal = false;
-		closing = false;
-		const next: StackerConfig = { serverId: editServerId, sections: { ...editSections }, graphs: editGraphs, totals: editTotals };
-		await updateDashboardItem(itemid, { config: next } as any);
-	}
-
-	const sectionLabels: [keyof StackerSections, string][] = [
-		['cpu', 'CPU'],
-		['memory', 'Memory'],
-		['gpu', 'GPU'],
-		['disk', 'Disk'],
-		['network', 'Network']
-	];
 </script>
 
 <div class="stacker" class:compact class:basic={density === 'basic'} class:stale={!!error && !!s} title={compact ? `${stat?.sys.hostname ?? serverName}${error ? ` (offline: ${error})` : ''}` : undefined}>
@@ -382,7 +345,7 @@
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>
 		</button>
-		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); openEditModal(); }} onpointerdown={(e) => e.stopPropagation()} title="Edit Stacker widget">
+		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title="Edit Stacker widget">
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -392,61 +355,7 @@
 </div>
 
 {#if showEditModal}
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div class="modal-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={closeModal} onpointerdown={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
-		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
-			<div class="modal-header">
-				<h2>Edit Stacker</h2>
-				<button class="btn-close" onclick={closeModal} aria-label="Close">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M18 6L6 18M6 6l12 12" />
-					</svg>
-				</button>
-			</div>
-
-			<div class="modal-body">
-				<label class="field">
-					<span>Server</span>
-					{#if servers.length === 0}
-						<p class="hint">Add a Stacker server in Add › Integrations › Connections first.</p>
-					{:else}
-						<select bind:value={editServerId}>
-							{#each servers as srv (srv.id)}
-								<option value={srv.id}>{srv.name || srv.url}</option>
-							{/each}
-						</select>
-					{/if}
-				</label>
-
-				<p class="group-title">Show</p>
-				{#each sectionLabels as [key, label] (key)}
-					<label class="toggle-switch">
-						<input type="checkbox" bind:checked={editSections[key]} />
-						<span class="toggle-slider"></span>
-						<span class="toggle-label">{label}</span>
-					</label>
-				{/each}
-
-				<p class="group-title">Details</p>
-				<label class="toggle-switch">
-					<input type="checkbox" bind:checked={editGraphs} />
-					<span class="toggle-slider"></span>
-					<span class="toggle-label">Graphs (hidden anyway on small tiles)</span>
-				</label>
-				<label class="toggle-switch">
-					<input type="checkbox" bind:checked={editTotals} />
-					<span class="toggle-slider"></span>
-					<span class="toggle-label">Disk and network totals since boot</span>
-				</label>
-			</div>
-
-			<div class="modal-actions">
-				<button class="btn-cancel" onclick={closeModal}>Cancel</button>
-				<button class="btn-save" onclick={handleSaveEdit} disabled={!editServerId}>Save</button>
-			</div>
-		</div>
-	</div>
+	<WidgetEditModal type="stacker" {itemid} {config} onclose={() => (showEditModal = false)} />
 {/if}
 
 <style>
@@ -784,7 +693,7 @@
 		color: var(--text-muted);
 	}
 
-	/* --- Edit controls and modal (CatBoard widget conventions) --- */
+	/* --- Edit controls (CatBoard widget conventions) --- */
 	.btn-delete,
 	.btn-edit {
 		position: absolute;
@@ -816,187 +725,5 @@
 	.stacker:hover .btn-delete,
 	.stacker:hover .btn-edit {
 		opacity: 1;
-	}
-
-	.modal-overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.6);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		animation: fadeIn 0.15s ease;
-	}
-
-	.modal-overlay.closing {
-		animation: fadeOut 0.18s ease forwards;
-	}
-
-	.modal {
-		background: var(--bg-modal);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		max-width: 420px;
-		width: 90%;
-		animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.modal-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 16px 20px;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.modal-header h2 {
-		font-size: 1rem;
-	}
-
-	.btn-close {
-		padding: 4px;
-		border-radius: 4px;
-		display: flex;
-	}
-
-	.btn-close:hover {
-		background: var(--bg-card-hover);
-	}
-
-	.modal-body {
-		padding: 16px 20px;
-	}
-
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		margin-bottom: 14px;
-		font-size: 0.85rem;
-		color: var(--text-secondary);
-	}
-
-	.field select {
-		padding: 8px 10px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		background: var(--bg-primary);
-		color: var(--text-primary);
-	}
-
-	.hint {
-		margin: 0;
-		font-size: 0.8rem;
-		color: var(--text-muted);
-	}
-
-	.group-title {
-		margin: 4px 0 8px;
-		font-size: 0.75rem;
-		color: var(--text-muted);
-	}
-
-	.toggle-switch {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		cursor: pointer;
-		margin-bottom: 10px;
-		position: relative;
-	}
-
-	.toggle-switch input {
-		opacity: 0;
-		width: 0;
-		height: 0;
-		position: absolute;
-	}
-
-	.toggle-slider {
-		width: 36px;
-		height: 20px;
-		background: var(--border);
-		border-radius: 20px;
-		position: relative;
-		transition: background var(--transition);
-		flex-shrink: 0;
-	}
-
-	.toggle-slider::after {
-		content: '';
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 16px;
-		height: 16px;
-		background: white;
-		border-radius: 50%;
-		transition: transform var(--transition);
-	}
-
-	.toggle-switch input:checked + .toggle-slider {
-		background: var(--accent);
-	}
-
-	.toggle-switch input:checked + .toggle-slider::after {
-		transform: translateX(16px);
-	}
-
-	.toggle-switch input:focus-visible + .toggle-slider {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.toggle-label {
-		font-size: 0.85rem;
-		color: var(--text-secondary);
-	}
-
-	.modal-actions {
-		display: flex;
-		gap: 8px;
-		justify-content: flex-end;
-		padding: 12px 20px;
-		border-top: 1px solid var(--border);
-	}
-
-	.btn-cancel {
-		padding: 8px 16px;
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--border);
-		color: var(--text-secondary);
-	}
-
-	.btn-save {
-		padding: 8px 16px;
-		border-radius: var(--radius-sm);
-		background: var(--accent);
-		color: white;
-		font-weight: 500;
-	}
-
-	.btn-save:hover {
-		background: var(--accent-hover);
-	}
-
-	.btn-save:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	@keyframes fadeIn {
-		from { opacity: 0; }
-		to { opacity: 1; }
-	}
-
-	@keyframes fadeOut {
-		from { opacity: 1; }
-		to { opacity: 0; }
-	}
-
-	@keyframes slideUp {
-		from { opacity: 0; transform: translateY(20px); }
-		to { opacity: 1; transform: translateY(0); }
 	}
 </style>

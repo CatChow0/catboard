@@ -179,15 +179,17 @@ docker compose up -d
 
 ## Integrations
 
+Connections are set up in **Settings > Integrations** (admins). **Test connection** checks the typed values from the CatBoard server before saving, so a failure there (refused, unreachable, timeout) means the container cannot reach the service. Widgets are then added from **Add > Widgets**.
+
 ### Docker
 
 To monitor Docker containers from CatBoard, mount the Docker socket as shown in the "With Docker Integration" compose example above. Then in the dashboard:
 
-1. Open **Add > Integrations > Connections**
+1. Open **Settings > Integrations**
 2. Under **Docker**, add an environment:
    - Name: e.g. `Local`
    - URL: `/var/run/docker.sock` (for the local socket)
-3. Go to **Add > Integrations > Widgets** to add Docker widgets (standard or navbar)
+3. Add a **Docker containers** widget (dashboard or navbar) from **Add > Widgets**
 
 Enable **Show CPU** / **Show RAM** in a Docker widget to see per-container usage (navbar: totals in the bar, detail in the popover). CatBoard then reads `/containers/{id}/stats` for running containers every 10 s (30 s otherwise); the read-only socket is enough.
 
@@ -199,12 +201,12 @@ You can add multiple environments by using different Docker socket URLs or HTTP 
 
 To connect CatBoard to an AdGuard Home instance:
 
-1. Open **Add > Integrations > Connections**
+1. Open **Settings > Integrations**
 2. Under **AdGuard Home**, enter:
    - **URL:** Your AdGuard Home web interface URL (e.g. `http://192.168.1.10:3000`)
    - **Username:** Your AdGuard Home admin username
    - **Password:** Your AdGuard Home admin password
-3. Go to **Add > Integrations > Widgets** to add AdGuard widgets (stats or control, standard or navbar)
+3. Add an **AdGuard Home stats** or **control** widget from **Add > Widgets**
 
 If AdGuard Home is running on the Docker host:
 ```
@@ -219,11 +221,11 @@ On Linux hosts without Docker Desktop, add `--add-host=host.docker.internal:host
 
 To connect CatBoard to your *Arr services:
 
-1. Open **Add > Integrations > Connections**
+1. Open **Settings > Integrations**
 2. Under each service, enter:
    - **URL:** Your instance URL (e.g. `http://192.168.1.10:7878` for Radarr)
    - **API Key:** Found in Settings > General of the respective app
-3. Go to **Add > Widgets** to add a Calendar widget, then enable the desired *Arr integrations in its config
+3. Add a **Calendar** or **New releases** widget from **Add > Widgets** and pick the sources
 
 If the services run on the Docker host:
 ```
@@ -236,11 +238,11 @@ http://host.docker.internal:8686   # Lidarr
 
 To connect CatBoard to a Jellyfin instance:
 
-1. Open **Add > Integrations > Connections**
+1. Open **Settings > Integrations**
 2. Under **Jellyfin**, enter:
    - **URL:** Your Jellyfin instance URL (e.g. `http://192.168.1.10:8096`)
    - **API Key:** Found in Dashboard > Advanced > API Keys
-3. Go to **Add > Integrations > Widgets** to add a **Jellyfin Latest** or **Jellyfin Now Playing** widget
+3. Add a **Jellyfin latest** or **Jellyfin now playing** widget from **Add > Widgets**
 
 Artwork is fetched by CatBoard and served from its own URL, so the Jellyfin address only needs to be reachable from the CatBoard container (an internal `http://jellyfin:8096` works even if the dashboard is served over HTTPS).
 
@@ -254,30 +256,30 @@ On Linux hosts without Docker Desktop, add `--add-host=host.docker.internal:host
 ### Jellyseerr / Overseerr
 
 1. Copy the API key from **Settings > General** in Jellyseerr (or Overseerr)
-2. In **Add > Integrations > Connections > Jellyseerr / Overseerr**, enter the URL (e.g. `http://jellyseerr:5055`) and the key
-3. Add a **Jellyseerr Requests** widget from **Add > Integrations > Widgets**
+2. In **Settings > Integrations > Jellyseerr / Overseerr**, enter the URL (e.g. `http://jellyseerr:5055`) and the key
+3. Add a **Jellyseerr Requests** widget from **Add > Widgets**
 
 Approving or declining from CatBoard uses that API key, so the key's owner must be allowed to manage requests. Only CatBoard admins see the buttons.
 
 ### qBittorrent
 
-1. In **Add > Integrations > Connections > qBittorrent**, enter the Web UI URL (e.g. `http://qbittorrent:8080`), username and password
-2. Add a **qBittorrent** widget from **Add > Integrations > Widgets**
+1. In **Settings > Integrations > qBittorrent**, enter the Web UI URL (e.g. `http://qbittorrent:8080`), username and password
+2. Add a **qBittorrent** widget from **Add > Widgets**
 
 Works with qBittorrent 4.x and 5.x. If the Web UI has "Enable Host header validation" on, add the hostname CatBoard uses (e.g. `qbittorrent`) to its allowed domains. Too many failed logins make qBittorrent ban CatBoard's IP for a while; fix the password and wait.
 
 ### Spoolman
 
-1. In **Add > Integrations > Connections > Spoolman**, enter its URL (e.g. `http://spoolman:7912`)
-2. Add a **Spoolman** widget from **Add > Integrations > Widgets**
+1. In **Settings > Integrations > Spoolman**, enter its URL (e.g. `http://spoolman:7912`)
+2. Add a **Spoolman** widget from **Add > Widgets**
 
 ### Elegoo Centauri Carbon 2
 
 The CC2 runs its own MQTT broker; CatBoard talks to it directly on the LAN.
 
 1. On the printer, enable **LAN Only** mode (Settings > Network). In cloud mode the printer does not answer local clients
-2. In **Add > Integrations > Connections > Elegoo printers**, add the printer IP and its access code (if one is set), then **Detect** to read the serial number (or type it from the label)
-3. Add a **3D Print Status** widget (standard or navbar) from **Add > Integrations > Widgets**
+2. In **Settings > Integrations > Elegoo printers**, add the printer IP and its access code (if one is set), then **Detect** to read the serial number (or type it from the label)
+3. Add a **3D Print Status** widget (standard or navbar) from **Add > Widgets**
 
 The container must reach the printer on **TCP 1883** (MQTT) and **UDP 52700** (detection only). The default bridge network works for a printer on the LAN. The printer accepts about 4 clients (Elegoo app, slicer…); CatBoard uses a single shared connection and closes it after 5 minutes without a dashboard open.
 
@@ -285,9 +287,9 @@ The container must reach the printer on **TCP 1883** (MQTT) and **UDP 52700** (d
 
 To show live hardware stats from a Stacker server:
 
-1. Open **Add > Integrations > Connections**
+1. Open **Settings > Integrations**
 2. Under **Stacker**, click **Add server** and enter a name and the URL. Add several servers to monitor several machines.
-3. Go to **Add > Integrations > Widgets**, pick the server and the sections to show (CPU, Memory, GPU, Disk, Network)
+3. Add a **Stacker** widget from **Add > Widgets**, pick the server and the sections to show (CPU, Memory, GPU, Disk, Network)
 
 If Stacker and CatBoard share a Docker network, use the container name, which needs no login:
 ```
@@ -300,9 +302,9 @@ If you can only reach Stacker through a reverse proxy with basic auth, enter its
 
 To connect CatBoard to an Uptime Kuma instance:
 
-1. Open **Add > Integrations > Connections**
+1. Open **Settings > Integrations**
 2. Under **Uptime Kuma**, enter your instance URL
-3. Go to **Add > Integrations > Widgets** to add status page widgets
+3. Add an **Uptime Kuma status page** widget from **Add > Widgets**
 
 If Uptime Kuma is running on the Docker host, use `host.docker.internal` as the hostname (Docker Desktop) or the host's LAN IP:
 ```

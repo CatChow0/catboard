@@ -52,6 +52,11 @@ export const dashboardDirection = writable<1 | -1>(1);
 export const dashboardSwitchBlocked = writable(false);
 /** Tile to scroll to and pulse once (search result picked). */
 export const highlightItem = writable<string | null>(null);
+/** Settings to open on a tab (e.g. the widget catalog's "Set up" links); Dashboard opens the modal. */
+export const settingsRequest = writable<{ tab: 'integrations'; integration?: string } | null>(null);
+export function openSettings(tab: 'integrations', integration?: string) {
+	settingsRequest.set({ tab, integration });
+}
 
 function layoutUrl(id = get(activeDashboardId)): string {
 	return `/api/layout?dashboard=${encodeURIComponent(id)}`;
@@ -511,40 +516,22 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 	layout.set(newLayout);
 }
 
-const SIMPLE_WIDGETS = new Set<string>(['jellyfin-now-playing', 'jellyseerr-requests', 'qbittorrent', 'notes', 'spoolman', 'elegoo-print']);
+export type GridWidgetType = Exclude<DashboardItem['type'], 'service'>;
 
-export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-standard' | 'calendar' | 'clock' | 'weather' | 'uptime-kuma-status-page' | 'docker' | 'adguard-home' | 'adguard-home-control' | 'jellyfin-latest' | 'arr-releases' | 'stacker' | 'jellyfin-now-playing' | 'jellyseerr-requests' | 'qbittorrent' | 'notes' | 'spoolman' | 'elegoo-print', title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
+/**
+ * Add a widget at the first free spot of the active breakpoint. Groups take a
+ * title (and start empty); every other widget is position + config.
+ */
+export async function addWidgetToDashboard(type: GridWidgetType, title: string, colSpan: number, rowSpan: number, maxCols: number, config?: Record<string, unknown>) {
 	const newLayout = mergeGridConfig(await api<Layout>(layoutUrl()));
 	const activeId = get(activeBreakpointId);
 	if (!newLayout.layouts[activeId]) newLayout.layouts[activeId] = { items: [], navbar: { columns: 12, items: [] } };
 	const activeItems = newLayout.layouts[activeId].items;
 	const pos = findNextAvailablePosition(activeItems, colSpan, rowSpan, maxCols);
-	const item: DashboardItem = type === 'group-collapsible'
-		? { id: uid(), type: 'group-collapsible' as const, title, col: pos.col, row: pos.row, colSpan, rowSpan, children: [] as DashboardItem[] }
-		: type === 'group-standard'
-			? { id: uid(), type: 'group-standard' as const, title, col: pos.col, row: pos.row, colSpan, rowSpan, children: [] as DashboardItem[], config: config as StandardGroupItem['config'] }
-			: type === 'calendar'
-			? { id: uid(), type: 'calendar' as const, col: pos.col, row: pos.row, colSpan, rowSpan }
-			: type === 'clock'
-			? { id: uid(), type: 'clock' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ClockConfig }
-			: type === 'uptime-kuma-status-page'
-				? { id: uid(), type: 'uptime-kuma-status-page' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as UptimeKumaStatusPageConfig }
-				: type === 'docker'
-					? { id: uid(), type: 'docker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as DockerWidgetConfig }
-					: type === 'adguard-home'
-						? { id: uid(), type: 'adguard-home' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
-						: type === 'adguard-home-control'
-							? { id: uid(), type: 'adguard-home-control' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
-									: type === 'jellyfin-latest'
-										? { id: uid(), type: 'jellyfin-latest' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string; limit?: number } }
-										: type === 'arr-releases'
-											? { id: uid(), type: 'arr-releases' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ArrReleasesConfig }
-											: type === 'stacker'
-												? { id: uid(), type: 'stacker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as StackerConfig }
-												: SIMPLE_WIDGETS.has(type)
-													// Widgets whose item is just position + optional config.
-													? ({ id: uid(), type, col: pos.col, row: pos.row, colSpan, rowSpan, config } as DashboardItem)
-											: { id: uid(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
+	const base = { id: uid(), col: pos.col, row: pos.row, colSpan, rowSpan };
+	const item = (type === 'group-collapsible' || type === 'group-standard'
+		? { ...base, type, title, children: [], config }
+		: { ...base, type, config }) as DashboardItem;
 	activeItems.push(item);
 	await api(layoutUrl(), { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
@@ -935,6 +922,7 @@ export async function saveSettings(newSettings: Settings) {
 
 // --- Navbar Actions ---
 
+/** Add a navbar widget in the first gap of the active navbar. The search box keeps its placeholder on the item. */
 export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, config?: Record<string, unknown>) {
 	const activeId = get(activeBreakpointId);
 	const newLayout = mergeGridConfig(await api<Layout>(layoutUrl()));
@@ -952,23 +940,12 @@ export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, c
 		return items.reduce((max, it) => Math.max(max, it.col + it.colSpan), 0);
 	}
 
-	const targetCol = findGap(colSpan);
-	const item: NavbarItem = (() => {
-		switch (type) {
-			case 'navbar-title': return { id: uid(), type: 'navbar-title', col: targetCol, colSpan };
-			case 'navbar-search': return { id: uid(), type: 'navbar-search', col: targetCol, colSpan, placeholder: 'Search services...' };
-			case 'navbar-cpu': return { id: uid(), type: 'navbar-cpu', col: targetCol, colSpan };
-			case 'navbar-ram': return { id: uid(), type: 'navbar-ram', col: targetCol, colSpan };
-			case 'navbar-disk': return { id: uid(), type: 'navbar-disk', col: targetCol, colSpan, config: { disks: (config?.disks as string[]) || [] } };
-			case 'navbar-uptime-kuma-status-page': return { id: uid(), type: 'navbar-uptime-kuma-status-page', col: targetCol, colSpan, config: { slug: (config?.slug as string) || '' } };
-			case 'navbar-docker': return { id: uid(), type: 'navbar-docker', col: targetCol, colSpan, config: { environmentId: (config?.environmentId as string) || '', showCpu: config?.showCpu === true || undefined, showRam: config?.showRam === true || undefined } };
-			case 'navbar-clock': return { id: uid(), type: 'navbar-clock', col: targetCol, colSpan, config: config as ClockConfig | undefined };
-			case 'navbar-elegoo-print': return { id: uid(), type: 'navbar-elegoo-print', col: targetCol, colSpan, config: { printerId: (config?.printerId as string) || '', showThumbnail: config?.showThumbnail !== false, showTemps: config?.showTemps !== false } };
-			case 'navbar-weather': return { id: uid(), type: 'navbar-weather', col: targetCol, colSpan, config: config as WeatherConfig | undefined };
-		case 'navbar-adguard-home-control': return { id: uid(), type: 'navbar-adguard-home-control', col: targetCol, colSpan, config: { instanceId: (config?.instanceId as string) || 'default' } };
-			default: return { id: uid(), type: 'navbar-title', col: targetCol, colSpan };
-		}
-	})();
+	const base = { id: uid(), col: findGap(colSpan), colSpan };
+	const item = (type === 'navbar-search'
+		? { ...base, type, placeholder: (config?.placeholder as string) ?? 'Search services...' }
+		: type === 'navbar-title' || type === 'navbar-ram'
+			? { ...base, type }
+			: { ...base, type, config: type === 'navbar-disk' ? { disks: [], ...config } : config }) as NavbarItem;
 
 	newLayout.layouts[activeId].navbar.items.push(item);
 	await api(layoutUrl(), { method: 'PUT', body: JSON.stringify(newLayout) });

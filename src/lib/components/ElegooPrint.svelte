@@ -2,9 +2,8 @@
 	// Elegoo Centauri Carbon 2 print status. One row: a single line (name,
 	// progress, time left); bigger tiles show the full details.
 	import type { ElegooPrintConfig } from '$lib/types';
-	import { updateDashboardItem, getIntegrations } from '$lib/stores/dashboard';
 	import EditButtons from './widget/EditButtons.svelte';
-	import WidgetModal from './widget/WidgetModal.svelte';
+	import WidgetEditModal from './widget/WidgetEditModal.svelte';
 	import ElegooPrintDetails from './details/ElegooPrintDetails.svelte';
 	import PrinterIcon from './icons/PrinterIcon.svelte';
 	import { pollElegoo } from './elegoo/pollElegoo.svelte';
@@ -25,27 +24,7 @@
 	const dense = $derived(colSpan <= 2 || rowSpan <= 3);
 	const printing = $derived(!!status && ['printing', 'preheating', 'pausing', 'paused', 'stopping'].includes(status.state));
 
-	// --- Settings ---
 	let showEdit = $state(false);
-	let printers = $state<{ id: string; name: string }[]>([]);
-	let editPrinter = $state('');
-	let editThumb = $state(true);
-	let editTemps = $state(true);
-	async function openEdit() {
-		editPrinter = printerId;
-		editThumb = config?.showThumbnail ?? true;
-		editTemps = config?.showTemps ?? true;
-		try {
-			printers = (await getIntegrations()).elegoo?.printers || [];
-		} catch {
-			printers = [];
-		}
-		showEdit = true;
-	}
-	async function saveEdit() {
-		showEdit = false;
-		await updateDashboardItem(itemid, { config: { printerId: editPrinter, showThumbnail: editThumb, showTemps: editTemps } } as any);
-	}
 </script>
 
 <div class="pr-tile">
@@ -73,33 +52,11 @@
 			<ElegooPrintDetails {status} {printerId} {dense} full showThumbnail={config?.showThumbnail ?? true} showTemps={config?.showTemps ?? true} onchanged={poll.refresh} />
 		{/if}
 	</div>
-	<EditButtons label="print status widget" {ondelete} onedit={openEdit} />
+	<EditButtons label="print status widget" {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}
-	<WidgetModal title="Edit print status" onclose={() => (showEdit = false)} onsave={saveEdit} saveDisabled={!editPrinter}>
-		<label class="field">
-			<span>Printer</span>
-			{#if printers.length}
-				<select bind:value={editPrinter}>
-					<option value="">Select printer</option>
-					{#each printers as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
-				</select>
-			{:else}
-				<span class="hint">No printer configured. Add one in Add &gt; Integrations &gt; Connections.</span>
-			{/if}
-		</label>
-		<label class="toggle-switch">
-			<input type="checkbox" bind:checked={editThumb} />
-			<span class="toggle-slider"></span>
-			<span class="toggle-label">Show the model preview</span>
-		</label>
-		<label class="toggle-switch">
-			<input type="checkbox" bind:checked={editTemps} />
-			<span class="toggle-slider"></span>
-			<span class="toggle-label">Show temperatures and speed</span>
-		</label>
-	</WidgetModal>
+	<WidgetEditModal type="elegoo-print" {itemid} {config} onclose={() => (showEdit = false)} />
 {/if}
 
 <style>

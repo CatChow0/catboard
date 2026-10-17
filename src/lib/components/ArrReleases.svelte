@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ArrReleasesConfig, ArrCalendarEntry } from '$lib/types';
-	import { isEditing, settings, updateDashboardItem, getIntegrations } from '$lib/stores/dashboard';
+	import { isEditing, settings } from '$lib/stores/dashboard';
+	import WidgetEditModal from './widget/WidgetEditModal.svelte';
 	import { onMount, onDestroy } from 'svelte';
 
 	let { config, colSpan = 1, rowSpan = 1, ondelete, itemid }: {
@@ -27,18 +28,7 @@
 	let error = $state<string | null>(null);
 	let intervalId: ReturnType<typeof setInterval> | null = null;
 
-	// Edit modal state
 	let showEditModal = $state(false);
-	let closing = $state(false);
-	let radarrEnabled = $state(false);
-	let sonarrEnabled = $state(false);
-	let lidarrEnabled = $state(false);
-	let editDays = $state(14);
-	let editLimit = $state(10);
-	let editOnlyDownloaded = $state(false);
-	let hasRadarr = $state(false);
-	let hasSonarr = $state(false);
-	let hasLidarr = $state(false);
 
 	async function fetchData() {
 		if (!sources) {
@@ -88,49 +78,6 @@
 	onDestroy(() => {
 		if (intervalId) clearInterval(intervalId);
 	});
-
-	async function openEditModal() {
-		radarrEnabled = !!config?.integrations?.radarr;
-		sonarrEnabled = !!config?.integrations?.sonarr;
-		lidarrEnabled = !!config?.integrations?.lidarr;
-		editDays = days;
-		editLimit = limit;
-		editOnlyDownloaded = onlyDownloaded;
-		closing = false;
-		try {
-			const integrations = await getIntegrations();
-			hasRadarr = !!integrations.radarr?.url;
-			hasSonarr = !!integrations.sonarr?.url;
-			hasLidarr = !!integrations.lidarr?.url;
-		} catch {
-			hasRadarr = false;
-			hasSonarr = false;
-			hasLidarr = false;
-		}
-		showEditModal = true;
-	}
-
-	function closeModal() {
-		closing = true;
-		setTimeout(() => { showEditModal = false; closing = false; }, 180);
-	}
-
-	async function handleSaveEdit() {
-		showEditModal = false;
-		closing = false;
-		await updateDashboardItem(itemid, {
-			config: {
-				integrations: {
-					radarr: radarrEnabled,
-					sonarr: sonarrEnabled,
-					lidarr: lidarrEnabled
-				},
-				days: Math.min(90, Math.max(1, Math.round(editDays) || 14)),
-				limit: Math.min(50, Math.max(1, Math.round(editLimit) || 10)),
-				onlyDownloaded: editOnlyDownloaded
-			}
-		} as any);
-	}
 
 	const SOURCE_META: Record<ArrCalendarEntry['type'], { label: string; color: string }> = {
 		radarr: { label: 'Movie', color: '#FF9800' },
@@ -217,7 +164,7 @@
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>
 		</button>
-		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); openEditModal(); }} onpointerdown={(e) => e.stopPropagation()} title="Edit releases widget">
+		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title="Edit releases widget">
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
 			</svg>
@@ -226,53 +173,7 @@
 </div>
 
 {#if showEditModal}
-	<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-	<div class="edit-overlay" class:closing onclick={() => closeModal()} onpointerdown={(e) => e.stopPropagation()}></div>
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="edit-modal" class:closing onpointerdown={(e) => e.stopPropagation()}>
-		<h3>New Releases</h3>
-		<div class="edit-fields">
-			<label class="source-check" class:disabled={!hasRadarr}>
-				<input type="checkbox" class="toggle-switch" bind:checked={radarrEnabled} disabled={!hasRadarr} />
-				<span>Radarr</span>
-				{#if !hasRadarr}
-					<span class="source-hint">(not configured)</span>
-				{/if}
-			</label>
-			<label class="source-check" class:disabled={!hasSonarr}>
-				<input type="checkbox" class="toggle-switch" bind:checked={sonarrEnabled} disabled={!hasSonarr} />
-				<span>Sonarr</span>
-				{#if !hasSonarr}
-					<span class="source-hint">(not configured)</span>
-				{/if}
-			</label>
-			<label class="source-check" class:disabled={!hasLidarr}>
-				<input type="checkbox" class="toggle-switch" bind:checked={lidarrEnabled} disabled={!hasLidarr} />
-				<span>Lidarr</span>
-				{#if !hasLidarr}
-					<span class="source-hint">(not configured)</span>
-				{/if}
-			</label>
-			<label class="source-check">
-				<input type="checkbox" class="toggle-switch" bind:checked={editOnlyDownloaded} />
-				<span>Downloaded only</span>
-			</label>
-			<div class="number-row">
-				<label>
-					<span>Last days</span>
-					<input type="number" min="1" max="90" bind:value={editDays} />
-				</label>
-				<label>
-					<span>Max items</span>
-					<input type="number" min="1" max="50" bind:value={editLimit} />
-				</label>
-			</div>
-		</div>
-		<div class="edit-actions">
-			<button class="btn-cancel" onclick={() => closeModal()}>Cancel</button>
-			<button class="btn-save" onclick={() => handleSaveEdit()}>Save</button>
-		</div>
-	</div>
+	<WidgetEditModal type="arr-releases" {itemid} {config} onclose={() => (showEditModal = false)} />
 {/if}
 
 <style>
@@ -474,202 +375,5 @@
 
 	.btn-edit:hover {
 		background: var(--accent-hover);
-	}
-
-	/* Edit modal */
-	.edit-overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.4);
-		z-index: 200;
-		animation: fadeIn 0.15s ease;
-	}
-
-	.edit-overlay.closing {
-		animation: fadeOut 0.18s ease forwards;
-	}
-
-	.edit-modal {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		background: var(--bg-modal);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		padding: 20px;
-		width: 320px;
-		z-index: 201;
-		animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.edit-modal.closing {
-		animation: slideDown 0.18s ease forwards;
-	}
-
-	.edit-modal h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		margin-bottom: 12px;
-		color: var(--text-primary);
-	}
-
-	.edit-fields {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		margin-bottom: 16px;
-	}
-
-	.source-check {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 0.85rem;
-		color: var(--text-primary);
-		cursor: pointer;
-	}
-
-	.source-check.disabled {
-		color: var(--text-muted);
-		cursor: not-allowed;
-	}
-
-	.source-check input {
-		cursor: pointer;
-	}
-
-	.source-check.disabled input {
-		cursor: not-allowed;
-	}
-
-	.source-hint {
-		font-size: 0.7rem;
-		color: var(--text-muted);
-		margin-left: auto;
-	}
-
-	.number-row {
-		display: flex;
-		gap: 12px;
-		margin-top: 4px;
-	}
-
-	.number-row label {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		font-size: 0.75rem;
-		color: var(--text-secondary);
-	}
-
-	.number-row input {
-		width: 100%;
-		padding: 6px 8px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		color: var(--text-primary);
-		font-size: 0.85rem;
-	}
-
-	.number-row input:focus {
-		outline: none;
-		border-color: var(--accent);
-	}
-
-	.edit-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 8px;
-	}
-
-	.edit-actions button {
-		padding: 6px 14px;
-		border-radius: var(--radius-sm);
-		font-size: 0.8rem;
-		font-weight: 500;
-		cursor: pointer;
-		border: none;
-	}
-
-	.btn-cancel {
-		background: var(--bg-card);
-		color: var(--text-primary);
-		border: 1px solid var(--border);
-	}
-
-	.btn-cancel:hover {
-		background: var(--bg-card-hover);
-	}
-
-	.btn-save {
-		background: var(--accent);
-		color: white;
-	}
-
-	.btn-save:hover {
-		background: var(--accent-hover);
-	}
-
-	@keyframes fadeIn {
-		from { opacity: 0; }
-		to { opacity: 1; }
-	}
-
-	@keyframes fadeOut {
-		from { opacity: 1; }
-		to { opacity: 0; }
-	}
-
-	@keyframes slideUp {
-		from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
-		to { opacity: 1; transform: translate(-50%, -50%); }
-	}
-
-	@keyframes slideDown {
-		from { opacity: 1; transform: translate(-50%, -50%); }
-		to { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
-	}
-
-	/* Toggle switch */
-	.toggle-switch {
-		appearance: none;
-		width: 36px;
-		height: 20px;
-		background: var(--border);
-		border-radius: 20px;
-		position: relative;
-		cursor: pointer;
-		outline: none;
-		flex-shrink: 0;
-		transition: background var(--transition);
-	}
-
-	.toggle-switch::after {
-		content: '';
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 16px;
-		height: 16px;
-		background: white;
-		border-radius: 50%;
-		transition: transform var(--transition);
-		box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-	}
-
-	.toggle-switch:checked {
-		background: var(--accent);
-	}
-
-	.toggle-switch:checked::after {
-		transform: translateX(16px);
-	}
-
-	.toggle-switch:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
 	}
 </style>

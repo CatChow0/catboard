@@ -2,10 +2,10 @@
 	// Spoolman: the list of available spools (scrollable), plus optional
 	// "Recently used" and "Running low / empty" sections. "Show only" hides the
 	// list and keeps just the enabled sections. A one-row tile shows a summary.
-	import type { SpoolInfo, SpoolmanConfig, SpoolmanData, SpoolmanSection } from '$lib/types';
-	import { updateDashboardItem } from '$lib/stores/dashboard';
+	import type { SpoolInfo, SpoolmanConfig, SpoolmanData } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
-	import WidgetModal from './widget/WidgetModal.svelte';
+	import WidgetEditModal from './widget/WidgetEditModal.svelte';
+	import { spoolmanOrder, spoolmanSections } from '$lib/widgets/spoolman';
 	import { timeAgo } from '$lib/utils/duration';
 
 	let { config, rowSpan = 3, ondelete, itemid }: {
@@ -18,26 +18,9 @@
 
 	const POLL_MS = 60_000;
 
-	/** Sections to show; widgets saved before V2.9 used `show` (they keep their look). */
-	function sectionsOf(c?: SpoolmanConfig) {
-		if (c?.show && c.showRecent === undefined && c.showLow === undefined) {
-			return { recent: c.show !== 'low', low: c.show !== 'recent', only: true };
-		}
-		const recent = !!c?.showRecent, low = !!c?.showLow;
-		return { recent, low, only: !!c?.showOnly && (recent || low) };
-	}
+	const sections = $derived(spoolmanSections(config));
 
-	const sections = $derived(sectionsOf(config));
-
-	const DEFAULT_ORDER: SpoolmanSection[] = ['list', 'recent', 'low'];
-	const SECTION_NAMES: Record<SpoolmanSection, string> = { list: 'Spool list', recent: 'Recently used', low: 'Running low / empty' };
-
-	/** Saved order, cleaned up: known blocks once each, missing ones appended. */
-	function orderOf(c?: SpoolmanConfig): SpoolmanSection[] {
-		const saved = (c?.order ?? []).filter((k, i, a) => DEFAULT_ORDER.includes(k) && a.indexOf(k) === i);
-		return [...saved, ...DEFAULT_ORDER.filter((k) => !saved.includes(k))];
-	}
-	const order = $derived(orderOf(config));
+	const order = $derived(spoolmanOrder(config));
 	const sort = $derived(config?.sort ?? 'name');
 	const limit = $derived(config?.limit ?? 5);
 	const lowPercent = $derived(config?.lowPercent ?? 15);
@@ -91,55 +74,7 @@
 	const meta = (s: SpoolInfo) => [s.vendor, s.material].filter(Boolean).join(' · ');
 	const lowAndEmpty = $derived(data ? [...data.empty, ...data.low].slice(0, limit) : []);
 
-	// --- Settings ---
 	let showEdit = $state(false);
-	let editTitle = $state('');
-	let editRecent = $state(false);
-	let editLow = $state(false);
-	let editOnly = $state(false);
-	let editSort = $state<NonNullable<SpoolmanConfig['sort']>>('name');
-	let editOrder = $state<SpoolmanSection[]>([...DEFAULT_ORDER]);
-	function moveSection(i: number, dir: -1 | 1) {
-		const next = [...editOrder];
-		[next[i], next[i + dir]] = [next[i + dir], next[i]];
-		editOrder = next;
-	}
-	/** Whether a block would be shown with the settings being edited. */
-	const editShown = (k: SpoolmanSection) => (k === 'list' ? !(canShowOnly && editOnly) : k === 'recent' ? editRecent : editLow);
-	let editLimit = $state(5);
-	let editLowPercent = $state(15);
-	let editLowGrams = $state(0);
-	let editArchived = $state(false);
-	const canShowOnly = $derived(editRecent || editLow);
-	function openEdit() {
-		editTitle = config?.title ?? '';
-		editRecent = sections.recent;
-		editLow = sections.low;
-		editOnly = sections.only;
-		editSort = sort;
-		editOrder = [...order];
-		editLimit = limit;
-		editLowPercent = lowPercent;
-		editLowGrams = lowGrams;
-		editArchived = archived;
-		showEdit = true;
-	}
-	async function saveEdit() {
-		showEdit = false;
-		const next: SpoolmanConfig = {
-			title: editTitle.trim() || undefined,
-			showRecent: editRecent || undefined,
-			showLow: editLow || undefined,
-			showOnly: (canShowOnly && editOnly) || undefined,
-			sort: editSort === 'name' ? undefined : editSort,
-			order: editOrder.join() === DEFAULT_ORDER.join() ? undefined : editOrder,
-			limit: Math.min(50, Math.max(1, editLimit || 5)),
-			lowPercent: Math.min(100, Math.max(0, editLowPercent || 0)),
-			lowGrams: Math.max(0, editLowGrams || 0) || undefined,
-			includeArchived: editArchived || undefined
-		};
-		await updateDashboardItem(itemid, { config: next } as any);
-	}
 </script>
 
 {#snippet row(s: SpoolInfo, kind: 'list' | 'recent' | 'low')}
@@ -229,70 +164,11 @@
 			</div>
 		{/if}
 	</div>
-	<EditButtons label="Spoolman widget" {ondelete} onedit={openEdit} />
+	<EditButtons label="Spoolman widget" {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}
-	<WidgetModal title="Edit Spoolman" onclose={() => (showEdit = false)} onsave={saveEdit}>
-		<label class="field">
-			<span>Title</span>
-			<input type="text" bind:value={editTitle} placeholder="Spoolman" />
-		</label>
-		<label class="field">
-			<span>Sort the spool list by</span>
-			<select bind:value={editSort}>
-				<option value="name">Name</option>
-				<option value="remaining">Remaining filament (least first)</option>
-				<option value="lastUsed">Last used</option>
-			</select>
-		</label>
-		<p class="sp-group-title">Extra sections</p>
-		<label class="toggle-switch">
-			<input type="checkbox" bind:checked={editRecent} />
-			<span class="toggle-slider"></span>
-			<span class="toggle-label">Recently used</span>
-		</label>
-		<label class="toggle-switch">
-			<input type="checkbox" bind:checked={editLow} />
-			<span class="toggle-slider"></span>
-			<span class="toggle-label">Running low / empty</span>
-		</label>
-		<label class="toggle-switch" class:sp-disabled={!canShowOnly} title={canShowOnly ? undefined : 'Enable a section first'}>
-			<input type="checkbox" bind:checked={editOnly} disabled={!canShowOnly} />
-			<span class="toggle-slider"></span>
-			<span class="toggle-label">Show only these sections (hide the spool list)</span>
-		</label>
-		<div class="sp-order">
-			<p class="sp-group-title">Order</p>
-			<ol>
-				{#each editOrder as key, i (key)}
-					<li class:sp-hidden={!editShown(key)}>
-						<span class="sp-order-name">{SECTION_NAMES[key]}</span>
-						{#if !editShown(key)}<span class="sp-order-off">hidden</span>{/if}
-						<button type="button" class="sp-order-btn" disabled={i === 0} onclick={() => moveSection(i, -1)} aria-label="Move {SECTION_NAMES[key]} up">↑</button>
-						<button type="button" class="sp-order-btn" disabled={i === editOrder.length - 1} onclick={() => moveSection(i, 1)} aria-label="Move {SECTION_NAMES[key]} down">↓</button>
-					</li>
-				{/each}
-			</ol>
-		</div>
-		<label class="field">
-			<span>Spools per section</span>
-			<input type="number" min="1" max="50" bind:value={editLimit} />
-		</label>
-		<label class="field">
-			<span>Running low below (% of the spool)</span>
-			<input type="number" min="0" max="100" bind:value={editLowPercent} />
-		</label>
-		<label class="field">
-			<span>…or below (grams, 0 = off)</span>
-			<input type="number" min="0" bind:value={editLowGrams} />
-		</label>
-		<label class="toggle-switch">
-			<input type="checkbox" bind:checked={editArchived} />
-			<span class="toggle-slider"></span>
-			<span class="toggle-label">Include archived spools (finished spools are often archived)</span>
-		</label>
-	</WidgetModal>
+	<WidgetEditModal type="spoolman" {itemid} {config} onclose={() => (showEdit = false)} />
 {/if}
 
 <style>
@@ -510,73 +386,5 @@
 	.sp-inline-error {
 		margin: 0;
 		font-size: 0.72rem;
-	}
-
-	.sp-group-title {
-		margin: 4px 0 8px;
-		font-size: 0.8rem;
-		font-weight: 500;
-		color: var(--text-muted);
-	}
-
-	.sp-disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
-	}
-
-	.sp-order {
-		margin-bottom: 12px;
-	}
-
-	.sp-order ol {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-	}
-
-	.sp-order li {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 5px 6px 5px 10px;
-		border-radius: var(--radius-sm);
-		background: var(--bg-primary);
-		border: 1px solid var(--border);
-		font-size: 0.85rem;
-		color: var(--text-primary);
-	}
-
-	.sp-order li.sp-hidden {
-		opacity: 0.5;
-	}
-
-	.sp-order-name {
-		flex: 1;
-	}
-
-	.sp-order-off {
-		font-size: 0.7rem;
-		color: var(--text-muted);
-	}
-
-	.sp-order-btn {
-		width: 26px;
-		height: 24px;
-		border-radius: var(--radius-sm);
-		color: var(--text-secondary);
-		background: color-mix(in srgb, var(--text-muted) 14%, transparent);
-	}
-
-	.sp-order-btn:hover:not(:disabled) {
-		color: var(--text-primary);
-		background: color-mix(in srgb, var(--accent) 25%, transparent);
-	}
-
-	.sp-order-btn:disabled {
-		opacity: 0.35;
-		cursor: default;
 	}
 </style>

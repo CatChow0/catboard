@@ -2,9 +2,9 @@
 	// Jellyseerr / Overseerr media requests. Admins can approve or decline
 	// pending requests from the tile.
 	import type { JellyseerrData, JellyseerrRequest, JellyseerrRequestsConfig } from '$lib/types';
-	import { currentUser, updateDashboardItem } from '$lib/stores/dashboard';
+	import { currentUser } from '$lib/stores/dashboard';
 	import EditButtons from './widget/EditButtons.svelte';
-	import WidgetModal from './widget/WidgetModal.svelte';
+	import WidgetEditModal from './widget/WidgetEditModal.svelte';
 
 	let { config, rowSpan = 3, ondelete, itemid }: {
 		config?: JellyseerrRequestsConfig;
@@ -82,19 +82,7 @@
 		return `${Math.round(d / 86400)} d ago`;
 	}
 
-	// --- Settings ---
 	let showEdit = $state(false);
-	let editFilter = $state<'pending' | 'all'>('pending');
-	let editLimit = $state(8);
-	function openEdit() {
-		editFilter = filter;
-		editLimit = limit;
-		showEdit = true;
-	}
-	async function saveEdit() {
-		showEdit = false;
-		await updateDashboardItem(itemid, { config: { filter: editFilter, limit: Math.min(30, Math.max(1, editLimit)) } } as any);
-	}
 </script>
 
 <div class="js-tile">
@@ -150,24 +138,11 @@
 			</ul>
 		{/if}
 	</div>
-	<EditButtons label="requests widget" {ondelete} onedit={openEdit} />
+	<EditButtons label="requests widget" {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}
-	<WidgetModal title="Edit Requests" onclose={() => (showEdit = false)} onsave={saveEdit}>
-		<label class="field">
-			<span>Show</span>
-			<select bind:value={editFilter}>
-				<option value="pending">Pending requests only</option>
-				<option value="all">All recent requests</option>
-			</select>
-		</label>
-		<label class="field">
-			<span>Number of requests</span>
-			<input type="number" min="1" max="30" bind:value={editLimit} />
-		</label>
-		{#if !isAdmin}<p class="hint">Only admins can approve or decline requests.</p>{/if}
-	</WidgetModal>
+	<WidgetEditModal type="jellyseerr-requests" {itemid} {config} onclose={() => (showEdit = false)} />
 {/if}
 
 <style>

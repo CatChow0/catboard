@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { uid } from '$lib/utils/uid';
 	import {
 		settings, layout, activeBreakpointId, saveSettings, currentUser, exportDashboard, importDashboard,
@@ -9,10 +10,16 @@
 	import { themePresets, customPaletteDefaults, themeDefaults } from '$lib/themes';
 	import type { CustomPalette } from '$lib/stores/dashboard';
 	import AdminPanel from './AdminPanel.svelte';
+	import IntegrationsPanel from './settings/IntegrationsPanel.svelte';
 
-	let { onclose }: { onclose: () => void } = $props();
+	let { onclose, initialTab, initialIntegration }: {
+		onclose: () => void;
+		/** Tab to open on (e.g. the widget catalog's "Set up" links). */
+		initialTab?: 'integrations';
+		initialIntegration?: string;
+	} = $props();
 
-	let activeTab = $state<'appearance' | 'layout' | 'cache' | 'admin' | 'export'>('appearance');
+	let activeTab = $state<'appearance' | 'layout' | 'integrations' | 'cache' | 'admin' | 'export'>(untrack(() => initialTab) ?? 'appearance');
 	let closing = $state(false);
 
 	let title = $state($settings.title);
@@ -331,6 +338,7 @@
 			<div class="sidebar">
 				<button class="tab" class:active={activeTab === 'appearance'} onclick={() => (activeTab = 'appearance')}>Appearance</button>
 				<button class="tab" class:active={activeTab === 'layout'} onclick={() => (activeTab = 'layout')}>Layout</button>
+				<button class="tab" class:active={activeTab === 'integrations'} onclick={() => (activeTab = 'integrations')}>Integrations</button>
 				<button class="tab" class:active={activeTab === 'cache'} onclick={() => (activeTab = 'cache')}>Cache</button>
 				{#if showAdmin}
 					<button class="tab" class:active={activeTab === 'admin'} onclick={() => (activeTab = 'admin')}>Admin</button>
@@ -338,7 +346,7 @@
 				{/if}
 			</div>
 
-			<div class="tab-content">
+			<div class="tab-content" class:flush={activeTab === 'integrations'}>
 			{#if activeTab === 'appearance'}
 				<div class="settings-section">
 					<h3>Color Theme</h3>
@@ -628,6 +636,8 @@
 						</button>
 					</div>
 				</div>
+			{:else if activeTab === 'integrations'}
+				<IntegrationsPanel initial={initialIntegration} />
 			{:else if activeTab === 'admin'}
 				<AdminPanel />
 			{:else if activeTab === 'export'}
@@ -706,7 +716,8 @@
 			</div>
 		</div>
 
-		{#if activeTab !== 'export'}
+		<!-- Export and Integrations act on their own (each connection has its Save button). -->
+		{#if activeTab !== 'export' && activeTab !== 'integrations'}
 			<div class="modal-footer">
 				<button class="btn-cancel" onclick={close}>Cancel</button>
 				<button class="btn-save" onclick={saveAll}>Save</button>
@@ -825,6 +836,11 @@
 		overflow-y: auto;
 		padding: 20px;
 		min-width: 0;
+	}
+
+	.tab-content.flush {
+		padding: 0 !important;
+		overflow: hidden;
 	}
 
 	.settings-section {

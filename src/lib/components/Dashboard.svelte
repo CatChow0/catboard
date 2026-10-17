@@ -26,7 +26,8 @@
 		dashboardSwitchBlocked,
 		switchDashboard,
 		followDashboardHash,
-		transferItems
+		transferItems,
+		settingsRequest
 	} from '$lib/stores/dashboard';
 	import { isPhone } from '$lib/stores/viewport';
 	import MobileEditBar from './MobileEditBar.svelte';
@@ -50,6 +51,15 @@
 
 	let showAddPopup = $state(false);
 	let showSettings = $state(false);
+	// Tab asked by another dialog (openSettings), e.g. the widget catalog's "Set up".
+	let settingsAt = $state<{ tab: 'integrations'; integration?: string } | null>(null);
+	$effect(() => {
+		const req = $settingsRequest;
+		if (!req) return;
+		settingsAt = req;
+		showSettings = true;
+		settingsRequest.set(null);
+	});
 	let editingService = $state<Service | null>(null);
 	let windowWidth = $state(1200);
 
@@ -1045,7 +1055,14 @@
 	<AddPopup onclose={() => (showAddPopup = false)} />
 {/if}
 {#if showSettings}
-	<SettingsModal onclose={() => (showSettings = false)} />
+	<SettingsModal
+		onclose={() => {
+			showSettings = false;
+			settingsAt = null;
+		}}
+		initialTab={settingsAt?.tab}
+		initialIntegration={settingsAt?.integration}
+	/>
 {/if}
 
 {#if editingService}

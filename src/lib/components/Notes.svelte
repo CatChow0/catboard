@@ -5,7 +5,7 @@
 	import { updateDashboardItem } from '$lib/stores/dashboard';
 	import { renderMarkdown, toggleTask } from '$lib/utils/markdown';
 	import EditButtons from './widget/EditButtons.svelte';
-	import WidgetModal from './widget/WidgetModal.svelte';
+	import WidgetEditModal from './widget/WidgetEditModal.svelte';
 
 	let { config, ondelete, itemid }: { config?: NotesConfig; colSpan?: number; rowSpan?: number; ondelete?: () => void; itemid: string } = $props();
 
@@ -57,15 +57,6 @@
 
 	// --- Title (dashboard edit mode) ---
 	let showEdit = $state(false);
-	let editTitle = $state('');
-	function openEdit() {
-		editTitle = config?.title ?? '';
-		showEdit = true;
-	}
-	async function saveTitle() {
-		showEdit = false;
-		await updateDashboardItem(itemid, { config: { ...config, content, title: editTitle.trim() || undefined } } as any);
-	}
 </script>
 
 <div class="nt-tile" class:editing>
@@ -97,17 +88,11 @@
 			<button class="nt-empty" onclick={startEdit} onpointerdown={(e) => e.stopPropagation()}>Empty note. Click to write something.</button>
 		{/if}
 	</div>
-	<EditButtons label="note" {ondelete} onedit={openEdit} />
+	<EditButtons label="note" {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}
-	<WidgetModal title="Edit Note" onclose={() => (showEdit = false)} onsave={saveTitle}>
-		<label class="field">
-			<span>Title (optional)</span>
-			<input type="text" bind:value={editTitle} placeholder="e.g. To do" />
-		</label>
-		<p class="hint">Edit the text itself with the Edit button on the note.</p>
-	</WidgetModal>
+	<WidgetEditModal type="notes" {itemid} {config} onclose={() => (showEdit = false)} />
 {/if}
 
 <style>

@@ -2,9 +2,9 @@
 	// qBittorrent: speeds (with a 60 s graph), counters and the busiest
 	// torrents. Admins can pause/resume single torrents or everything.
 	import type { QBittorrentConfig, QBittorrentData, Torrent } from '$lib/types';
-	import { currentUser, updateDashboardItem } from '$lib/stores/dashboard';
+	import { currentUser } from '$lib/stores/dashboard';
 	import EditButtons from './widget/EditButtons.svelte';
-	import WidgetModal from './widget/WidgetModal.svelte';
+	import WidgetEditModal from './widget/WidgetEditModal.svelte';
 	import StackerGraph from './stacker/StackerGraph.svelte';
 	import { bytes, bytesRate, niceMax } from './stacker/format';
 
@@ -97,19 +97,7 @@
 		downloading: 'Downloading', seeding: 'Seeding', paused: 'Paused', queued: 'Queued', checking: 'Checking', stalled: 'Stalled', error: 'Error', completed: 'Completed'
 	};
 
-	// --- Settings ---
 	let showEdit = $state(false);
-	let editFilter = $state<NonNullable<QBittorrentConfig['filter']>>('active');
-	let editLimit = $state(8);
-	function openEdit() {
-		editFilter = filter;
-		editLimit = limit;
-		showEdit = true;
-	}
-	async function saveEdit() {
-		showEdit = false;
-		await updateDashboardItem(itemid, { config: { filter: editFilter, limit: Math.min(50, Math.max(1, editLimit)) } } as any);
-	}
 </script>
 
 <div class="qb-tile">
@@ -192,26 +180,11 @@
 			{/if}
 		{/if}
 	</div>
-	<EditButtons label="qBittorrent widget" {ondelete} onedit={openEdit} />
+	<EditButtons label="qBittorrent widget" {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}
-	<WidgetModal title="Edit qBittorrent" onclose={() => (showEdit = false)} onsave={saveEdit}>
-		<label class="field">
-			<span>Show</span>
-			<select bind:value={editFilter}>
-				<option value="active">Active torrents (with traffic)</option>
-				<option value="downloading">Downloading</option>
-				<option value="seeding">Seeding</option>
-				<option value="all">All torrents (newest first)</option>
-			</select>
-		</label>
-		<label class="field">
-			<span>Number of torrents</span>
-			<input type="number" min="1" max="50" bind:value={editLimit} />
-		</label>
-		{#if !isAdmin}<p class="hint">Only admins can pause or resume torrents.</p>{/if}
-	</WidgetModal>
+	<WidgetEditModal type="qbittorrent" {itemid} {config} onclose={() => (showEdit = false)} />
 {/if}
 
 <style>
