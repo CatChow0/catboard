@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { uid } from '$lib/utils/uid';
 	import {
 		settings, layout, activeBreakpointId, saveSettings, currentUser, exportDashboard, importDashboard,
 		dashboards, activeDashboardId, fetchDashboardLayout, saveLayoutSettings, refreshActiveDashboard, getBreakpointLabel, GRID_DEFAULTS
@@ -45,7 +46,7 @@
 	};
 
 	function addBreakpoint() {
-		breakpoints = [...breakpoints, { id: crypto.randomUUID(), name: 'New Layout', minWidth: 0, columns: 4 }];
+		breakpoints = [...breakpoints, { id: uid(), name: 'New Layout', minWidth: 0, columns: 4 }];
 	}
 
 	function removeBreakpoint(index: number) {
@@ -316,7 +317,7 @@
 </script>
 
 <div class="modal-overlay" class:closing>
-	<div class="modal" class:closing>
+	<div class="modal sheet-full" class:closing>
 		<div class="modal-header">
 			<h2>Settings</h2>
 			<button class="btn-close" onclick={close} title="Close">
@@ -1563,5 +1564,107 @@
 	@keyframes slideDown {
 		from { opacity: 1; transform: translateY(0); }
 		to { opacity: 0; transform: translateY(20px); }
+	}
+
+	/* Phone: full-screen sheet, tabs in a scrolling row on top, single-column forms. */
+	@media (max-width: 640px) {
+		.modal-header {
+			padding: 12px 16px;
+		}
+
+		.modal-body {
+			flex-direction: column;
+		}
+
+		.sidebar {
+			flex-direction: row;
+			width: auto;
+			gap: 4px;
+			padding: 6px 10px;
+			border-right: none;
+			border-bottom: 1px solid var(--border);
+			overflow-x: auto;
+			overflow-y: hidden;
+			scrollbar-width: none;
+			flex-shrink: 0;
+		}
+
+		.sidebar::-webkit-scrollbar {
+			display: none;
+		}
+
+		.tab {
+			flex-shrink: 0;
+			padding: 9px 14px;
+			border-left: none;
+			border-bottom: 3px solid transparent;
+			border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+			white-space: nowrap;
+		}
+
+		.tab.active {
+			border-bottom-color: var(--accent);
+		}
+
+		.tab-content {
+			padding: 16px;
+		}
+
+		.theme-grid {
+			grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+		}
+
+		.palette-grid {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.option-cards {
+			flex-wrap: wrap;
+		}
+
+		.option-card {
+			flex: 1 1 calc(50% - 10px);
+		}
+
+		.field-row {
+			flex-wrap: wrap;
+			gap: 6px 12px;
+		}
+
+		.field-row label {
+			min-width: 0;
+			flex-basis: 100%;
+		}
+
+		.pair-dash,
+		.pair-dash select {
+			min-width: 0;
+			width: 100%;
+		}
+
+		.bp-tabs {
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+
+		.pair-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.breakpoint-row {
+			flex-wrap: wrap;
+		}
+
+		.breakpoint-row .field-row {
+			flex: 1 1 40%;
+		}
+
+		.modal-footer {
+			padding: 12px 16px;
+		}
+
+		.modal-footer button {
+			flex: 1;
+		}
 	}
 </style>

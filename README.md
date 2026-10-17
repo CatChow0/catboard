@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-2.10.1-blue)
+![Version](https://img.shields.io/badge/version-2.11.0-blue)
 
 ## Features
 
@@ -32,6 +32,8 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
 - **Theme system** -- Built-in presets (Dark, Light, Nord, Dracula, Solarized, Catppuccin, Gruvbox, One Dark, Tokyo Night, and TMOG in cyan/green/amber with a self-hosted Michroma display font), custom palettes, style presets (default, sharp, pill), animation options
 - **Cross-platform** -- Works on Linux and Windows; disk paths and temperature sensors adapt to the host OS
+- **Mobile UI** -- On phones (≤ 640px wide) a compact top bar with a scrolling strip of navbar widgets, a menu sheet, full-screen settings and add dialogs, bottom sheets for menus and details, and touch editing (hold a tile to move it)
+- **Android app** -- Signed APK on GitHub Releases (installable and auto-updated with Obtainium) that connects to your CatBoard server
 
 ## Quick Start
 
@@ -74,6 +76,7 @@ The server listens on port 3000 by default (configurable via the `PORT` environm
 | `PORT` | `3000` | Server port |
 | `CONFIG_DIR` | `./config` | Directory for JSON config files |
 | `SESSION_SECRET` | Random (per boot) | Secret for session tokens. **Set this in production** to keep sessions across restarts |
+| `COOKIE_SECURE` | Auto | `true`/`false` forces the `Secure` flag on the session cookie. By default it is set only for HTTPS requests (direct or `X-Forwarded-Proto: https`), so login also works over plain HTTP on the LAN |
 
 ### Config Files
 
@@ -206,6 +209,60 @@ Backup and restore your dashboard:
 - **Escape** -- Clear selection in edit mode, close modals
 - **Shift/Ctrl+Click** -- Multi-select items for batch dragging
 - **← / →** -- Previous / next dashboard (outside edit mode and text fields)
+
+### On a phone
+
+Screens up to 640px wide get a phone layout, in the browser and in the Android app:
+
+- **Top bar:** the dashboard title and its squares (tap to switch, or swipe the dashboard sideways), 🔍 when the navbar has a search widget, and ☰ for Edit, Settings and Logout.
+- **Widget strip:** the other navbar widgets of the active layout, in a row you scroll sideways. Their order and width follow the navbar columns; in edit mode, tap a widget to move it (◀ ▶), resize it (− +), edit or remove it.
+- **Edit mode:** a bottom bar holds the layout picker, **Add** and **Done**. Pages still scroll. **Hold a tile** until it lifts, then drag it; hold and release without moving to open its menu (copy / move to another dashboard, delete). The edit, delete and resize controls are always visible.
+- Dialogs open as bottom sheets; Settings and Add use the full screen with their tabs on top. On Android, the Back button closes the open sheet or dialog first.
+
+## Android App
+
+CatBoard has a lightweight Android client (Android 7.0+). It is a native WebView shell around your own CatBoard server, so every dashboard feature works as in the browser.
+
+### Install with Obtainium
+
+1. Install [Obtainium](https://github.com/ImranR98/Obtainium).
+2. **Add App** → source URL `https://github.com/CatChow0/catboard` → **Add**.
+3. Install the APK. Obtainium checks GitHub Releases for new versions.
+
+You can also download `catboard-v<version>.apk` from the [Releases](https://github.com/CatChow0/catboard/releases) page and install it manually.
+
+### First launch
+
+Enter your server address, e.g. `http://192.168.1.10:3000` or `https://dash.example.com`, then log in as usual. The app checks that the address answers like CatBoard before saving it. To switch servers later, long-press the app icon → **Change server**, or use the button shown when the server can't be reached.
+
+- Plain HTTP works on your local network. Use HTTPS (reverse proxy) when the server is reachable from the internet.
+- Servers with a private certificate authority work once its CA certificate is installed on the phone (Settings → Security → Install certificate). Self-signed certificates that are not installed are rejected.
+- Links to other services open in your browser. Config export asks where to save the file; icon upload and config import use the system file picker.
+
+### Building the APK (maintainers)
+
+**Prerequisites:** JDK 17+ and the Android SDK (install [Android Studio](https://developer.android.com/studio), or the command-line tools with `platforms;android-35` and `build-tools;35.0.0`). Set `ANDROID_HOME`, or create `android/local.properties` with `sdk.dir=C\:\Users\<you>\AppData\Local\Android\Sdk`.
+
+The APK version always follows `package.json` (`versionCode = major*10000 + minor*100 + patch`).
+
+**One-time signing setup.** Every release must be signed with the same key, or installed apps can't update.
+
+1. Create the keystore **outside the repo** and back it up somewhere safe. If you lose it, users have to uninstall and reinstall:
+   ```powershell
+   & "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -keystore C:\keys\catboard-release.jks -alias catboard -keyalg RSA -keysize 4096 -validity 10000
+   ```
+2. Copy `android/keystore.properties.example` to `android/keystore.properties` (gitignored) and fill in the path and passwords.
+
+**Release:**
+
+```powershell
+./scripts/build-android.ps1          # builds + verifies dist/android/catboard-v<version>.apk
+git tag v2.11.0; git push origin v2.11.0
+```
+
+Then on GitHub: **Releases → Draft a new release**, pick the tag, attach the APK and publish. With the [gh CLI](https://cli.github.com) installed, `./scripts/build-android.ps1 -Publish` creates the release for you.
+
+For CI (for example Jenkins), set `CATBOARD_KEYSTORE_PATH`, `CATBOARD_KEYSTORE_PASSWORD`, `CATBOARD_KEY_ALIAS` and `CATBOARD_KEY_PASSWORD` instead of using `keystore.properties`, and run the same script. For a quick unsigned debug build: `cd android; ./gradlew assembleDebug`.
 
 ## Tech Stack
 

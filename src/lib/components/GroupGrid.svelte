@@ -260,7 +260,8 @@
 	}
 
 	.child-wrapper.editing {
-		touch-action: none;
+		/* Pages still scroll; a touch drag starts after a hold (Dashboard HOLD_MS). */
+		touch-action: pan-y;
 		cursor: grab;
 	}
 
@@ -311,6 +312,7 @@
 		z-index: 10;
 		opacity: 0;
 		transition: opacity var(--transition);
+		touch-action: none;
 	}
 
 	.child-wrapper:hover .resize-handle {

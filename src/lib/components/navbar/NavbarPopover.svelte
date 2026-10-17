@@ -1,8 +1,10 @@
 <script lang="ts">
 	// Details popover anchored under a navbar widget. Fixed-positioned so the
 	// navbar grid never clips it; closes on outside click or Escape and follows the
-	// anchor when the page scrolls or resizes.
+	// anchor when the page scrolls or resizes. On phones it opens as a bottom sheet.
 	import type { Snippet } from 'svelte';
+	import { isPhone } from '$lib/stores/viewport';
+	import BottomSheet from '../BottomSheet.svelte';
 
 	let { anchor, onclose, label, width = 300, children }: {
 		anchor: HTMLElement;
@@ -25,6 +27,7 @@
 	}
 
 	$effect(() => {
+		if ($isPhone) return;
 		place();
 		popover?.focus();
 
@@ -63,16 +66,24 @@
 	});
 </script>
 
-<div
-	bind:this={popover}
-	class="navbar-popover"
-	role="dialog"
-	aria-label={label}
-	tabindex="-1"
-	style="left: {pos.left}px; top: {pos.top}px; width: {Math.min(width, 9999)}px; max-height: {pos.maxHeight}px;"
->
-	{@render children()}
-</div>
+{#if $isPhone}
+	<BottomSheet {label} {onclose}>
+		<div class="navbar-popover-sheet">
+			{@render children()}
+		</div>
+	</BottomSheet>
+{:else}
+	<div
+		bind:this={popover}
+		class="navbar-popover"
+		role="dialog"
+		aria-label={label}
+		tabindex="-1"
+		style="left: {pos.left}px; top: {pos.top}px; width: {Math.min(width, 9999)}px; max-height: {pos.maxHeight}px;"
+	>
+		{@render children()}
+	</div>
+{/if}
 
 <style>
 	.navbar-popover {
@@ -86,6 +97,11 @@
 		box-shadow: var(--shadow);
 		outline: none;
 		animation: pop-in 0.12s ease-out;
+		text-align: left;
+		white-space: normal;
+	}
+
+	.navbar-popover-sheet {
 		text-align: left;
 		white-space: normal;
 	}

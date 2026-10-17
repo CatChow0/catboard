@@ -13,3 +13,14 @@ CLAUDE.md
 
 # Browser network captures (contain session cookies and API keys)
 *.har
+
+# Android client
+android/.gradle/
+android/.idea/
+android/.kotlin/
+android/**/build/
+android/local.properties
+android/keystore.properties
+*.jks
+*.keystore
+dist/

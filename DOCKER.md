@@ -130,6 +130,7 @@ volumes:
 | `SESSION_SECRET` | **Yes** | Random (per boot) | Secret for session tokens. Must be set to keep sessions across container restarts |
 | `CONFIG_DIR` | No | `/app/config` | Path to config directory inside the container |
 | `PORT` | No | `3000` | Server port inside the container |
+| `COOKIE_SECURE` | No | Auto | `true`/`false` forces the session cookie `Secure` flag. Auto: set only on HTTPS requests (direct or `X-Forwarded-Proto: https` from your proxy), so plain-HTTP LAN access (browser or Android app) can log in |
 
 ### Volumes
 

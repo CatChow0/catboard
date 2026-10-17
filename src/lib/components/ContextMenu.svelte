@@ -14,7 +14,11 @@
 	// Right-click menu with nested submenus. Opens at (x, y), stays inside the
 	// window (submenus flip to the left when needed), closes on an outside click,
 	// Escape, scroll or resize. Keyboard: ↑ ↓ move, → / Enter open a submenu,
-	// ← goes back, Enter picks.
+	// ← goes back, Enter picks. On phones it is a bottom sheet where submenus
+	// replace the list (with a back row) instead of opening beside it.
+	import { isPhone } from '$lib/stores/viewport';
+	import BottomSheet from './BottomSheet.svelte';
+
 	let { x, y, title = '', items, onclose }: { x: number; y: number; title?: string; items: MenuItem[]; onclose: () => void } = $props();
 
 	/** Index whose submenu is open, per level. */
@@ -87,6 +91,8 @@
 	}
 
 	$effect(() => {
+		// The phone sheet closes itself (backdrop, Escape, swipe down) and must survive scrolling.
+		if ($isPhone) return;
 		const close = () => onclose();
 		const outside = (e: PointerEvent) => {
 			if (!(e.target as HTMLElement).closest?.('.cm-root')) onclose();
@@ -102,6 +108,15 @@
 			window.removeEventListener('scroll', close, true);
 		};
 	});
+
+	// --- Phone: drill-down ---
+	const sheetLevel = $derived(expanded.length);
+	const sheetList = $derived(listAt(sheetLevel));
+	const sheetParent = $derived(sheetLevel > 0 ? listAt(sheetLevel - 1)[expanded[sheetLevel - 1]] : null);
+
+	function sheetBack() {
+		expanded = expanded.slice(0, -1);
+	}
 </script>
 
 {#snippet panel(list: MenuItem[], level: number)}
@@ -134,9 +149,36 @@
 	</div>
 {/snippet}
 
-<div class="cm-root" oncontextmenu={(e) => e.preventDefault()} role="presentation">
-	{@render panel(items, 0)}
-</div>
+{#if $isPhone}
+	<BottomSheet label={title || 'Menu'} title={sheetParent ? sheetParent.label : title} {onclose}>
+		<div class="cm-sheet" role="menu">
+			{#if sheetLevel > 0}
+				<button type="button" class="cm-sheet-item back" onclick={sheetBack}>
+					<span class="cm-arrow" aria-hidden="true">‹</span>
+					<span class="cm-label">Back</span>
+				</button>
+			{/if}
+			{#each sheetList as item, i (i)}
+				<button
+					type="button"
+					role="menuitem"
+					class="cm-sheet-item"
+					class:danger={item.danger}
+					disabled={item.disabled}
+					onclick={() => activate(sheetLevel, i)}
+				>
+					<span class="cm-label">{item.label}</span>
+					{#if item.hint}<span class="cm-hint">{item.hint}</span>{/if}
+					{#if item.children}<span class="cm-arrow" aria-hidden="true">›</span>{/if}
+				</button>
+			{/each}
+		</div>
+	</BottomSheet>
+{:else}
+	<div class="cm-root" oncontextmenu={(e) => e.preventDefault()} role="presentation">
+		{@render panel(items, 0)}
+	</div>
+{/if}
 
 <style>
 	.cm-root {
@@ -224,6 +266,50 @@
 	.cm-arrow {
 		font-size: 0.95rem;
 		color: var(--text-muted);
+	}
+
+	.cm-sheet {
+		display: flex;
+		flex-direction: column;
+		padding: 0 8px;
+	}
+
+	.cm-sheet-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		min-height: 52px;
+		padding: 0 12px;
+		border-radius: var(--radius-sm);
+		font-size: 1rem;
+		text-align: left;
+		color: var(--text-primary);
+		background: none;
+	}
+
+	.cm-sheet-item:active:not(:disabled) {
+		background: var(--bg-card-hover);
+	}
+
+	.cm-sheet-item.danger {
+		color: var(--danger);
+	}
+
+	.cm-sheet-item.back {
+		color: var(--accent);
+		font-weight: 600;
+	}
+
+	.cm-sheet-item .cm-hint {
+		font-size: 0.8rem;
+	}
+
+	.cm-sheet-item .cm-arrow {
+		font-size: 1.3rem;
+	}
+
+	.cm-sheet-item:disabled {
+		opacity: 0.45;
 	}
 
 	@keyframes cm-in {

@@ -28,6 +28,8 @@
 		followDashboardHash,
 		transferItems
 	} from '$lib/stores/dashboard';
+	import { isPhone } from '$lib/stores/viewport';
+	import MobileEditBar from './MobileEditBar.svelte';
 	import ContextMenu, { type MenuItem } from './ContextMenu.svelte';
 	import { matchingItemIds } from '$lib/utils/search';
 	import SettingsModal from './SettingsModal.svelte';
@@ -104,6 +106,7 @@
 	type Container = string | null;
 
 	const THRESHOLD = 5; // px of movement before a press becomes a drag
+	const HOLD_MS = 300; // touch: hold this long before a tile lifts (moving earlier scrolls)
 	const LEAVE_MARGIN = 24; // px a tile must travel outside its group to leave it
 	const EDGE = 60; // px from the window edge where auto-scroll starts
 
@@ -115,7 +118,16 @@
 		ids: string[];
 		source: Container;
 		el: HTMLElement;
+		/** Element pressed (the context menu opens for it on a touch hold-and-release). */
+		target: HTMLElement;
+		touch: boolean;
+		/** Touch presses arm after HOLD_MS; mouse presses are armed at once. */
+		armed: boolean;
+		timer: ReturnType<typeof setTimeout> | undefined;
 	} | null = null;
+
+	/** Tile lifted by a touch hold, drawn raised until it is dragged or released. */
+	let liftedId = $state<string | null>(null);
 
 	let drag = $state<{
 		ids: string[];
@@ -246,7 +258,41 @@
 	function beginPointer(e: PointerEvent, item: DashboardItemType, source: Container) {
 		const selection = source === null ? selectedItemIds : (selectedChildIds.get(source) ?? new Set<string>());
 		const ids = selection.has(item.id) && selection.size > 1 ? [item.id, ...[...selection].filter((id) => id !== item.id)] : [item.id];
-		pending = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, anchor: item, ids, source, el: e.currentTarget as HTMLElement };
+		const touch = e.pointerType === 'touch';
+		clearPending();
+		pending = {
+			pointerId: e.pointerId,
+			x: e.clientX,
+			y: e.clientY,
+			anchor: item,
+			ids,
+			source,
+			el: e.currentTarget as HTMLElement,
+			target: e.target as HTMLElement,
+			touch,
+			armed: !touch,
+			timer: undefined
+		};
+		if (touch) pending.timer = setTimeout(armPending, HOLD_MS);
+	}
+
+	/** Touch hold reached: the tile lifts; moving now drags it, releasing opens its menu. */
+	function armPending() {
+		if (!pending) return;
+		pending.armed = true;
+		liftedId = pending.anchor.id;
+		navigator.vibrate?.(12);
+	}
+
+	function clearPending() {
+		if (pending) clearTimeout(pending.timer);
+		pending = null;
+		liftedId = null;
+	}
+
+	/** While a tile is lifted or dragged by touch, the page must not scroll. */
+	function blockTouchScroll(e: TouchEvent) {
+		if ((pending?.armed && pending.touch) || drag || resize) e.preventDefault();
 	}
 
 	function handlePointerDownOnItem(e: PointerEvent, item: DashboardItemType) {
@@ -313,7 +359,7 @@
 
 	function startDrag() {
 		const pd = pending!;
-		pending = null;
+		clearPending();
 		const list = containerItems(pd.source);
 		const origin = new Map<string, Rect>();
 		let hasGroup = false;
@@ -605,7 +651,10 @@
 	function handlePointerMove(e: PointerEvent) {
 		lastPointer = { x: e.clientX, y: e.clientY };
 		if (pending) {
-			if (e.pointerId === pending.pointerId && Math.hypot(e.clientX - pending.x, e.clientY - pending.y) > THRESHOLD) startDrag();
+			if (e.pointerId !== pending.pointerId || Math.hypot(e.clientX - pending.x, e.clientY - pending.y) <= THRESHOLD) return;
+			// A finger that moves before the hold completes is scrolling or swiping, not dragging.
+			if (pending.armed) startDrag();
+			else clearPending();
 			return;
 		}
 		if (drag) updateDrag();
@@ -613,13 +662,17 @@
 	}
 
 	function handlePointerUp() {
-		if (pending) pending = null;
-		else if (drag) finishDrag();
+		if (pending) {
+			const pd = pending;
+			clearPending();
+			// Touch hold released without moving: the tile's menu.
+			if (pd.touch && pd.armed) openMenuAt(pd.target, pd.x, pd.y);
+		} else if (drag) finishDrag();
 		else if (resize) finishResize();
 	}
 
 	function cancelAll() {
-		pending = null;
+		clearPending();
 		if (drag) endDrag();
 		if (resize) {
 			resize = null;
@@ -696,7 +749,6 @@
 	// --- Edit-mode context menu: copy / move to a dashboard x breakpoint, delete ---
 
 	let menu = $state<{ x: number; y: number; ids: string[] } | null>(null);
-	let longPress: ReturnType<typeof setTimeout> | undefined;
 
 	/** Ids of every selected tile (root and inside groups). */
 	function selectedIds(): string[] {
@@ -727,22 +779,6 @@
 		if (!$isEditing || drag || resize) return;
 		if ((e.target as HTMLElement).closest('input, textarea, select, .modal-overlay, .edit-modal')) return;
 		if (openMenuAt(e.target as HTMLElement, e.clientX, e.clientY)) e.preventDefault();
-	}
-
-	function handleLongPressStart(e: PointerEvent) {
-		if (e.pointerType !== 'touch' || !$isEditing) return;
-		const target = e.target as HTMLElement;
-		const { clientX, clientY } = e;
-		clearTimeout(longPress);
-		longPress = setTimeout(() => {
-			if (drag || resize) return;
-			pending = null;
-			openMenuAt(target, clientX, clientY);
-		}, 550);
-	}
-
-	function cancelLongPress() {
-		clearTimeout(longPress);
 	}
 
 	async function runTransfer(ids: string[], to: string, toBp: string, copy: boolean) {
@@ -863,12 +899,15 @@
 		window.addEventListener('resize', onResize);
 		// Back / forward or an edited #name in the address bar.
 		window.addEventListener('hashchange', followDashboardHash);
+		// Non-passive so a lifted tile can stop the page from scrolling.
+		window.addEventListener('touchmove', blockTouchScroll, { passive: false });
 		return () => {
 			window.removeEventListener('resize', onResize);
 			window.removeEventListener('hashchange', followDashboardHash);
 			cancelAnimationFrame(scrollRaf);
 			clearTimeout(toastTimer);
-			clearTimeout(longPress);
+			clearPending();
+			window.removeEventListener('touchmove', blockTouchScroll);
 		};
 	});
 
@@ -893,6 +932,7 @@
 	class:edit-mode={$isEditing}
 	class:dragging={!!drag}
 	class:resizing={!!resize}
+	class:phone-editing={$isPhone && $isEditing}
 >
 	<Navbar onadd={() => (showAddPopup = true)} onsettings={() => (showSettings = true)} onlogout={handleLogout} />
 
@@ -907,9 +947,7 @@
 						bind:this={gridEl}
 						class="dashboard-grid"
 						style="grid-template-columns: repeat({columns}, 1fr); grid-auto-rows: {cellSize}px; gap: {gap}px;"
-						onpointerdown={(e) => { handleGridPointerDown(e); handleLongPressStart(e); }}
-						onpointerup={cancelLongPress}
-						onpointercancel={cancelLongPress}
+						onpointerdown={handleGridPointerDown}
 						oncontextmenu={handleContextMenu}
 					>
 						{#each items as item (item.id)}
@@ -922,6 +960,7 @@
 								class:dragging={isDragged(item.id, null)}
 								class:drag-source={drag?.source === item.id}
 								class:selected={selectedItemIds.has(item.id) && !drag}
+								class:lifted={liftedId === item.id}
 								class:drop-target={drag?.target === item.id && drag?.source !== item.id}
 								class:drop-refused={drag?.target === item.id && drag?.source !== item.id && !drag?.preview && !drag?.collapsedTarget}
 								class:dimmed={query && !matchingIds.has(item.id)}
@@ -998,6 +1037,10 @@
 	</main>
 </div>
 
+{#if $isPhone && $isEditing}
+	<MobileEditBar onadd={() => (showAddPopup = true)} />
+{/if}
+
 {#if showAddPopup}
 	<AddPopup onclose={() => (showAddPopup = false)} />
 {/if}
@@ -1018,6 +1061,11 @@
 		min-height: 100vh;
 	}
 
+	/* Room for the bottom edit bar. */
+	.dashboard-wrapper.phone-editing {
+		padding-bottom: calc(72px + env(safe-area-inset-bottom));
+	}
+
 	.dashboard-wrapper.dragging,
 	.dashboard-wrapper.resizing {
 		user-select: none;
@@ -1030,6 +1078,8 @@
 
 	.dashboard-grid-wrapper {
 		padding: 16px;
+		padding-left: max(16px, env(safe-area-inset-left));
+		padding-right: max(16px, env(safe-area-inset-right));
 	}
 
 	/* Horizontal swipes are ours (dashboard switch); vertical ones scroll the page. */
@@ -1087,8 +1137,17 @@
 		outline: 1px dashed var(--border-light);
 		outline-offset: -1px;
 		border-radius: var(--radius);
-		/* Edit mode only: let pointer events drive the drag instead of page panning. */
-		touch-action: none;
+		/* Vertical swipes still scroll the page in edit mode; a touch drag starts
+		   after a hold (see HOLD_MS), which then blocks scrolling itself. */
+		touch-action: pan-y;
+	}
+
+	/* Touch hold reached: the tile lifts to show it can be dragged. */
+	.item-wrapper.lifted {
+		z-index: 20;
+		transform: scale(1.03);
+		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+		transition: transform 0.12s ease, box-shadow 0.12s ease;
 	}
 
 	.item-wrapper.editing:active {
@@ -1167,6 +1226,22 @@
 		z-index: 10;
 		opacity: 0;
 		transition: opacity var(--transition);
+		touch-action: none;
+	}
+
+	/* No hover on touch screens (or phones): a bigger handle that is always shown. */
+	@media (pointer: coarse), (max-width: 640px) {
+		.resize-handle {
+			width: 30px;
+			height: 30px;
+			opacity: 1;
+		}
+
+		.resize-handle::after {
+			width: 12px;
+			height: 12px;
+			border-width: 3px;
+		}
 	}
 
 	.item-wrapper:hover .resize-handle {
@@ -1253,4 +1328,14 @@
 		color: var(--text-muted);
 	}
 
+	@media (max-width: 640px) {
+		.dashboard-grid-wrapper {
+			padding: 8px max(10px, env(safe-area-inset-right)) 16px max(10px, env(safe-area-inset-left));
+		}
+	}
+
+	/* The toast sits above the bottom edit bar. */
+	.dashboard-wrapper.phone-editing .dash-toast {
+		bottom: calc(84px + env(safe-area-inset-bottom));
+	}
 </style>

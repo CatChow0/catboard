@@ -97,19 +97,27 @@ export async function destroySession(sessionId: string): Promise<void> {
 	await saveSessions();
 }
 
-function getSecureFlag(): string {
-	return process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
+/**
+ * Whether the session cookie should carry the `Secure` flag.
+ * `COOKIE_SECURE=true|false` forces it. Otherwise it follows `X-Forwarded-Proto` from a
+ * TLS-terminating reverse proxy, so plain-HTTP LAN access (browsers, Android app) keeps a
+ * session. adapter-node reports `url.protocol` as https unless `ORIGIN`/`PROTOCOL_HEADER`
+ * is configured, so the URL scheme is only trusted when one of those is set.
+ */
+export function isSecureRequest(url: URL, headers: Headers): boolean {
+	const forced = process.env.COOKIE_SECURE?.toLowerCase();
+	if (forced === 'true') return true;
+	if (forced === 'false') return false;
+	const proto = headers.get('x-forwarded-proto')?.split(',')[0].trim().toLowerCase();
+	if (proto) return proto === 'https';
+	if (process.env.ORIGIN || process.env.PROTOCOL_HEADER) return url.protocol === 'https:';
+	return false;
 }
 
-export function getSessionCookieHeader(sessionId: string): string {
-	return `sid=${sessionId}; Path=/; HttpOnly; ${getSecureFlag()}SameSite=Strict; Max-Age=${SESSION_MAX_AGE}`;
+export function getSessionCookieHeader(sessionId: string, secure: boolean): string {
+	return `sid=${sessionId}; Path=/; HttpOnly; ${secure ? 'Secure; ' : ''}SameSite=Strict; Max-Age=${SESSION_MAX_AGE}`;
 }
 
-export function getDeleteCookieHeader(): string {
-	return `sid=; Path=/; HttpOnly; ${getSecureFlag()}SameSite=Strict; Max-Age=0`;
-}
-
-// Backward compat: unused but exported
-export function getCookieOptions(): string {
-	return `sid=; Path=/; HttpOnly; ${getSecureFlag()}SameSite=Strict; Max-Age=${SESSION_MAX_AGE}`;
+export function getDeleteCookieHeader(secure: boolean): string {
+	return `sid=; Path=/; HttpOnly; ${secure ? 'Secure; ' : ''}SameSite=Strict; Max-Age=0`;
 }

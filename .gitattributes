@@ -1,0 +1,4 @@
+# Gradle wrapper scripts must keep their native line endings (gradlew runs on Linux CI).
+android/gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary

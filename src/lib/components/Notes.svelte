@@ -170,6 +170,14 @@
 		opacity: 1;
 	}
 
+	/* No hover on touch screens (or phones): the button is always shown, with a finger-sized target. */
+	@media (hover: none), (max-width: 640px) {
+		.nt-btn {
+			opacity: 1;
+			padding: 6px 12px;
+		}
+	}
+
 	.nt-btn.primary {
 		background: var(--accent);
 		border-color: var(--accent);

@@ -541,3 +541,130 @@ input, select, textarea {
 	from { opacity: 0; transform: translateY(20px); }
 	to { opacity: 1; transform: translateY(0); }
 }
+@keyframes sheetUp {
+	from { transform: translateY(100%); }
+	to { transform: translateY(0); }
+}
+
+@keyframes sheetDown {
+	from { transform: translateY(0); }
+	to { transform: translateY(100%); }
+}
+
+/* === Touch === */
+
+/* No hover on touch screens: controls revealed on hover elsewhere are shown by the
+   components themselves under (hover: none); this only removes hover lifts that
+   would otherwise stick after a tap. */
+@media (hover: none) {
+	[data-animations] .tile:hover {
+		transform: none !important;
+	}
+}
+
+/* Phones and other touch screens. Phone width is included because some devices
+   (and emulators) report a fine, hover-capable pointer. */
+@media (hover: none), (max-width: 640px) {
+	/* Tile, group and widget edit/delete buttons are revealed on hover by each
+	   component; on touch screens they are always shown, and larger. */
+	.edit-mode .item-wrapper .btn-edit,
+	.edit-mode .item-wrapper .btn-delete {
+		opacity: 1 !important;
+		width: 28px !important;
+		height: 28px !important;
+	}
+
+	/* Inside the tile corners: the dashboard page clips anything past its sides. */
+	.edit-mode .item-wrapper .btn-delete {
+		top: 4px !important;
+		left: 4px !important;
+	}
+
+	.edit-mode .item-wrapper .btn-edit {
+		bottom: 4px !important;
+		left: 4px !important;
+	}
+
+	/* Resize handles of tiles inside groups. */
+	.edit-mode .child-wrapper .resize-handle {
+		opacity: 1 !important;
+		width: 26px !important;
+		height: 26px !important;
+	}
+}
+
+/* === Phone layout (keep in sync with PHONE_MAX_WIDTH in stores/viewport.ts) === */
+
+@media (max-width: 640px) {
+	/* Every dialog becomes a bottom sheet: full width, scrolls inside, clears the
+	   home indicator. Component styles are scoped, hence !important on geometry. */
+	.modal-overlay,
+	.popup-overlay {
+		align-items: flex-end !important;
+		justify-content: stretch !important;
+		padding: 0 !important;
+	}
+
+	.modal-overlay > .modal,
+	.popup-overlay > .popup,
+	.edit-modal {
+		position: relative;
+		width: 100% !important;
+		max-width: 100% !important;
+		min-width: 0 !important;
+		height: auto !important;
+		min-height: 0 !important;
+		max-height: calc(100vh - 24px) !important;
+		max-height: calc(100dvh - 24px) !important;
+		margin: 0 !important;
+		border-radius: 16px 16px 0 0 !important;
+		border-left: none !important;
+		border-right: none !important;
+		border-bottom: none !important;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+		animation: sheetUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+	}
+
+	.modal-overlay > .modal.closing,
+	.popup-overlay > .popup.closing,
+	.closing > .modal,
+	.closing > .popup,
+	.edit-modal.closing {
+		animation: sheetDown 0.18s ease forwards !important;
+	}
+
+	[data-animations='none'] .modal-overlay > .modal,
+	[data-animations='none'] .popup-overlay > .popup,
+	[data-animations='none'] .edit-modal {
+		animation: none !important;
+	}
+
+	/* Widget/group settings panels are positioned in their tile: pin them to the screen. */
+	.edit-modal {
+		position: fixed !important;
+		left: 0 !important;
+		right: 0 !important;
+		bottom: 0 !important;
+		top: auto !important;
+		transform: none !important;
+		z-index: 1001 !important;
+	}
+
+	/* Tabbed dialogs (Settings, Add) take the whole screen. */
+	.modal-overlay > .modal.sheet-full,
+	.popup-overlay > .popup.sheet-full {
+		height: 100vh !important;
+		height: 100dvh !important;
+		max-height: 100vh !important;
+		max-height: 100dvh !important;
+		border-radius: 0 !important;
+		border-top: none !important;
+		padding-top: env(safe-area-inset-top) !important;
+		padding-bottom: env(safe-area-inset-bottom) !important;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+}

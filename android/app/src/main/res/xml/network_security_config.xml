@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Self-hosted dashboards are often reached over plain HTTP on the LAN. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <!-- User-installed CAs, for homelab setups with a private certificate authority -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

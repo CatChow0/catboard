@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { uid } from '$lib/utils/uid';
 	import type { Service } from '$lib/stores/dashboard';
 	import type { StackerServer, StackerSections, WeatherLocation, ElegooPrinter, SpoolmanConfig } from '$lib/types';
 	import LocationSearch from './LocationSearch.svelte';
@@ -318,7 +319,7 @@
 	}
 
 	function addDockerEnvironment() {
-		dockerEnvironments = [...dockerEnvironments, { id: crypto.randomUUID(), name: '', url: '' }];
+		dockerEnvironments = [...dockerEnvironments, { id: uid(), name: '', url: '' }];
 	}
 
 	function removeDockerEnvironment(id: string) {
@@ -401,7 +402,7 @@
 	}
 
 	function addStackerServer() {
-		stackerServers = [...stackerServers, { id: crypto.randomUUID(), name: '', url: '' }];
+		stackerServers = [...stackerServers, { id: uid(), name: '', url: '' }];
 	}
 
 	function removeStackerServer(id: string) {
@@ -459,7 +460,7 @@
 	}
 
 	function addElegooPrinter() {
-		elegooPrinters = [...elegooPrinters, { id: crypto.randomUUID(), name: '', host: '' }];
+		elegooPrinters = [...elegooPrinters, { id: uid(), name: '', host: '' }];
 	}
 
 	function removeElegooPrinter(id: string) {
@@ -589,7 +590,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 <div class="popup-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
-	<div class="popup" onclick={(e) => e.stopPropagation()}>
+	<div class="popup sheet-full" onclick={(e) => e.stopPropagation()}>
 		<div class="popup-header">
 			<h2>Add to Dashboard</h2>
 			<button class="btn-close" onclick={close}>
@@ -2553,5 +2554,77 @@
 	@keyframes slideDown {
 		from { opacity: 1; transform: translateY(0); }
 		to { opacity: 0; transform: translateY(20px); }
+	}
+
+	/* Phone: full-screen sheet, tabs in a scrolling row on top, two-column cards. */
+	@media (max-width: 640px) {
+		.popup-header {
+			padding: 12px 16px;
+		}
+
+		.modal-body {
+			flex-direction: column;
+		}
+
+		.sidebar {
+			flex-direction: row;
+			width: auto;
+			gap: 4px;
+			padding: 6px 10px;
+			border-right: none;
+			border-bottom: 1px solid var(--border);
+			overflow-x: auto;
+			overflow-y: hidden;
+			scrollbar-width: none;
+			flex-shrink: 0;
+		}
+
+		.sidebar::-webkit-scrollbar {
+			display: none;
+		}
+
+		.tab {
+			flex-shrink: 0;
+			padding: 9px 14px;
+			border-left: none;
+			border-bottom: 3px solid transparent;
+			border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+			white-space: nowrap;
+		}
+
+		.tab.active {
+			border-bottom-color: var(--accent);
+		}
+
+		.tab-content {
+			padding: 14px;
+		}
+
+		.sub-tabs {
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+
+		.sub-tab {
+			flex-shrink: 0;
+			white-space: nowrap;
+		}
+
+		.grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+		}
+
+		.size-row {
+			flex-wrap: wrap;
+		}
+
+		.size-row .field {
+			flex: 1 1 calc(50% - 12px);
+		}
+
+		.form-actions button {
+			flex: 1;
+		}
 	}
 </style>

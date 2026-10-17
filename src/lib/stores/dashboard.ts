@@ -1,4 +1,5 @@
 import { writable, get, derived } from 'svelte/store';
+import { uid } from '$lib/utils/uid';
 import { findNextAvailablePosition, hasCollision } from '$lib/utils/grid';
 import { initIconCache } from './icons';
 import type {
@@ -99,6 +100,13 @@ export const currentUser = writable<{ username: string; role: string } | null>(n
 export const activeBreakpointId = writable<string>('desktop');
 export const manualBreakpointId = writable<string | null>(null);
 export const searchQuery = writable<string>('');
+
+/** Enter / leave edit mode. Entering pins the breakpoint being edited so resizing the window doesn't switch layouts mid-edit. */
+export function toggleEditMode() {
+	if (!get(isEditing)) manualBreakpointId.set(get(activeBreakpointId));
+	else manualBreakpointId.set(null);
+	isEditing.update((v) => !v);
+}
 
 // --- Helpers ---
 
@@ -490,7 +498,7 @@ export async function addServiceToDashboard(serviceId: string, maxCols: number) 
 	const activeItems = newLayout.layouts[activeId].items;
 	const pos = findNextAvailablePosition(activeItems, 1, 1, maxCols);
 	const item: ServiceItem = {
-		id: crypto.randomUUID(),
+		id: uid(),
 		type: 'service',
 		serviceId,
 		col: pos.col,
@@ -512,31 +520,31 @@ export async function addWidgetToDashboard(type: 'group-collapsible' | 'group-st
 	const activeItems = newLayout.layouts[activeId].items;
 	const pos = findNextAvailablePosition(activeItems, colSpan, rowSpan, maxCols);
 	const item: DashboardItem = type === 'group-collapsible'
-		? { id: crypto.randomUUID(), type: 'group-collapsible' as const, title, col: pos.col, row: pos.row, colSpan, rowSpan, children: [] as DashboardItem[] }
+		? { id: uid(), type: 'group-collapsible' as const, title, col: pos.col, row: pos.row, colSpan, rowSpan, children: [] as DashboardItem[] }
 		: type === 'group-standard'
-			? { id: crypto.randomUUID(), type: 'group-standard' as const, title, col: pos.col, row: pos.row, colSpan, rowSpan, children: [] as DashboardItem[], config: config as StandardGroupItem['config'] }
+			? { id: uid(), type: 'group-standard' as const, title, col: pos.col, row: pos.row, colSpan, rowSpan, children: [] as DashboardItem[], config: config as StandardGroupItem['config'] }
 			: type === 'calendar'
-			? { id: crypto.randomUUID(), type: 'calendar' as const, col: pos.col, row: pos.row, colSpan, rowSpan }
+			? { id: uid(), type: 'calendar' as const, col: pos.col, row: pos.row, colSpan, rowSpan }
 			: type === 'clock'
-			? { id: crypto.randomUUID(), type: 'clock' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ClockConfig }
+			? { id: uid(), type: 'clock' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ClockConfig }
 			: type === 'uptime-kuma-status-page'
-				? { id: crypto.randomUUID(), type: 'uptime-kuma-status-page' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as UptimeKumaStatusPageConfig }
+				? { id: uid(), type: 'uptime-kuma-status-page' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as UptimeKumaStatusPageConfig }
 				: type === 'docker'
-					? { id: crypto.randomUUID(), type: 'docker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as DockerWidgetConfig }
+					? { id: uid(), type: 'docker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as DockerWidgetConfig }
 					: type === 'adguard-home'
-						? { id: crypto.randomUUID(), type: 'adguard-home' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
+						? { id: uid(), type: 'adguard-home' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
 						: type === 'adguard-home-control'
-							? { id: crypto.randomUUID(), type: 'adguard-home-control' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
+							? { id: uid(), type: 'adguard-home-control' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string } }
 									: type === 'jellyfin-latest'
-										? { id: crypto.randomUUID(), type: 'jellyfin-latest' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string; limit?: number } }
+										? { id: uid(), type: 'jellyfin-latest' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as { instanceId: string; limit?: number } }
 										: type === 'arr-releases'
-											? { id: crypto.randomUUID(), type: 'arr-releases' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ArrReleasesConfig }
+											? { id: uid(), type: 'arr-releases' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as ArrReleasesConfig }
 											: type === 'stacker'
-												? { id: crypto.randomUUID(), type: 'stacker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as StackerConfig }
+												? { id: uid(), type: 'stacker' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as StackerConfig }
 												: SIMPLE_WIDGETS.has(type)
 													// Widgets whose item is just position + optional config.
-													? ({ id: crypto.randomUUID(), type, col: pos.col, row: pos.row, colSpan, rowSpan, config } as DashboardItem)
-											: { id: crypto.randomUUID(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
+													? ({ id: uid(), type, col: pos.col, row: pos.row, colSpan, rowSpan, config } as DashboardItem)
+											: { id: uid(), type: 'weather' as const, col: pos.col, row: pos.row, colSpan, rowSpan, config: config as unknown as WeatherConfig };
 	activeItems.push(item);
 	await api(layoutUrl(), { method: 'PUT', body: JSON.stringify(newLayout) });
 	layout.set(newLayout);
@@ -947,18 +955,18 @@ export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, c
 	const targetCol = findGap(colSpan);
 	const item: NavbarItem = (() => {
 		switch (type) {
-			case 'navbar-title': return { id: crypto.randomUUID(), type: 'navbar-title', col: targetCol, colSpan };
-			case 'navbar-search': return { id: crypto.randomUUID(), type: 'navbar-search', col: targetCol, colSpan, placeholder: 'Search services...' };
-			case 'navbar-cpu': return { id: crypto.randomUUID(), type: 'navbar-cpu', col: targetCol, colSpan };
-			case 'navbar-ram': return { id: crypto.randomUUID(), type: 'navbar-ram', col: targetCol, colSpan };
-			case 'navbar-disk': return { id: crypto.randomUUID(), type: 'navbar-disk', col: targetCol, colSpan, config: { disks: (config?.disks as string[]) || [] } };
-			case 'navbar-uptime-kuma-status-page': return { id: crypto.randomUUID(), type: 'navbar-uptime-kuma-status-page', col: targetCol, colSpan, config: { slug: (config?.slug as string) || '' } };
-			case 'navbar-docker': return { id: crypto.randomUUID(), type: 'navbar-docker', col: targetCol, colSpan, config: { environmentId: (config?.environmentId as string) || '', showCpu: config?.showCpu === true || undefined, showRam: config?.showRam === true || undefined } };
-			case 'navbar-clock': return { id: crypto.randomUUID(), type: 'navbar-clock', col: targetCol, colSpan, config: config as ClockConfig | undefined };
-			case 'navbar-elegoo-print': return { id: crypto.randomUUID(), type: 'navbar-elegoo-print', col: targetCol, colSpan, config: { printerId: (config?.printerId as string) || '', showThumbnail: config?.showThumbnail !== false, showTemps: config?.showTemps !== false } };
-			case 'navbar-weather': return { id: crypto.randomUUID(), type: 'navbar-weather', col: targetCol, colSpan, config: config as WeatherConfig | undefined };
-		case 'navbar-adguard-home-control': return { id: crypto.randomUUID(), type: 'navbar-adguard-home-control', col: targetCol, colSpan, config: { instanceId: (config?.instanceId as string) || 'default' } };
-			default: return { id: crypto.randomUUID(), type: 'navbar-title', col: targetCol, colSpan };
+			case 'navbar-title': return { id: uid(), type: 'navbar-title', col: targetCol, colSpan };
+			case 'navbar-search': return { id: uid(), type: 'navbar-search', col: targetCol, colSpan, placeholder: 'Search services...' };
+			case 'navbar-cpu': return { id: uid(), type: 'navbar-cpu', col: targetCol, colSpan };
+			case 'navbar-ram': return { id: uid(), type: 'navbar-ram', col: targetCol, colSpan };
+			case 'navbar-disk': return { id: uid(), type: 'navbar-disk', col: targetCol, colSpan, config: { disks: (config?.disks as string[]) || [] } };
+			case 'navbar-uptime-kuma-status-page': return { id: uid(), type: 'navbar-uptime-kuma-status-page', col: targetCol, colSpan, config: { slug: (config?.slug as string) || '' } };
+			case 'navbar-docker': return { id: uid(), type: 'navbar-docker', col: targetCol, colSpan, config: { environmentId: (config?.environmentId as string) || '', showCpu: config?.showCpu === true || undefined, showRam: config?.showRam === true || undefined } };
+			case 'navbar-clock': return { id: uid(), type: 'navbar-clock', col: targetCol, colSpan, config: config as ClockConfig | undefined };
+			case 'navbar-elegoo-print': return { id: uid(), type: 'navbar-elegoo-print', col: targetCol, colSpan, config: { printerId: (config?.printerId as string) || '', showThumbnail: config?.showThumbnail !== false, showTemps: config?.showTemps !== false } };
+			case 'navbar-weather': return { id: uid(), type: 'navbar-weather', col: targetCol, colSpan, config: config as WeatherConfig | undefined };
+		case 'navbar-adguard-home-control': return { id: uid(), type: 'navbar-adguard-home-control', col: targetCol, colSpan, config: { instanceId: (config?.instanceId as string) || 'default' } };
+			default: return { id: uid(), type: 'navbar-title', col: targetCol, colSpan };
 		}
 	})();
 

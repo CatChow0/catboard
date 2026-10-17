@@ -10,3 +10,5 @@ config
 .claude
 README.md
 DOCKER.md
+android
+dist

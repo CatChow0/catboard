@@ -1,5 +1,5 @@
 import type { Handle } from '@sveltejs/kit';
-import { validateSession } from '$lib/auth/session';
+import { validateSession, isSecureRequest } from '$lib/auth/session';
 import { isSetupDone, findUserByUsername, migrateAuthToUsers } from '$lib/server/config';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -19,7 +19,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			const user = await findUserByUsername(username);
 			event.locals.role = user?.role ?? null;
 		} else {
-			event.cookies.delete('sid', { path: '/' });
+			event.cookies.delete('sid', { path: '/', secure: isSecureRequest(event.url, event.request.headers) });
 			event.locals.isAuthenticated = false;
 		}
 	} else {

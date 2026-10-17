@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CatBoard</string>
+    <string name="setup_title">Connect to CatBoard</string>
+    <string name="setup_subtitle">Enter the address of your CatBoard server.</string>
+    <string name="setup_hint">http://192.168.1.10:3000</string>
+    <string name="setup_connect">Connect</string>
+    <string name="setup_http_note">Plain HTTP works on your local network. Use HTTPS when the server is reachable from the internet.</string>
+    <string name="setup_error_empty">Please enter a server address.</string>
+    <string name="setup_error_invalid">That doesn\'t look like a valid address.</string>
+    <string name="setup_error_unreachable">Could not reach the server: %1$s</string>
+    <string name="setup_error_not_catboard">The server answered, but it doesn\'t look like CatBoard (HTTP %1$d).</string>
+    <string name="change_server">Change server</string>
+    <string name="retry">Retry</string>
+    <string name="error_title">Can\'t reach CatBoard</string>
+    <string name="download_saved">Saved %1$s</string>
+    <string name="download_failed">Download failed</string>
+    <string name="no_app_for_link">No app can open this link</string>
+</resources>

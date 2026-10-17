@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_server"
+        android:shortcutId="change_server"
+        android:shortcutShortLabel="@string/change_server">
+        <intent
+            android:action="com.catchow.catboard.CHANGE_SERVER"
+            android:targetClass="com.catchow.catboard.MainActivity"
+            android:targetPackage="com.catchow.catboard" />
+    </shortcut>
+</shortcuts>
