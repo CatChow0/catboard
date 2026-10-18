@@ -147,7 +147,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem | SpoolmanItem | ElegooPrintItem | JenkinsItem | PsiTransferItem;
+export type DashboardItem = ProxmoxItem | PortainerItem | ImmichItem | NextcloudItem | ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem | SpoolmanItem | ElegooPrintItem | JenkinsItem | PsiTransferItem;
 
 // --- Weather ---
 
@@ -218,7 +218,7 @@ export interface NavbarWeatherItem extends NavbarItemBase {
 	config?: WeatherConfig;
 }
 
-export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem | NavbarClockItem | NavbarWeatherItem | NavbarElegooPrintItem | NavbarJenkinsItem;
+export type NavbarItem = NavbarProxmoxItem | NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem | NavbarClockItem | NavbarWeatherItem | NavbarElegooPrintItem | NavbarJenkinsItem;
 
 export interface NavbarLayout {
 	columns: number;
@@ -292,6 +292,22 @@ export interface Settings {
 	navbar: { columns: number };
 	statusCheckInterval: number;
 	layout: GridConfig;
+	/** Theme 'auto': presets used when the system is dark / light. */
+	autoDark?: string;
+	autoLight?: string;
+	/** Corner radius in px; overrides the style preset when set. */
+	radius?: number;
+	/** Accent colour on top of the theme. */
+	accent?: string;
+	/** Google Fonts family name; system font when empty. */
+	font?: string;
+	/** Text size in percent (90-120). */
+	fontScale?: number;
+	/** Card opacity in percent (40-100) and backdrop blur in px (0-20). */
+	cardOpacity?: number;
+	cardBlur?: number;
+	/** The user's own CSS, added after the theme. */
+	customCss?: string;
 }
 
 // --- Status ---
@@ -351,6 +367,22 @@ export interface IntegrationsConfig {
 	psitransfer?: { url: string; publicUrl?: string; uploadPassword?: string };
 	/** url: address used by the server; publicUrl: base of the links shown (default: url). */
 	jenkins?: { url: string; publicUrl?: string; username: string; apiToken: string };
+	/** Toggle fields ("Skip TLS verification") are stored as the string "true". */
+	proxmox?: { clusters: ProxmoxCluster[] };
+	portainer?: { url: string; publicUrl?: string; apiKey: string; insecure?: string };
+	immich?: { url: string; publicUrl?: string; apiKey: string };
+	nextcloud?: { url: string; publicUrl?: string; username: string; appPassword: string };
+}
+
+/** A Proxmox VE node or cluster, read with an API token. */
+export interface ProxmoxCluster {
+	id: string;
+	name: string;
+	url: string;
+	/** "user@realm!tokenname" */
+	tokenId: string;
+	tokenSecret: string;
+	insecure?: string;
 }
 
 /** A Stacker (web task manager) instance polled by the Stacker widget. */
@@ -792,4 +824,141 @@ export interface JenkinsItem extends DashboardItemBase {
 export interface NavbarJenkinsItem extends NavbarItemBase {
 	type: 'navbar-jenkins';
 	config?: JenkinsConfig;
+}
+
+// --- Proxmox ---
+
+export interface ProxmoxConfig {
+	clusterId?: string;
+	/** Only this node ('' = every node). */
+	node?: string;
+	/** Which guests: VMs, containers or both. */
+	kind?: 'all' | 'qemu' | 'lxc';
+	hideStopped?: boolean;
+	showNodes?: boolean;
+}
+
+export interface ProxmoxNode {
+	node: string;
+	status: string;
+	cpu: number;
+	maxcpu: number;
+	mem: number;
+	maxmem: number;
+	uptime: number;
+}
+
+export interface ProxmoxGuest {
+	vmid: number;
+	name: string;
+	type: 'qemu' | 'lxc';
+	node: string;
+	status: string;
+	cpu: number;
+	maxcpu: number;
+	mem: number;
+	maxmem: number;
+	uptime: number;
+}
+
+export interface ProxmoxData {
+	nodes: ProxmoxNode[];
+	guests: ProxmoxGuest[];
+	/** Link to the Proxmox web UI. */
+	url: string;
+}
+
+export interface ProxmoxItem extends DashboardItemBase {
+	type: 'proxmox';
+	config?: ProxmoxConfig;
+}
+
+export interface NavbarProxmoxItem extends NavbarItemBase {
+	type: 'navbar-proxmox';
+	config?: ProxmoxConfig;
+}
+
+// --- Portainer ---
+
+export interface PortainerConfig {
+	/** Only this environment (endpoint id as text; '' = every environment). */
+	endpointId?: string;
+}
+
+export interface PortainerEndpoint {
+	id: number;
+	name: string;
+	up: boolean;
+	running: number;
+	stopped: number;
+	healthy: number;
+	unhealthy: number;
+}
+
+export interface PortainerStack {
+	id: number;
+	name: string;
+	endpointId: number;
+	active: boolean;
+	/** 1 swarm, 2 compose, 3 kubernetes */
+	type: number;
+}
+
+export interface PortainerData {
+	endpoints: PortainerEndpoint[];
+	stacks: PortainerStack[];
+	url: string;
+}
+
+export interface PortainerItem extends DashboardItemBase {
+	type: 'portainer';
+	config?: PortainerConfig;
+}
+
+// --- Immich ---
+
+export interface ImmichConfig {
+	showStats?: boolean;
+	/** Recent photos shown (0 hides the strip). */
+	photos?: number;
+}
+
+export interface ImmichData {
+	stats: { photos: number; videos: number; usage: number | null; scope: 'server' | 'user' };
+	recent: { id: string; date: string }[];
+	url: string;
+}
+
+export interface ImmichItem extends DashboardItemBase {
+	type: 'immich';
+	config?: ImmichConfig;
+}
+
+// --- Nextcloud ---
+
+export interface NextcloudConfig {
+	showQuota?: boolean;
+	showServer?: boolean;
+	/** Recent files shown (0 hides the list). */
+	files?: number;
+}
+
+export interface NextcloudFile {
+	name: string;
+	path: string;
+	modified: number;
+	size: number;
+	url: string;
+}
+
+export interface NextcloudData {
+	user: { name: string; used: number; total: number | null };
+	server: { version: string; freeSpace: number | null; files: number | null; activeUsers: number | null; cpuLoad: number | null } | null;
+	files: NextcloudFile[];
+	url: string;
+}
+
+export interface NextcloudItem extends DashboardItemBase {
+	type: 'nextcloud';
+	config?: NextcloudConfig;
 }

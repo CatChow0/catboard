@@ -12,10 +12,14 @@
 		saveLabel?: string;
 		children: Snippet;
 	} = $props();
+
+	// Focus the overlay so Escape closes the modal without a click first.
+	let overlay = $state<HTMLDivElement>();
+	$effect(() => overlay?.focus({ preventScroll: true }));
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-<div class="wm-overlay modal-overlay" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" onclick={onclose} onpointerdown={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && onclose()}>
+<div bind:this={overlay} class="wm-overlay modal-overlay" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" onclick={onclose} onpointerdown={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && onclose()}>
 	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 	<div class="wm modal" role="presentation" onclick={(e) => e.stopPropagation()}>
 		<div class="wm-header">
@@ -33,6 +37,10 @@
 </div>
 
 <style>
+	.wm-overlay:focus {
+		outline: none;
+	}
+
 	.wm-overlay {
 		position: fixed;
 		inset: 0;

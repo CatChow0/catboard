@@ -28,10 +28,14 @@ import SpoolmanSettings from '$lib/components/widget-settings/SpoolmanSettings.s
 import PrintSettings from '$lib/components/widget-settings/PrintSettings.svelte';
 import PsiTransferSettings from '$lib/components/widget-settings/PsiTransferSettings.svelte';
 import JenkinsSettings from '$lib/components/widget-settings/JenkinsSettings.svelte';
+import ProxmoxSettings from '$lib/components/widget-settings/ProxmoxSettings.svelte';
+import PortainerSettings from '$lib/components/widget-settings/PortainerSettings.svelte';
+import ImmichSettings from '$lib/components/widget-settings/ImmichSettings.svelte';
+import NextcloudSettings from '$lib/components/widget-settings/NextcloudSettings.svelte';
 
 export type WidgetTarget = 'grid' | 'navbar';
-export type WidgetCategory = 'Basics' | 'System' | 'Monitoring' | 'Media' | 'Downloads' | 'Files' | 'Development' | '3D printing' | 'Network';
-export const WIDGET_CATEGORIES: WidgetCategory[] = ['Basics', 'System', 'Monitoring', 'Media', 'Downloads', 'Files', 'Development', '3D printing', 'Network'];
+export type WidgetCategory = 'Basics' | 'System' | 'Monitoring' | 'Virtualisation' | 'Media' | 'Downloads' | 'Files' | 'Development' | '3D printing' | 'Network';
+export const WIDGET_CATEGORIES: WidgetCategory[] = ['Basics', 'System', 'Monitoring', 'Virtualisation', 'Media', 'Downloads', 'Files', 'Development', '3D printing', 'Network'];
 
 export type GridWidgetType = Exclude<DashboardItem['type'], 'service'>;
 export type NavbarWidgetType = Exclude<NavbarItem['type'], 'navbar-title'>;
@@ -230,6 +234,46 @@ export const WIDGETS: WidgetDef[] = [
 		missing: (d) => (d.serverId ? null : 'Pick a server')
 	},
 
+	// --- Virtualisation ---
+	{
+		id: 'proxmox',
+		name: 'Proxmox VE',
+		description: 'Node load, VMs and containers; start and stop guests',
+		icon: 'server',
+		category: 'Virtualisation',
+		integrations: ['proxmox'],
+		grid: { type: 'proxmox', colSpan: 4, rowSpan: 3, minColSpan: 3 },
+		navbar: { type: 'navbar-proxmox', colSpan: 2 },
+		settings: ProxmoxSettings,
+		prepare: (c, _t, conn) => ({
+			clusterId: c?.clusterId ?? (c ? '' : (conn.proxmox?.clusters?.[0]?.id ?? '')),
+			node: c?.node ?? '',
+			kind: c?.kind ?? 'all',
+			hideStopped: c?.hideStopped ?? false,
+			showNodes: c?.showNodes ?? true
+		}),
+		normalize: (d) => ({
+			clusterId: d.clusterId,
+			node: d.node || undefined,
+			kind: d.kind === 'all' ? undefined : d.kind,
+			hideStopped: d.hideStopped || undefined,
+			showNodes: d.showNodes ? undefined : false
+		}),
+		missing: (d) => (d.clusterId ? null : 'Pick a cluster')
+	},
+	{
+		id: 'portainer',
+		name: 'Portainer stacks',
+		description: 'Containers per environment and stacks; start and stop stacks',
+		icon: 'stacks',
+		category: 'Virtualisation',
+		integrations: ['portainer'],
+		grid: { type: 'portainer', colSpan: 4, rowSpan: 3, minColSpan: 3 },
+		settings: PortainerSettings,
+		prepare: (c) => ({ endpointId: c?.endpointId ?? '' }),
+		normalize: (d) => ({ endpointId: d.endpointId || undefined })
+	},
+
 	// --- Network ---
 	{
 		id: 'adguard-stats',
@@ -335,6 +379,30 @@ export const WIDGETS: WidgetDef[] = [
 	},
 
 	// --- Development ---
+	{
+		id: 'immich',
+		name: 'Immich',
+		description: 'Photo library statistics and the latest photos',
+		icon: 'photos',
+		category: 'Files',
+		integrations: ['immich'],
+		grid: { type: 'immich', colSpan: 4, rowSpan: 2, minColSpan: 2 },
+		settings: ImmichSettings,
+		prepare: (c) => ({ showStats: c?.showStats ?? true, photos: c?.photos ?? 8 }),
+		normalize: (d) => ({ showStats: d.showStats ? undefined : false, photos: clamp(d.photos, 0, 24, 8) })
+	},
+	{
+		id: 'nextcloud',
+		name: 'Nextcloud',
+		description: 'Storage quota, server info and recent files',
+		icon: 'cloud',
+		category: 'Files',
+		integrations: ['nextcloud'],
+		grid: { type: 'nextcloud', colSpan: 4, rowSpan: 3, minColSpan: 2 },
+		settings: NextcloudSettings,
+		prepare: (c) => ({ showQuota: c?.showQuota ?? true, showServer: c?.showServer ?? false, files: c?.files ?? 6 }),
+		normalize: (d) => ({ showQuota: d.showQuota ? undefined : false, showServer: d.showServer || undefined, files: clamp(d.files, 0, 20, 6) })
+	},
 	{
 		id: 'jenkins',
 		name: 'Jenkins',

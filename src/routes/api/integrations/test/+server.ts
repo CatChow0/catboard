@@ -6,6 +6,9 @@ import { basicAuth } from '$lib/server/adguard-home';
 import { dockerGet } from '$lib/server/docker';
 import { discover } from '$lib/server/elegoo-cc2';
 import type { IntegrationKey } from '$lib/integrations/registry';
+import { httpFetch, isOn } from '$lib/server/http';
+import { pveConnOf, pve } from '$lib/server/proxmox';
+import { nextcloudConnOf, ocsUser } from '$lib/server/nextcloud';
 
 type Result = { ok: boolean; message: string };
 type Values = Record<string, string | undefined>;
@@ -156,6 +159,34 @@ async function run(key: IntegrationKey, v: Values): Promise<Result> {
 			if (!res.ok) return httpError(res, 'Jenkins');
 			const version = res.headers.get('x-jenkins');
 			return version ? { ok: true, message: `Jenkins ${version}` } : { ok: false, message: 'This does not look like Jenkins' };
+		}
+		case 'proxmox': {
+			if (!/^[^@\s]+@[^!\s]+![^\s]+$/.test(v.tokenId ?? '')) return { ok: false, message: 'The token ID looks like user@realm!name' };
+			const version = await pve<{ version: string; release: string }>(pveConnOf({ url, tokenId: v.tokenId!, tokenSecret: v.tokenSecret ?? '', insecure: v.insecure }), '/version');
+			return { ok: true, message: `Proxmox VE ${version.version}` };
+		}
+		case 'portainer': {
+			const res = await httpFetch(`${normalizeUrl(url)}/api/endpoints?limit=1`, { insecure: isOn(v.insecure), headers: { Accept: 'application/json', 'X-API-Key': v.apiKey ?? '' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+			if (res.status === 401) return { ok: false, message: 'Portainer refused the access token' };
+			if (!res.ok) return httpError(res, 'Portainer');
+			const status = await httpFetch(`${normalizeUrl(url)}/api/system/status`, { insecure: isOn(v.insecure), headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) })
+				.then((r) => r.json())
+				.catch(() => null);
+			return { ok: true, message: `Portainer ${status?.Version ?? ''}`.trim() };
+		}
+		case 'immich': {
+			const me = await get(`${normalizeUrl(url)}/api/users/me`, { 'x-api-key': v.apiKey ?? '' });
+			if (me.status === 401) return { ok: false, message: 'Immich refused the API key' };
+			if (!me.ok) return httpError(me, 'Immich');
+			const user = await me.json().catch(() => null);
+			const ver = await get(`${normalizeUrl(url)}/api/server/version`).then((r) => r.json()).catch(() => null);
+			const version = ver?.major != null ? ` ${ver.major}.${ver.minor}.${ver.patch}` : '';
+			return { ok: true, message: `Immich${version}, key of ${user?.name || user?.email || 'a user'}${user?.isAdmin ? ' (admin)' : ''}` };
+		}
+		case 'nextcloud': {
+			if (!v.username) return { ok: false, message: 'Enter the username' };
+			const user = await ocsUser(nextcloudConnOf({ url, username: v.username, appPassword: v.appPassword }));
+			return { ok: true, message: `Nextcloud, signed in as ${user.displayname || v.username}` };
 		}
 		case 'elegoo':
 			return testElegoo(v);

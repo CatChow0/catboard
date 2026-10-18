@@ -259,6 +259,197 @@ input, select, textarea {
 	--shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* === More presets === */
+
+[data-theme='catppuccin-latte'] {
+	--bg-primary: #eff1f5;
+	--bg-secondary: #e6e9ef;
+	--bg-card: #e6e9ef;
+	--bg-card-hover: #dce0e8;
+	--bg-modal: #eff1f5;
+	--text-primary: #4c4f69;
+	--text-secondary: #5c5f77;
+	--text-muted: #9ca0b0;
+	--accent: #8839ef;
+	--accent-hover: #7287fd;
+	--accent-glow: rgba(114, 135, 253, 0.18);
+	--accent-bg: rgba(114, 135, 253, 0.06);
+	--danger: #d20f39;
+	--success: #40a02b;
+	--warning: #df8e1d;
+	--border: #ccd0da;
+	--border-light: #bcc0cc;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='catppuccin-frappe'] {
+	--bg-primary: #303446;
+	--bg-secondary: #292c3c;
+	--bg-card: #414559;
+	--bg-card-hover: #51576d;
+	--bg-modal: #292c3c;
+	--text-primary: #c6d0f5;
+	--text-secondary: #b5bfe2;
+	--text-muted: #737994;
+	--accent: #ca9ee6;
+	--accent-hover: #babbf1;
+	--accent-glow: rgba(186, 187, 241, 0.18);
+	--accent-bg: rgba(186, 187, 241, 0.06);
+	--danger: #e78284;
+	--success: #a6d189;
+	--warning: #e5c890;
+	--border: #414559;
+	--border-light: #51576d;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='rose-pine'] {
+	--bg-primary: #191724;
+	--bg-secondary: #1f1d2e;
+	--bg-card: #1f1d2e;
+	--bg-card-hover: #26233a;
+	--bg-modal: #1f1d2e;
+	--text-primary: #e0def4;
+	--text-secondary: #908caa;
+	--text-muted: #6e6a86;
+	--accent: #c4a7e7;
+	--accent-hover: #ebbcba;
+	--accent-glow: rgba(235, 188, 186, 0.18);
+	--accent-bg: rgba(235, 188, 186, 0.06);
+	--danger: #eb6f92;
+	--success: #9ccfd8;
+	--warning: #f6c177;
+	--border: #26233a;
+	--border-light: #403d52;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='everforest'] {
+	--bg-primary: #2d353b;
+	--bg-secondary: #232a2e;
+	--bg-card: #343f44;
+	--bg-card-hover: #3d484d;
+	--bg-modal: #232a2e;
+	--text-primary: #d3c6aa;
+	--text-secondary: #9da9a0;
+	--text-muted: #7a8478;
+	--accent: #a7c080;
+	--accent-hover: #83c092;
+	--accent-glow: rgba(131, 192, 146, 0.18);
+	--accent-bg: rgba(131, 192, 146, 0.06);
+	--danger: #e67e80;
+	--success: #a7c080;
+	--warning: #dbbc7f;
+	--border: #3d484d;
+	--border-light: #475258;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='kanagawa'] {
+	--bg-primary: #1f1f28;
+	--bg-secondary: #16161d;
+	--bg-card: #2a2a37;
+	--bg-card-hover: #363646;
+	--bg-modal: #16161d;
+	--text-primary: #dcd7ba;
+	--text-secondary: #c8c093;
+	--text-muted: #727169;
+	--accent: #7e9cd8;
+	--accent-hover: #7fb4ca;
+	--accent-glow: rgba(127, 180, 202, 0.18);
+	--accent-bg: rgba(127, 180, 202, 0.06);
+	--danger: #e46876;
+	--success: #98bb6c;
+	--warning: #e6c384;
+	--border: #2a2a37;
+	--border-light: #54546d;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='github-dark'] {
+	--bg-primary: #0d1117;
+	--bg-secondary: #010409;
+	--bg-card: #161b22;
+	--bg-card-hover: #1c2128;
+	--bg-modal: #161b22;
+	--text-primary: #e6edf3;
+	--text-secondary: #8b949e;
+	--text-muted: #6e7681;
+	--accent: #2f81f7;
+	--accent-hover: #58a6ff;
+	--accent-glow: rgba(88, 166, 255, 0.18);
+	--accent-bg: rgba(88, 166, 255, 0.06);
+	--danger: #f85149;
+	--success: #3fb950;
+	--warning: #d29922;
+	--border: #30363d;
+	--border-light: #484f58;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='github-light'] {
+	--bg-primary: #f6f8fa;
+	--bg-secondary: #ffffff;
+	--bg-card: #ffffff;
+	--bg-card-hover: #f3f4f6;
+	--bg-modal: #ffffff;
+	--text-primary: #1f2328;
+	--text-secondary: #656d76;
+	--text-muted: #8c959f;
+	--accent: #0969da;
+	--accent-hover: #218bff;
+	--accent-glow: rgba(33, 139, 255, 0.18);
+	--accent-bg: rgba(33, 139, 255, 0.06);
+	--danger: #cf222e;
+	--success: #1a7f37;
+	--warning: #9a6700;
+	--border: #d0d7de;
+	--border-light: #e5e8eb;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='monokai'] {
+	--bg-primary: #272822;
+	--bg-secondary: #1e1f1c;
+	--bg-card: #2d2e27;
+	--bg-card-hover: #3e3d32;
+	--bg-modal: #1e1f1c;
+	--text-primary: #f8f8f2;
+	--text-secondary: #cfcfc2;
+	--text-muted: #75715e;
+	--accent: #66d9ef;
+	--accent-hover: #8be6f5;
+	--accent-glow: rgba(139, 230, 245, 0.18);
+	--accent-bg: rgba(139, 230, 245, 0.06);
+	--danger: #f92672;
+	--success: #a6e22e;
+	--warning: #fd971f;
+	--border: #3e3d32;
+	--border-light: #49483e;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='oled'] {
+	--bg-primary: #000000;
+	--bg-secondary: #0a0a0a;
+	--bg-card: #0d0d0d;
+	--bg-card-hover: #161616;
+	--bg-modal: #0a0a0a;
+	--text-primary: #e8e8e8;
+	--text-secondary: #a0a0a0;
+	--text-muted: #666666;
+	--accent: #4f8fff;
+	--accent-hover: #6fa0ff;
+	--accent-glow: rgba(111, 160, 255, 0.18);
+	--accent-bg: rgba(111, 160, 255, 0.06);
+	--danger: #ff4f6f;
+	--success: #4fdd8f;
+	--warning: #ffbf4f;
+	--border: #1f1f1f;
+	--border-light: #2c2c2c;
+	--shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
 /* === TMOG (tmog.org) — instrument-panel look === */
 
 @font-face {
@@ -901,4 +1092,38 @@ input, select, textarea {
 	.cb-form .field-row > .field {
 		flex: 1 1 calc(50% - 12px);
 	}
+}
+
+/* Placeholder while a widget's code downloads (LazyWidget). */
+.cb-skeleton {
+	width: 100%;
+	height: 100%;
+	min-height: 32px;
+	border-radius: var(--radius);
+	background: linear-gradient(100deg, var(--bg-card) 40%, var(--bg-card-hover) 50%, var(--bg-card) 60%) 0 0 / 200% 100%;
+	border: 1px solid var(--border);
+	animation: cb-shimmer 1.4s linear infinite;
+}
+
+.cb-skeleton.inline {
+	width: 64px;
+	min-height: 24px;
+	height: 24px;
+	border-radius: var(--radius-sm);
+}
+
+[data-animations='none'] .cb-skeleton {
+	animation: none;
+}
+
+@keyframes cb-shimmer {
+	to {
+		background-position: -200% 0;
+	}
+}
+
+/* Glass cards (Settings > Appearance > Cards): see-through cards blur what is behind them. */
+[data-glass] .dashboard-item > * {
+	-webkit-backdrop-filter: blur(var(--card-blur));
+	backdrop-filter: blur(var(--card-blur));
 }

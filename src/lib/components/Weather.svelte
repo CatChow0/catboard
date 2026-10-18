@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { whileVisible } from '$lib/utils/poll';
 	import type { WeatherConfig } from '$lib/types';
 	import { isEditing } from '$lib/stores/dashboard';
 	import WeatherIcon from './WeatherIcon.svelte';
@@ -48,9 +49,9 @@
 			}
 		}
 		fetchWeather();
-		const interval = setInterval(fetchWeather, 600_000);
+		const stop = whileVisible(fetchWeather, 600_000);
 		return () => {
-			clearInterval(interval);
+			stop();
 			controller.abort();
 		};
 	});

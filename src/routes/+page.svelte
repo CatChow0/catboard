@@ -1,67 +1,60 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import Dashboard from '$lib/components/Dashboard.svelte';
-	import { loadDashboard, serviceStatuses, systemStats, uptimeKumaData, dockerData, adguardHomeData } from '$lib/stores/dashboard';
+	import { loadDashboard, serviceStatuses, systemStats, uptimeKumaData, dockerData, adguardHomeData, settings } from '$lib/stores/dashboard';
 
 	let loaded = $state(false);
 
 	onMount(() => {
 		loadDashboard(window.innerWidth).then(() => { loaded = true; });
 
-		// Status checks: fetch once then every 5 minutes (not SSE)
+		// Service status checks, at the user's check interval (the server shares
+		// and caches the results).
+		let statusTimer: ReturnType<typeof setTimeout> | undefined;
 		async function fetchStatuses() {
+			clearTimeout(statusTimer);
 			try {
 				const res = await fetch('/api/status');
-				if (res.ok) {
-					const data = await res.json();
-					serviceStatuses.set(data);
-				}
+				if (res.ok) serviceStatuses.set(await res.json());
 			} catch {
 				// silent fail
 			}
+			const every = Math.min(600_000, Math.max(10_000, get(settings).statusCheckInterval || 30_000));
+			statusTimer = setTimeout(fetchStatuses, every);
 		}
-		fetchStatuses();
-		const statusInterval = setInterval(fetchStatuses, 300_000);
 
-		const statsSource = new EventSource('/api/system-stats');
-		statsSource.addEventListener('system-stats', (e) => {
-			const data = JSON.parse(e.data);
-			systemStats.set(data);
-		});
+		// Live streams, open only while the page is visible: a hidden tab costs
+		// the server nothing.
+		let sources: EventSource[] = [];
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		function listen(url: string, event: string, onData: (data: any) => void) {
+			const source = new EventSource(url);
+			source.addEventListener(event, (e) => onData(JSON.parse((e as MessageEvent).data)));
+			sources.push(source);
+		}
+		function start() {
+			fetchStatuses();
+			listen('/api/system-stats', 'system-stats', (data) => systemStats.set(data));
+			listen('/api/integrations/uptime-kuma/heartbeat', 'uptime-kuma-status', (data) => uptimeKumaData.update((prev) => ({ ...prev, [data.slug]: data })));
+			listen('/api/integrations/docker/heartbeat', 'docker-status', (data) => dockerData.update((prev) => ({ ...prev, [data.environmentId]: data })));
+			listen('/api/integrations/adguard-home/heartbeat', 'adguard-home-status', (data) => adguardHomeData.update((prev) => ({ ...prev, [data.instanceId]: data })));
+		}
+		function stop() {
+			clearTimeout(statusTimer);
+			for (const source of sources) source.close();
+			sources = [];
+		}
+		const onVisibility = () => {
+			stop();
+			if (!document.hidden) start();
+		};
 
-		const uptimeKumaSource = new EventSource('/api/integrations/uptime-kuma/heartbeat');
-		uptimeKumaSource.addEventListener('uptime-kuma-status', (e) => {
-			const data = JSON.parse(e.data);
-			uptimeKumaData.update((prev) => ({
-				...prev,
-				[data.slug]: data
-			}));
-		});
-
-		const dockerSource = new EventSource('/api/integrations/docker/heartbeat');
-		dockerSource.addEventListener('docker-status', (e) => {
-			const data = JSON.parse(e.data);
-			dockerData.update((prev) => ({
-				...prev,
-				[data.environmentId]: data
-			}));
-		});
-
-		const adguardSource = new EventSource('/api/integrations/adguard-home/heartbeat');
-		adguardSource.addEventListener('adguard-home-status', (e) => {
-			const data = JSON.parse(e.data);
-			adguardHomeData.update((prev) => ({
-				...prev,
-				[data.instanceId]: data
-			}));
-		});
-
+		if (!document.hidden) start();
+		document.addEventListener('visibilitychange', onVisibility);
 		return () => {
-			clearInterval(statusInterval);
-			statsSource.close();
-			uptimeKumaSource.close();
-			dockerSource.close();
-			adguardSource.close();
+			document.removeEventListener('visibilitychange', onVisibility);
+			stop();
 		};
 	});
 </script>

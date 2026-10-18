@@ -1,14 +1,16 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { getServices } from '$lib/server/config';
+import { getServices, getSettingsForUser } from '$lib/server/config';
 
-interface CachedStatus {
-	data: Record<string, string>;
-	expires: number;
-}
+// Results are shared by every viewer and kept for the reader's check interval
+// (Settings statusCheckInterval, 10 s to 10 min). Checks already running are
+// joined instead of probing every service a second time.
+const MIN_TTL = 10_000;
+const MAX_TTL = 600_000;
+const PARALLEL = 8;
 
-let cache: CachedStatus | null = null;
-const CACHE_TTL = 300_000; // 5 minutes
+let cache: { data: Record<string, string>; at: number } | null = null;
+let running: Promise<Record<string, string>> | null = null;
 
 async function checkService(url: string, method: string): Promise<string> {
 	try {
@@ -19,26 +21,29 @@ async function checkService(url: string, method: string): Promise<string> {
 	}
 }
 
-export const GET: RequestHandler = async () => {
-	if (cache && cache.expires > Date.now()) {
-		return json(cache.data);
-	}
-
+async function checkAll(): Promise<Record<string, string>> {
 	const data = await getServices();
-	const services = data.services.filter((s) => s.statusCheck?.enabled);
-
-	const results = await Promise.all(
-		services.map(async (s) => {
-			const status = await checkService(s.url, s.statusCheck.method || 'HEAD');
-			return { id: s.id, status };
-		})
-	);
-
+	const queue = data.services.filter((s) => s.statusCheck?.enabled);
 	const map: Record<string, string> = {};
-	for (const r of results) {
-		map[r.id] = r.status;
-	}
+	const worker = async () => {
+		for (let s = queue.shift(); s; s = queue.shift()) {
+			map[s.id] = await checkService(s.url, s.statusCheck.method || 'HEAD');
+		}
+	};
+	await Promise.all(Array.from({ length: PARALLEL }, worker));
+	return map;
+}
 
-	cache = { data: map, expires: Date.now() + CACHE_TTL };
-	return json(map);
+export const GET: RequestHandler = async ({ locals }) => {
+	const interval = locals.username ? (await getSettingsForUser(locals.username)).statusCheckInterval : undefined;
+	const ttl = Math.min(MAX_TTL, Math.max(MIN_TTL, Number(interval) || 30_000));
+	if (cache && Date.now() - cache.at < ttl) return json(cache.data);
+
+	running ??= checkAll()
+		.then((data) => {
+			cache = { data, at: Date.now() };
+			return data;
+		})
+		.finally(() => (running = null));
+	return json(await running);
 };

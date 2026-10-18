@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { whileVisible } from '$lib/utils/poll';
 	// Navbar weather: icon, temperature and (when wide enough) the city.
 	// Polls /api/weather like the standard Weather widget (server caches 10 min).
 	import type { WeatherConfig } from '$lib/types';
@@ -33,9 +34,9 @@
 			}
 		}
 		load();
-		const interval = setInterval(load, 600_000);
+		const stop = whileVisible(load, 600_000);
 		return () => {
-			clearInterval(interval);
+			stop();
 			controller?.abort();
 		};
 	});

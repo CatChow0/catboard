@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { whileVisible } from '$lib/utils/poll';
 	import type { JellyfinLatestConfig, JellyfinMediaItem } from '$lib/types';
 	import { isEditing, settings } from '$lib/stores/dashboard';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	let { config, colSpan = 1, rowSpan = 1, ondelete, itemid }: {
 		config?: JellyfinLatestConfig;
@@ -21,7 +22,6 @@
 	let items = $state<JellyfinMediaItem[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let intervalId = $state<ReturnType<typeof setInterval> | null>(null);
 
 	async function fetchData() {
 		try {
@@ -47,11 +47,7 @@
 
 	onMount(() => {
 		fetchData();
-		intervalId = setInterval(fetchData, 60000);
-	});
-
-	onDestroy(() => {
-		if (intervalId) clearInterval(intervalId);
+		return whileVisible(fetchData, 60000);
 	});
 
 	function getBadgeColor(type: string): string {

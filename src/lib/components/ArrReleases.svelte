@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { whileVisible } from '$lib/utils/poll';
 	import type { ArrReleasesConfig, ArrCalendarEntry } from '$lib/types';
 	import { isEditing, settings } from '$lib/stores/dashboard';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	let { config, colSpan = 1, rowSpan = 1, ondelete, itemid }: {
 		config?: ArrReleasesConfig;
@@ -26,7 +27,6 @@
 	let entries = $state<ArrCalendarEntry[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let intervalId: ReturnType<typeof setInterval> | null = null;
 
 	let showEditModal = $state(false);
 
@@ -71,13 +71,7 @@
 		fetchData();
 	});
 
-	onMount(() => {
-		intervalId = setInterval(fetchData, 60000);
-	});
-
-	onDestroy(() => {
-		if (intervalId) clearInterval(intervalId);
-	});
+	onMount(() => whileVisible(fetchData, 60000));
 
 	const SOURCE_META: Record<ArrCalendarEntry['type'], { label: string; color: string }> = {
 		radarr: { label: 'Movie', color: '#FF9800' },

@@ -1,28 +1,12 @@
 <script lang="ts">
 	import type { DashboardItem as DashboardItemType, Service } from '$lib/stores/dashboard';
-	import { resolveService, isEditing } from '$lib/stores/dashboard';
+	import { resolveService } from '$lib/stores/dashboard';
 	import type { GroupDragView } from '$lib/utils/grid';
 	import ServiceTile from './ServiceTile.svelte';
 	import CollapsibleGroup from './CollapsibleGroup.svelte';
 	import StandardGroup from './StandardGroup.svelte';
-	import Calendar from './Calendar.svelte';
-	import Clock from './Clock.svelte';
-	import Weather from './Weather.svelte';
-	import UptimeKumaStatusPage from './UptimeKumaStatusPage.svelte';
-	import Docker from './Docker.svelte';
-	import AdGuardStats from './AdGuardStats.svelte';
-	import AdGuardControl from './AdGuardControl.svelte';
-	import JellyfinLatest from './JellyfinLatest.svelte';
-	import ArrReleases from './ArrReleases.svelte';
-	import Stacker from './Stacker.svelte';
-	import JellyfinNowPlaying from './JellyfinNowPlaying.svelte';
-	import JellyseerrRequests from './JellyseerrRequests.svelte';
-	import QBittorrent from './QBittorrent.svelte';
-	import Notes from './Notes.svelte';
-	import Spoolman from './Spoolman.svelte';
-	import ElegooPrint from './ElegooPrint.svelte';
-	import Jenkins from './Jenkins.svelte';
-	import PsiTransfer from './PsiTransfer.svelte';
+	import LazyWidget from './widget/LazyWidget.svelte';
+	import { GRID_WIDGETS } from '$lib/widgets/loaders';
 
 	let { item, allServices, effectiveColSpan, effectiveRowSpan, gridGap, onedit, onremove, ondragitem, dragView, selectedChildIds, ontogglechild, query, matchingIds }: {
 		item: DashboardItemType;
@@ -46,9 +30,19 @@
 
 	let colSpan = $derived(effectiveColSpan ?? item.colSpan);
 	let rowSpan = $derived(effectiveRowSpan ?? item.rowSpan);
+
+	// Every widget takes the same props; its code is loaded on demand.
+	let loader = $derived(GRID_WIDGETS[item.type]);
+	let widgetProps = $derived({
+		config: 'config' in item ? item.config : undefined,
+		colSpan,
+		rowSpan,
+		ondelete: onremove ? () => onremove(item.id) : undefined,
+		itemid: item.id
+	});
 </script>
 
-<div class="dashboard-item">
+<div class="dashboard-item cb-item-{item.type}">
 	{#if item.type === 'service' && service}
 		<ServiceTile
 			{service}
@@ -61,42 +55,8 @@
 		<CollapsibleGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {dragView} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
 	{:else if item.type === 'group-standard'}
 		<StandardGroup item={item} {allServices} {onedit} {onremove} {ondragitem} {dragView} selectedChildIds={selectedChildIds} ontogglechild={ontogglechild} {gridGap} {query} {matchingIds} />
-	{:else if item.type === 'calendar'}
-		<Calendar config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'clock'}
-		<Clock config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'weather'}
-		<Weather config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'docker'}
-		<Docker config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'uptime-kuma-status-page'}
-		<UptimeKumaStatusPage config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'adguard-home'}
-		<AdGuardStats config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'adguard-home-control'}
-		<AdGuardControl config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'jellyfin-latest'}
-		<JellyfinLatest config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'arr-releases'}
-		<ArrReleases config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'stacker'}
-		<Stacker config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'jellyfin-now-playing'}
-		<JellyfinNowPlaying config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'jellyseerr-requests'}
-		<JellyseerrRequests config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'qbittorrent'}
-		<QBittorrent config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'notes'}
-		<Notes config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'spoolman'}
-		<Spoolman config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'elegoo-print'}
-		<ElegooPrint config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'jenkins'}
-		<Jenkins config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
-	{:else if item.type === 'psitransfer'}
-		<PsiTransfer config={item.config} {colSpan} {rowSpan} ondelete={onremove ? () => onremove(item.id) : undefined} itemid={item.id} />
+	{:else if loader}
+		<LazyWidget {loader} props={widgetProps} />
 	{:else if item.type === 'service' && !service}
 		<div class="missing-service">Service not found</div>
 	{/if}

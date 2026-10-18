@@ -4,8 +4,6 @@
 	import { cubicOut } from 'svelte/easing';
 	import DashboardItem from './DashboardItem.svelte';
 	import Navbar from './Navbar.svelte';
-	import AddPopup from './AddPopup.svelte';
-	import ServiceModal from './ServiceModal.svelte';
 	import {
 		services,
 		layout,
@@ -33,7 +31,6 @@
 	import MobileEditBar from './MobileEditBar.svelte';
 	import ContextMenu, { type MenuItem } from './ContextMenu.svelte';
 	import { matchingItemIds } from '$lib/utils/search';
-	import SettingsModal from './SettingsModal.svelte';
 	import type { Service, DashboardItem as DashboardItemType, Layout } from '$lib/stores/dashboard';
 	import {
 		moveWithPush,
@@ -1051,26 +1048,33 @@
 	<MobileEditBar onadd={() => (showAddPopup = true)} />
 {/if}
 
+<!-- Popups load their code when first opened. -->
 {#if showAddPopup}
-	<AddPopup onclose={() => (showAddPopup = false)} />
+	{#await import('./AddPopup.svelte') then { default: AddPopup }}
+		<AddPopup onclose={() => (showAddPopup = false)} />
+	{/await}
 {/if}
 {#if showSettings}
-	<SettingsModal
-		onclose={() => {
-			showSettings = false;
-			settingsAt = null;
-		}}
-		initialTab={settingsAt?.tab}
-		initialIntegration={settingsAt?.integration}
-	/>
+	{#await import('./SettingsModal.svelte') then { default: SettingsModal }}
+		<SettingsModal
+			onclose={() => {
+				showSettings = false;
+				settingsAt = null;
+			}}
+			initialTab={settingsAt?.tab}
+			initialIntegration={settingsAt?.integration}
+		/>
+	{/await}
 {/if}
 
 {#if editingService}
-	<ServiceModal service={editingService} onsave={async (data) => {
-		const { updateService } = await import('$lib/stores/dashboard');
-		await updateService(editingService!.id, data);
-		editingService = null;
-	}} onclose={() => (editingService = null)} />
+	{#await import('./ServiceModal.svelte') then { default: ServiceModal }}
+		<ServiceModal service={editingService} onsave={async (data) => {
+			const { updateService } = await import('$lib/stores/dashboard');
+			await updateService(editingService!.id, data);
+			editingService = null;
+		}} onclose={() => (editingService = null)} />
+	{/await}
 {/if}
 
 <style>

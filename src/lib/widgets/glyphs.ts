@@ -33,7 +33,11 @@ export const GLYPHS = {
 	shield: { svg: '<path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" />' },
 	upload: { svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5M12 3v12" />' },
 	jenkins: { svg: '<circle cx="6" cy="6" r="2.5" /><circle cx="6" cy="18" r="2.5" /><circle cx="18" cy="12" r="2.5" /><path d="M6 8.5v7M8.3 7.2l7.4 3.6M8.3 16.8l7.4-3.6" />' },
-	shieldStats: { svg: '<path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z" /><path d="M8.5 15v-3M12 15V9M15.5 15v-5" />' }
+	shieldStats: { svg: '<path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z" /><path d="M8.5 15v-3M12 15V9M15.5 15v-5" />' },
+	server: { svg: '<rect x="2" y="3" width="20" height="7" rx="1.5" /><rect x="2" y="14" width="20" height="7" rx="1.5" /><path d="M6 6.5h.01M6 17.5h.01M10 6.5h8M10 17.5h8" />' },
+	stacks: { svg: '<path d="M12 2l9 5-9 5-9-5z" /><path d="M3 12l9 5 9-5" /><path d="M3 17l9 5 9-5" />' },
+	photos: { svg: '<rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />' },
+	cloud: { svg: '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" /><path d="M9 14h6" />' },
 } satisfies Record<string, GlyphDef>;
 
 export type GlyphName = keyof typeof GLYPHS;

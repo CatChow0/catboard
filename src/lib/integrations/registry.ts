@@ -6,13 +6,14 @@ import type { IntegrationsConfig } from '$lib/types';
 import type { GlyphName } from '$lib/widgets/glyphs';
 
 export type IntegrationKey = keyof IntegrationsConfig;
-export type IntegrationCategory = 'Monitoring' | 'Media' | 'Downloads' | 'Files' | 'Development' | '3D printing' | 'Network';
-export const INTEGRATION_CATEGORIES: IntegrationCategory[] = ['Monitoring', 'Media', 'Downloads', 'Files', 'Development', '3D printing', 'Network'];
+export type IntegrationCategory = 'Monitoring' | 'Virtualisation' | 'Media' | 'Downloads' | 'Files' | 'Development' | '3D printing' | 'Network';
+export const INTEGRATION_CATEGORIES: IntegrationCategory[] = ['Monitoring', 'Virtualisation', 'Media', 'Downloads', 'Files', 'Development', '3D printing', 'Network'];
 
 export interface FieldDef {
 	id: string;
 	label: string;
-	type: 'url' | 'text' | 'secret';
+	/** toggle: a checkbox stored as the string "true". */
+	type: 'url' | 'text' | 'secret' | 'toggle';
 	placeholder?: string;
 	hint?: string;
 	/** Optional fields are shown in a collapsed "Advanced" box when empty. */
@@ -187,6 +188,72 @@ export const INTEGRATIONS: IntegrationDef[] = [
 		],
 		requiredField: 'url',
 		help: 'Create an API token for this user in Jenkins (user menu > Security > API Token). Starting builds needs the Job/Build permission.'
+	},
+	{
+		key: 'proxmox',
+		name: 'Proxmox VE',
+		description: 'Nodes, VMs and containers; start and stop guests',
+		icon: 'server',
+		category: 'Virtualisation',
+		kind: 'list',
+		listKey: 'clusters',
+		itemName: 'cluster',
+		fields: [
+			{ id: 'name', label: 'Name', type: 'text', placeholder: 'Home lab' },
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'https://pve.lan:8006' },
+			{ id: 'tokenId', label: 'API token ID', type: 'text', placeholder: 'catboard@pve!dashboard' },
+			{ id: 'tokenSecret', label: 'API token secret', type: 'secret', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+			{ id: 'insecure', label: 'Skip TLS verification (self-signed certificate)', type: 'toggle' }
+		],
+		requiredField: 'url',
+		help: 'Datacenter > Permissions > API Tokens. Reading needs the PVEAuditor role on /; starting and stopping guests needs PVEVMUser (or VM.PowerMgmt). Untick "Privilege Separation" or give the token its own role.'
+	},
+	{
+		key: 'portainer',
+		name: 'Portainer',
+		description: 'Environments and stacks; start and stop stacks',
+		icon: 'stacks',
+		category: 'Virtualisation',
+		kind: 'single',
+		fields: [
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'https://portainer:9443' },
+			{ id: 'apiKey', label: 'Access token', type: 'secret', placeholder: 'My account > Access tokens' },
+			{ id: 'insecure', label: 'Skip TLS verification (self-signed certificate)', type: 'toggle' },
+			{ id: 'publicUrl', label: 'Public URL', type: 'url', placeholder: 'https://portainer.example.com', advanced: true, hint: 'Public address for the links (only when it differs from the URL).' }
+		],
+		requiredField: 'url',
+		help: 'Create an access token in Portainer (My account > Access tokens). Starting and stopping stacks needs an administrator or an environment administrator.'
+	},
+	{
+		key: 'immich',
+		name: 'Immich',
+		description: 'Library statistics and the latest photos',
+		icon: 'photos',
+		category: 'Files',
+		kind: 'single',
+		fields: [
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'http://immich-server:2283' },
+			{ id: 'apiKey', label: 'API key', type: 'secret', placeholder: 'Account settings > API keys' },
+			{ id: 'publicUrl', label: 'Public URL', type: 'url', placeholder: 'https://photos.example.com', advanced: true, hint: 'Public address for the links to photos (only when it differs from the URL).' }
+		],
+		requiredField: 'url',
+		help: "An API key of an admin shows the whole server's statistics; any other key shows its owner's library."
+	},
+	{
+		key: 'nextcloud',
+		name: 'Nextcloud',
+		description: 'Storage quota, server info and recent files',
+		icon: 'cloud',
+		category: 'Files',
+		kind: 'single',
+		fields: [
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'http://nextcloud' },
+			{ id: 'username', label: 'Username', type: 'text' },
+			{ id: 'appPassword', label: 'App password', type: 'secret', placeholder: 'Personal settings > Security > App passwords' },
+			{ id: 'publicUrl', label: 'Public URL', type: 'url', placeholder: 'https://cloud.example.com', advanced: true, hint: 'Public address for the links to files (only when it differs from the URL).' }
+		],
+		requiredField: 'url',
+		help: 'Use an app password (Personal settings > Security), not your login password. Server info needs an admin account and the Monitoring (serverinfo) app.'
 	},
 	{
 		key: 'spoolman',

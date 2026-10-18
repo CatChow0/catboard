@@ -315,6 +315,37 @@ Files go through CatBoard in 384 KB chunks, so no `BODY_SIZE_LIMIT` change is ne
 
 The token's user needs Overall/Read and Job/Read, plus Job/Build to start builds (only CatBoard admins see the **Run** button). With an API token, Jenkins needs no CSRF crumb.
 
+### Proxmox VE
+
+1. In Proxmox, **Datacenter > Permissions > API Tokens**: add a token (e.g. `catboard@pve!dashboard`), untick **Privilege Separation** or give the token its own role
+2. Give it **PVEAuditor** on `/` to read; add **VM.PowerMgmt** (e.g. PVEVMUser) for the start / shut down / reboot buttons
+3. In **Settings > Integrations > Proxmox VE**, add a cluster: URL (`https://pve:8006`), token ID and secret; tick **Skip TLS verification** if Proxmox uses its self-signed certificate
+4. Add a **Proxmox VE** widget (dashboard or navbar) from **Add > Widgets**
+
+### Portainer
+
+1. In Portainer, **My account > Access tokens**: add a token
+2. In **Settings > Integrations > Portainer**, enter the URL (e.g. `https://portainer:9443`) and the token; tick **Skip TLS verification** for a self-signed certificate
+3. Add a **Portainer stacks** widget
+
+Starting and stopping stacks needs a Portainer administrator (or environment administrator) token.
+
+### Immich
+
+1. In Immich, **Account settings > API keys**: create a key (an admin's key shows the whole server's statistics)
+2. In **Settings > Integrations > Immich**, enter the URL (e.g. `http://immich-server:2283`) and the key; set **Public URL** for the links to photos
+3. Add an **Immich** widget
+
+Thumbnails go through CatBoard: the browser never needs the key nor to reach Immich.
+
+### Nextcloud
+
+1. In Nextcloud, **Personal settings > Security**: create an app password
+2. In **Settings > Integrations > Nextcloud**, enter the URL, the username and the app password; set **Public URL** for the links to files
+3. Add a **Nextcloud** widget
+
+Server info needs a Nextcloud admin account and the **Monitoring** (serverinfo) app.
+
 ### Uptime Kuma
 
 To connect CatBoard to an Uptime Kuma instance:

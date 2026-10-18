@@ -178,6 +178,13 @@
 
 {#snippet fieldInput(index: number, item: Item, f: IntegrationDef['fields'][number])}
 	{@const rid = `${selected}-${item.id ?? index}-${f.id}`}
+	{#if f.type === 'toggle'}
+		<label class="toggle-switch" for={rid}>
+			<input id={rid} type="checkbox" checked={item[f.id] === 'true'} onchange={(e) => edit(index, f.id, e.currentTarget.checked ? 'true' : '')} disabled={!canEdit} />
+			<span class="toggle-slider"></span>
+			<span class="toggle-label">{f.label}</span>
+		</label>
+	{:else}
 	<label class="field" for={rid}>
 		<span>{f.label}</span>
 		{#if f.type === 'secret'}
@@ -212,6 +219,7 @@
 		{/if}
 		{#if f.hint}<span class="hint">{f.hint}</span>{/if}
 	</label>
+	{/if}
 {/snippet}
 
 {#snippet itemFields(index: number, item: Item)}

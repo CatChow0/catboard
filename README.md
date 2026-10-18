@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.1.1-blue)
+![Version](https://img.shields.io/badge/version-3.2.0-blue)
 
 ## Features
 
@@ -26,11 +26,17 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP), with optional per-container CPU and RAM usage
 - **Stacker integration** -- Live CPU, memory, GPU, disk and network gauges and graphs from one or more Stacker servers, with selectable sections
-- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins)
+- **Proxmox VE integration** -- Node CPU and RAM, VMs and containers with their usage, as a widget or in the navbar; admins can start, shut down, reboot or force stop guests
+- **Portainer integration** -- Containers per environment and the stacks; admins can start and stop stacks
+- **Immich integration** -- Photo, video and storage counts and the latest photos (thumbnails proxied by CatBoard)
+- **Nextcloud integration** -- Storage quota, server info and the latest modified files
+- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins, Proxmox VE, Portainer, Immich, Nextcloud)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
-- **Theme system** -- Built-in presets (Dark, Light, Nord, Dracula, Solarized, Catppuccin, Gruvbox, One Dark, Tokyo Night, and TMOG in cyan/green/amber with a self-hosted Michroma display font), custom palettes, style presets (default, sharp, pill), animation options
+- **Theme system** -- 22 presets (Dark, Light, Nord, Dracula, Solarized, Catppuccin Mocha / Latte / Frappé, Gruvbox, One Dark, Tokyo Night, Rosé Pine, Everforest, Kanagawa, GitHub Dark / Light, Monokai, OLED Black, and TMOG in cyan/green/amber with a self-hosted Michroma display font), an **Auto** theme that follows the device's light/dark mode, custom palettes, style presets (default, sharp, pill) or a corner radius, animation options
+- **Customization** -- Font (Google Fonts) and text size, accent color, see-through and blurred cards, **custom CSS** (per user, applied live) and theme files to export and import a whole look
+- **Fast loading** -- Each widget's code is downloaded only when a dashboard shows it; popups load when first opened; live streams and refreshes pause while the tab is hidden; service status checks are shared between viewers
 - **Cross-platform** -- Works on Linux and Windows; disk paths and temperature sensors adapt to the host OS
 - **Mobile UI** -- On phones (≤ 640px wide) a compact top bar with a scrolling strip of navbar widgets, a menu sheet, full-screen settings and add dialogs, bottom sheets for menus and details, and touch editing (hold a tile to move it)
 - **Android app** -- Signed APK on GitHub Releases (installable and auto-updated with Obtainium) that connects to your CatBoard server
@@ -145,6 +151,7 @@ Add them from **Add > Widgets** (badge *Navbar* or *Dashboard + navbar*; choose 
 | **AdGuard Home** | Toggle protection status with colored state pill |
 | **3D printer** | Printer icon, mini progress bar, % and time left; click for the full print details (pause/resume/stop for admins) |
 | **Jenkins** | One project's last build (status, number), or for all projects the number running and the last failure; click for the latest builds (Run button for admins) |
+| **Proxmox VE** | Guests running / total and the busiest node's CPU; click for the nodes and guests (power buttons for admins) |
 
 Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, Docker environment, printer, clock format or weather location. Every navbar widget also has **Icon size** and **Text size** sliders (50–250%, previewed live); the navbar row grows to fit larger widgets. Outside edit mode, clicking the Docker, Uptime Kuma or 3D printer widget opens a details popover with the same content as the standard widget (close it with a click outside or Escape).
 
@@ -176,6 +183,10 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **Notes** | Markdown note (headings, bold/italic, links, lists, code, quotes, `- [ ]` checklists); edit with the Edit button, Ctrl+Enter to save |
 | **PsiTransfer** | Drop zone: drag files onto the tile or click it to pick them, choose how long PsiTransfer keeps them (its own retentions, one-time download included) and an optional password, then **Send**; the share link appears with **Copy** / **Open**, and the last links (with their expiry) stay listed, per browser. Options: default retention, skip the options step (send on drop), number of links kept. Any signed-in user can share files |
 | **Jenkins** | Latest builds of **all projects** or of **one project** (folders supported): status, number, time, duration, progress bar while running; a click opens the build in Jenkins. In project view, admins get **Run**, with a form for the job's parameters (text, choice, boolean, pre-filled with the defaults). Refreshed every 15 s, 5 s while a build runs |
+| **Proxmox VE** | Nodes with CPU and RAM bars, then the VMs and containers (ID, name, VM/CT, node, CPU % and RAM, or their state); options: cluster, node, VMs / containers / both, hide stopped guests, hide the nodes. Admins get **Start**, **Reboot** and **Shut down** (asks first, with **Force stop** as an option). Refreshed every 15 s |
+| **Portainer stacks** | Each environment with its running / stopped (and unhealthy) container counts, then the stacks with their state; option: one environment or all. Admins can start and stop stacks (stopping asks first). Refreshed every 30 s |
+| **Immich** | Photo, video and storage counts (the whole server with an admin key, else the key owner's library) and a grid of the latest photos linking to Immich; options: show the counts, number of photos (0 hides them). Refreshed every 5 min |
+| **Nextcloud** | Storage used and quota, server info (version, active users, files, free space; needs a Nextcloud admin and the Monitoring app) and the latest modified files linking to Nextcloud; options: show the quota, show server info, number of files. Refreshed every 2 min |
 
 ### Integrations
 
@@ -193,12 +204,29 @@ Connections to external services are set up in **Settings > Integrations**: a se
 | **Spoolman** | URL |
 | **PsiTransfer** | URL (the server's address, e.g. `http://psitransfer:3000`); optional public URL for the share links and upload password (`PSITRANSFER_UPLOAD_PASS`) |
 | **Jenkins** | URL, username, API token (user menu > Security > API Token); optional public URL for the links to builds |
+| **Proxmox VE** | Clusters: name, URL (`https://pve:8006`), API token ID (`user@realm!name`) and secret, **Skip TLS verification** for a self-signed certificate. Reading needs the PVEAuditor role; the power buttons need VM.PowerMgmt (e.g. PVEVMUser) |
+| **Portainer** | URL, access token (My account > Access tokens), **Skip TLS verification**; optional public URL for the links |
+| **Immich** | URL and API key (Account settings > API keys); optional public URL for the links to photos |
+| **Nextcloud** | URL, username and an app password (Personal settings > Security); optional public URL for the links to files |
 | **Elegoo printers** | Centauri Carbon 2: name, IP, access code (if set); **Detect** reads the serial number. The printer must be in **LAN Only** mode (Settings > Network) |
 | **AdGuard Home** | URL, username, password |
 
 **Test connection** tries the values typed, before saving them, from the CatBoard server (so it checks what the widgets will reach): the answer shows the version found (e.g. *Radarr 5.2.1*) or the reason of the failure (wrong key, connection refused, no answer within 5 s...). Lists (Docker, Stacker, printers) test every item. Each connection has its own **Save**; a dot in the list marks unsaved changes, and **Revert** drops them. Emptying a connection's URL and saving removes it.
 
 Only admins (admin and mini-admin roles) can change or test connections, or use widget actions (approve/decline, pause/resume/stop). Other users see the list read-only and the widgets, and integration secrets are hidden from them.
+
+### Appearance
+
+**Settings > Appearance** changes the look for your account only; every change shows at once, and closing without saving puts the previous look back.
+
+- **Color theme**: 22 presets, **Auto** (pick one dark and one light preset: CatBoard follows the device's light/dark mode, live) or **Custom** (your own palette).
+- **Style**: Rounded, Sharp or Pill, or any **corner radius** from 0 to 24 px.
+- **Text**: system font or a Google Font (Inter, Roboto, Nunito, Poppins, Fira Sans, JetBrains Mono, or any family name), text size 90–120%.
+- **Cards**: accent color over the theme, card **opacity** and **blur** (see-through, frosted cards over a background image).
+- **Custom CSS**: your own rules, added after the theme. Useful hooks: the theme variables (`--bg-primary`, `--bg-card`, `--text-primary`, `--accent`, `--radius`...) on `.cb-root`, `.cb-item-<type>` on each tile (`.cb-item-service`, `.cb-item-clock`, `.cb-item-proxmox`...), the `data-theme`, `data-style` and `data-animations` attributes, and `.navbar`. If a rule breaks the page, open CatBoard with `?nocss` at the end of the address to load it without your CSS.
+- **Theme file**: **Export theme** saves the whole look (colors, style, text, cards, background, custom CSS) as a `.json` file; **Import theme** applies one (Save to keep it).
+
+**Settings > Layout > Service status** sets how often service tiles are checked (10 s to 10 min).
 
 ## API Endpoints
 
@@ -249,6 +277,13 @@ Only admins (admin and mini-admin roles) can change or test connections, or use 
 | `GET` | `/api/integrations/jenkins/params` | Parameters of a job (`job`) |
 | `POST` | `/api/integrations/jenkins/build` | Start a build, with parameters (`job`, `params`, admins) |
 | `GET` | `/api/integrations/stacker/snapshot` | New samples from a Stacker server (`serverId`, `since`, `static`) |
+| `GET` | `/api/integrations/proxmox/resources` | Nodes and guests of a Proxmox cluster (`cluster`) |
+| `POST` | `/api/integrations/proxmox/action` | Start / shut down / reboot / stop a guest (`cluster`, `node`, `type`, `vmid`, `action`, admins) |
+| `GET` | `/api/integrations/portainer/overview` | Portainer environments (container counts) and stacks |
+| `POST` | `/api/integrations/portainer/stack` | Start or stop a stack (`id`, `endpointId`, `action`, admins) |
+| `GET` | `/api/integrations/immich/summary` | Immich statistics and the latest photos (`photos`) |
+| `GET` | `/api/integrations/immich/thumb/[id]` | A photo thumbnail, fetched with the API key on the server |
+| `GET` | `/api/integrations/nextcloud/overview` | Quota, server info and recent files (`server`, `files`) |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |
 | `GET` | `/api/version` | Current vs latest Docker image version |

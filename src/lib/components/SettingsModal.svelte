@@ -7,7 +7,7 @@
 	} from '$lib/stores/dashboard';
 	import type { Layout } from '$lib/types';
 	import { clearBrowserIconCache } from '$lib/stores/icons';
-	import { themePresets, customPaletteDefaults, themeDefaults } from '$lib/themes';
+	import { themePresets, customPaletteDefaults, themeDefaults, FONTS, isFontName, THEME_KEYS, cleanThemeFile, MAX_CUSTOM_CSS } from '$lib/themes';
 	import type { CustomPalette } from '$lib/stores/dashboard';
 	import AdminPanel from './AdminPanel.svelte';
 	import IntegrationsPanel from './settings/IntegrationsPanel.svelte';
@@ -33,6 +33,50 @@
 	let customPalette = $state<CustomPalette>(
 		$settings.customPalette || { ...customPaletteDefaults['dark'] }
 	);
+	let autoDark = $state($settings.autoDark || 'dark');
+	let autoLight = $state($settings.autoLight || 'light');
+	let radius = $state<number | undefined>($settings.radius);
+	let accent = $state($settings.accent || '');
+	let fontChoice = $state(!$settings.font ? '' : FONTS.includes($settings.font) ? $settings.font : 'other');
+	let otherFont = $state($settings.font && !FONTS.includes($settings.font) ? $settings.font : '');
+	let fontScale = $state($settings.fontScale ?? 100);
+	let cardOpacity = $state($settings.cardOpacity ?? 100);
+	let cardBlur = $state($settings.cardBlur ?? 0);
+	let customCss = $state($settings.customCss ?? '');
+	let statusCheckInterval = $state($settings.statusCheckInterval || 30000);
+
+	const font = $derived(fontChoice === 'other' ? (isFontName(otherFont.trim()) ? otherFont.trim() : '') : fontChoice);
+	const darkPresets = themePresets.filter((t) => !['light', 'solarized-light', 'catppuccin-latte', 'github-light'].includes(t.name));
+	const lightPresets = themePresets.filter((t) => ['light', 'solarized-light', 'catppuccin-latte', 'github-light'].includes(t.name));
+
+	/** Appearance fields as stored in settings (empty values left out). */
+	function appearance() {
+		return {
+			theme: selectedTheme,
+			autoDark: selectedTheme === 'auto' ? autoDark : undefined,
+			autoLight: selectedTheme === 'auto' ? autoLight : undefined,
+			customPalette: selectedTheme === 'custom' ? $state.snapshot(customPalette) : undefined,
+			background: { type: bgType, value: bgValue },
+			stylePreset,
+			animations,
+			scrollbarStyle,
+			radius,
+			accent: accent || undefined,
+			font: font || undefined,
+			fontScale: fontScale !== 100 ? fontScale : undefined,
+			cardOpacity: cardOpacity < 100 ? cardOpacity : undefined,
+			cardBlur: cardBlur > 0 ? cardBlur : undefined,
+			customCss: customCss.trim() ? customCss.slice(0, MAX_CUSTOM_CSS) : undefined
+		};
+	}
+
+	// Every appearance change shows at once; closing without saving puts the
+	// previous look back.
+	const originalSettings = $state.snapshot($settings);
+	$effect(() => {
+		const next = appearance();
+		untrack(() => settings.update((s) => ({ ...s, ...next })));
+	});
 
 	const paletteLabels: Record<keyof CustomPalette, string> = {
 		bgPrimary: 'Background',
@@ -146,7 +190,9 @@
 	const pendingCount = $derived(Object.keys(edits).length);
 
 	function applyTheme(themeName: string) {
-		if (themeName === 'custom') {
+		if (themeName === 'auto') {
+			// keeps the current style; the two presets are picked below
+		} else if (themeName === 'custom') {
 			const baseTheme = selectedTheme === 'custom' ? 'dark' : selectedTheme;
 			customPalette = { ...customPaletteDefaults[baseTheme] || customPaletteDefaults['dark'] };
 		} else {
@@ -157,7 +203,70 @@
 			}
 		}
 		selectedTheme = themeName;
-		settings.update(s => ({ ...s, theme: themeName, stylePreset, scrollbarStyle }));
+	}
+
+	/** A style card resets a custom corner radius. */
+	function pickStyle(preset: 'default' | 'sharp' | 'pill') {
+		stylePreset = preset;
+		radius = undefined;
+	}
+
+	/** Tab in the CSS editor indents instead of leaving the field. */
+	function cssKeydown(e: KeyboardEvent) {
+		if (e.key !== 'Tab' || e.shiftKey) return;
+		e.preventDefault();
+		const el = e.currentTarget as HTMLTextAreaElement;
+		const { selectionStart: a, selectionEnd: b } = el;
+		customCss = customCss.slice(0, a) + '\t' + customCss.slice(b);
+		requestAnimationFrame(() => el.setSelectionRange(a + 1, a + 1));
+	}
+
+	let themeMessage = $state<{ ok: boolean; text: string } | null>(null);
+
+	function exportTheme() {
+		const data: Record<string, unknown> = { catboardTheme: 1 };
+		const a = appearance() as Record<string, unknown>;
+		for (const k of THEME_KEYS) if (a[k] !== undefined) data[k] = a[k];
+		const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = `catboard-theme-${selectedTheme}.json`;
+		link.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function importTheme(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+		file.text().then((text) => {
+			try {
+				const t = cleanThemeFile(JSON.parse(text));
+				if (t.customPalette) customPalette = t.customPalette;
+				if (t.theme) selectedTheme = t.theme;
+				autoDark = t.autoDark ?? 'dark';
+				autoLight = t.autoLight ?? 'light';
+				if (t.stylePreset) stylePreset = t.stylePreset;
+				if (t.animations) animations = t.animations;
+				if (t.scrollbarStyle) scrollbarStyle = t.scrollbarStyle;
+				if (t.background) {
+					bgType = t.background.type;
+					bgValue = t.background.value;
+				}
+				radius = t.radius;
+				accent = t.accent ?? '';
+				fontChoice = !t.font ? '' : FONTS.includes(t.font) ? t.font : 'other';
+				otherFont = t.font && !FONTS.includes(t.font) ? t.font : '';
+				fontScale = t.fontScale ?? 100;
+				cardOpacity = t.cardOpacity ?? 100;
+				cardBlur = t.cardBlur ?? 0;
+				customCss = t.customCss ?? '';
+				themeMessage = { ok: true, text: `Theme "${file.name}" applied: Save to keep it.` };
+			} catch (err) {
+				themeMessage = { ok: false, text: err instanceof Error && err.message !== 'Unexpected end of JSON input' ? err.message : 'This file is not valid JSON' };
+			}
+		});
 	}
 
 	function resetPalette() {
@@ -168,19 +277,13 @@
 	async function saveAll() {
 		const data: any = {
 			...$settings,
+			...appearance(),
 			title,
-			theme: selectedTheme,
-			background: { type: bgType, value: bgValue },
-			stylePreset,
-			animations,
-			scrollbarStyle,
+			statusCheckInterval,
 			layout: { cellSize: defaultCellSize, gap: defaultGap, breakpoints }
 		};
-		if (selectedTheme === 'custom') {
-			data.customPalette = customPalette;
-		} else {
-			delete data.customPalette;
-		}
+		// Unset options are left out of the file rather than stored as null.
+		for (const k of Object.keys(data)) if (data[k] === undefined) delete data[k];
 		await saveSettings(data);
 		for (const [key, v] of Object.entries(edits)) {
 			const [d, b] = key.split('|');
@@ -201,6 +304,7 @@
 	function close() {
 		// Closing without saving: drop the live preview.
 		if (!saved && Object.keys(edits).length) layout.set(originalLayout);
+		if (!saved) settings.set(originalSettings);
 		closing = true;
 		const duration = $settings.animations === 'none' ? 0 : 200;
 		setTimeout(() => onclose(), duration);
@@ -311,6 +415,8 @@
 			await importDashboard(importData, importSections);
 			importData = null;
 			importSections = [];
+			// The imported settings are the new look: keep them on close.
+			saved = true;
 			close();
 		} catch {
 			// ignore
@@ -362,6 +468,11 @@
 								</div>
 							</button>
 						{/each}
+						<button class="theme-card" class:active={selectedTheme === 'auto'} onclick={() => applyTheme('auto')}>
+							<div class="theme-preview" data-theme-preview="auto">
+								<span class="theme-label">Auto</span>
+							</div>
+						</button>
 						<button
 							class="theme-card"
 							class:active={selectedTheme === 'custom'}
@@ -377,6 +488,25 @@
 						</button>
 					</div>
 				</div>
+
+				{#if selectedTheme === 'auto'}
+					<div class="settings-section">
+						<h3>Auto theme</h3>
+						<p class="section-hint">Follows the light or dark mode of the device.</p>
+						<div class="field-row">
+							<label for="auto-dark">Dark mode</label>
+							<select id="auto-dark" bind:value={autoDark}>
+								{#each darkPresets as t}<option value={t.name}>{t.label}</option>{/each}
+							</select>
+						</div>
+						<div class="field-row">
+							<label for="auto-light">Light mode</label>
+							<select id="auto-light" bind:value={autoLight}>
+								{#each lightPresets as t}<option value={t.name}>{t.label}</option>{/each}
+							</select>
+						</div>
+					</div>
+				{/if}
 
 				{#if selectedTheme === 'custom'}
 					<div class="settings-section">
@@ -398,25 +528,84 @@
 				<div class="settings-section">
 					<h3>Style</h3>
 					<div class="option-cards">
-						<button class="option-card" class:active={stylePreset === 'default'} onclick={() => (stylePreset = 'default')}>
+						<button class="option-card" class:active={stylePreset === 'default' && radius === undefined} onclick={() => pickStyle('default')}>
 							<div class="option-preview">
 								<div class="style-box default-box"></div>
 							</div>
 							<span>Rounded</span>
 						</button>
-						<button class="option-card" class:active={stylePreset === 'sharp'} onclick={() => (stylePreset = 'sharp')}>
+						<button class="option-card" class:active={stylePreset === 'sharp' && radius === undefined} onclick={() => pickStyle('sharp')}>
 							<div class="option-preview">
 								<div class="style-box sharp-box"></div>
 							</div>
 							<span>Sharp</span>
 						</button>
-						<button class="option-card" class:active={stylePreset === 'pill'} onclick={() => (stylePreset = 'pill')}>
+						<button class="option-card" class:active={stylePreset === 'pill' && radius === undefined} onclick={() => pickStyle('pill')}>
 							<div class="option-preview">
 								<div class="style-box pill-box"></div>
 							</div>
 							<span>Pill</span>
 						</button>
 					</div>
+					<div class="range-row">
+						<label for="radius">Corner radius</label>
+						<input id="radius" type="range" min="0" max="24" step="1" value={radius ?? (stylePreset === 'sharp' ? 4 : stylePreset === 'pill' ? 20 : 12)} oninput={(e) => (radius = Number(e.currentTarget.value))} />
+						<span class="range-value">{radius === undefined ? 'Preset' : `${radius}px`}</span>
+					</div>
+				</div>
+
+				<div class="settings-section">
+					<h3>Text</h3>
+					<div class="field-row">
+						<label for="font">Font</label>
+						<select id="font" bind:value={fontChoice}>
+							<option value="">System</option>
+							{#each FONTS as f}<option value={f}>{f}</option>{/each}
+							<option value="other">Other Google font…</option>
+						</select>
+					</div>
+					{#if fontChoice === 'other'}
+						<div class="field-row">
+							<label for="other-font">Font name</label>
+							<input id="other-font" type="text" bind:value={otherFont} placeholder="e.g. Space Grotesk" maxlength="40" />
+						</div>
+						{#if otherFont.trim() && !font}<p class="section-hint"><b>Letters, digits and spaces only.</b></p>{/if}
+					{/if}
+					{#if font}<p class="section-hint">Loaded from Google Fonts.</p>{/if}
+					<div class="range-row">
+						<label for="font-scale">Text size</label>
+						<input id="font-scale" type="range" min="90" max="120" step="5" bind:value={fontScale} />
+						<span class="range-value">{fontScale}%</span>
+					</div>
+				</div>
+
+				<div class="settings-section">
+					<h3>Cards</h3>
+					<div class="range-row">
+						<label for="accent-on">Accent color</label>
+						<span class="cb-form">
+							<label class="toggle-switch" style="margin: 0">
+								<input id="accent-on" type="checkbox" checked={!!accent} onchange={(e) => (accent = e.currentTarget.checked ? '#4f8fff' : '')} />
+								<span class="toggle-slider"></span>
+							</label>
+						</span>
+						{#if accent}
+							<input class="accent-input" type="color" bind:value={accent} aria-label="Accent color" />
+						{:else}
+							<span class="range-value">From theme</span>
+						{/if}
+					</div>
+					<div class="range-row">
+						<label for="card-opacity">Opacity</label>
+						<input id="card-opacity" type="range" min="40" max="100" step="5" bind:value={cardOpacity} />
+						<span class="range-value">{cardOpacity}%</span>
+					</div>
+					<div class="range-row">
+						<label for="card-blur">Blur</label>
+						<input id="card-blur" type="range" min="0" max="20" step="1" bind:value={cardBlur} />
+						<span class="range-value">{cardBlur ? `${cardBlur}px` : 'Off'}</span>
+					</div>
+					<p class="section-hint">See-through, blurred cards look best over a background image.</p>
 				</div>
 
 				<div class="settings-section">
@@ -484,10 +673,55 @@
 						</div>
 					{/if}
 				</div>
+
+				<div class="settings-section">
+					<div class="section-header">
+						<h3>Custom CSS</h3>
+						{#if customCss}<button class="btn-reset" onclick={() => (customCss = '')}>Clear</button>{/if}
+					</div>
+					<p class="section-hint">Applied live, only for your account. Broken page? Open CatBoard with <code>?nocss</code> at the end of the address to skip it.</p>
+					<textarea class="css-editor" bind:value={customCss} onkeydown={cssKeydown} spellcheck="false" maxlength={MAX_CUSTOM_CSS} placeholder={'.cb-item-clock {\n\tborder: 1px solid var(--accent);\n}'}></textarea>
+					<details class="css-help">
+						<summary>What can I style?</summary>
+						<ul>
+							<li><code>--bg-primary</code>, <code>--bg-card</code>, <code>--text-primary</code>, <code>--accent</code>, <code>--radius</code>… on <code>.cb-root</code>: every colour and size of the theme.</li>
+							<li><code>.cb-item-&lt;type&gt;</code>: one kind of tile, e.g. <code>.cb-item-service</code>, <code>.cb-item-clock</code>, <code>.cb-item-jenkins</code>.</li>
+							<li><code>[data-theme='nord']</code>, <code>[data-style]</code>, <code>[data-animations]</code>: rules for one theme or option.</li>
+							<li><code>.navbar</code>: the top bar.</li>
+						</ul>
+					</details>
+				</div>
+
+				<div class="settings-section">
+					<h3>Theme file</h3>
+					<p class="section-hint">Share this look: colors, style, text, cards, background and custom CSS.</p>
+					<div class="theme-file">
+						<button class="btn-reset" onclick={exportTheme}>Export theme</button>
+						<label class="btn-reset file-btn">
+							Import theme
+							<input type="file" accept="application/json,.json" onchange={importTheme} hidden />
+						</label>
+					</div>
+					{#if themeMessage}<p class="theme-message" class:error={!themeMessage.ok}>{themeMessage.text}</p>{/if}
+				</div>
 			{:else if activeTab === 'layout'}
 				<div class="settings-section">
 					<h3>Dashboard Title</h3>
 					<input type="text" bind:value={title} />
+				</div>
+
+				<div class="settings-section">
+					<h3>Service status</h3>
+					<div class="field-row">
+						<label for="status-interval">Check every</label>
+						<select id="status-interval" bind:value={statusCheckInterval}>
+							<option value={10000}>10 seconds</option>
+							<option value={30000}>30 seconds</option>
+							<option value={60000}>1 minute</option>
+							<option value={300000}>5 minutes</option>
+							<option value={600000}>10 minutes</option>
+						</select>
+					</div>
 				</div>
 
 				<div class="settings-section">
@@ -879,6 +1113,110 @@
 		color: var(--accent);
 	}
 
+	/* Sliders, CSS editor, theme file */
+	.range-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-top: 10px;
+		margin-bottom: 10px;
+	}
+
+	.range-row > label:first-child {
+		font-size: 0.85rem;
+		color: var(--text-secondary);
+		min-width: 100px;
+	}
+
+	.range-row input[type='range'] {
+		flex: 1;
+		accent-color: var(--accent);
+	}
+
+	.range-value {
+		min-width: 64px;
+		text-align: right;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.accent-input {
+		width: 44px;
+		height: 28px;
+		padding: 0;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: none;
+		cursor: pointer;
+	}
+
+	.css-editor {
+		width: 100%;
+		min-height: 160px;
+		padding: 10px 12px;
+		background: var(--bg-primary);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+		font-size: 0.8rem;
+		line-height: 1.5;
+		tab-size: 4;
+		resize: vertical;
+		outline: none;
+	}
+
+	.css-editor:focus {
+		border-color: var(--accent);
+	}
+
+	.css-help {
+		margin-top: 8px;
+		font-size: 0.78rem;
+		color: var(--text-muted);
+	}
+
+	.css-help summary {
+		cursor: pointer;
+		color: var(--text-secondary);
+	}
+
+	.css-help ul {
+		margin: 6px 0 0 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.settings-section code {
+		font-family: ui-monospace, Consolas, monospace;
+		font-size: 0.9em;
+		padding: 0 4px;
+		border-radius: 4px;
+		background: var(--bg-primary);
+		color: var(--text-secondary);
+	}
+
+	.theme-file {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.file-btn {
+		cursor: pointer;
+	}
+
+	.theme-message {
+		margin-top: 8px;
+		font-size: 0.8rem;
+		color: var(--success);
+	}
+
+	.theme-message.error {
+		color: var(--danger);
+	}
+
 	/* Theme grid */
 	.theme-grid {
 		display: grid;
@@ -929,6 +1267,16 @@
 	.theme-preview[data-theme-preview="tmog"] { background: radial-gradient(circle at 80% 0%, rgba(22, 197, 255, 0.25), transparent 70%), #070b0f; color: #16c5ff; }
 	.theme-preview[data-theme-preview="tmog-green"] { background: radial-gradient(circle at 80% 0%, rgba(69, 237, 115, 0.22), transparent 70%), #050a06; color: #45ed73; }
 	.theme-preview[data-theme-preview="tmog-amber"] { background: radial-gradient(circle at 80% 0%, rgba(255, 179, 54, 0.22), transparent 70%), #0b0805; color: #ffb336; }
+	.theme-preview[data-theme-preview="catppuccin-latte"] { background: #eff1f5; color: #4c4f69; }
+	.theme-preview[data-theme-preview="catppuccin-frappe"] { background: #303446; color: #c6d0f5; }
+	.theme-preview[data-theme-preview="rose-pine"] { background: #191724; color: #e0def4; }
+	.theme-preview[data-theme-preview="everforest"] { background: #2d353b; color: #d3c6aa; }
+	.theme-preview[data-theme-preview="kanagawa"] { background: #1f1f28; color: #dcd7ba; }
+	.theme-preview[data-theme-preview="github-dark"] { background: #0d1117; color: #e6edf3; }
+	.theme-preview[data-theme-preview="github-light"] { background: #f6f8fa; color: #1f2328; }
+	.theme-preview[data-theme-preview="monokai"] { background: #272822; color: #f8f8f2; }
+	.theme-preview[data-theme-preview="oled"] { background: #000000; color: #4f8fff; }
+	.theme-preview[data-theme-preview="auto"] { background: linear-gradient(135deg, #0f0f1a 50%, #f0f2f5 50%); color: #4f8fff; }
 
 	.custom-preview {
 		background: conic-gradient(from 0deg, #ff4f6f, #ffbf4f, #4fdd8f, #4f8fff, #bd93f9, #ff4f6f);
