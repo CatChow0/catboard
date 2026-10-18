@@ -6,8 +6,8 @@ import type { IntegrationsConfig } from '$lib/types';
 import type { GlyphName } from '$lib/widgets/glyphs';
 
 export type IntegrationKey = keyof IntegrationsConfig;
-export type IntegrationCategory = 'Monitoring' | 'Media' | 'Downloads' | '3D printing' | 'Network';
-export const INTEGRATION_CATEGORIES: IntegrationCategory[] = ['Monitoring', 'Media', 'Downloads', '3D printing', 'Network'];
+export type IntegrationCategory = 'Monitoring' | 'Media' | 'Downloads' | 'Files' | 'Development' | '3D printing' | 'Network';
+export const INTEGRATION_CATEGORIES: IntegrationCategory[] = ['Monitoring', 'Media', 'Downloads', 'Files', 'Development', '3D printing', 'Network'];
 
 export interface FieldDef {
 	id: string;
@@ -156,6 +156,37 @@ export const INTEGRATIONS: IntegrationDef[] = [
 			{ id: 'password', label: 'Password', type: 'secret' }
 		],
 		requiredField: 'url'
+	},
+	{
+		key: 'psitransfer',
+		name: 'PsiTransfer',
+		description: 'Share files: drop them on a widget, get a link',
+		icon: 'upload',
+		category: 'Files',
+		kind: 'single',
+		fields: [
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'http://psitransfer:3000' },
+			{ id: 'publicUrl', label: 'Public URL', type: 'url', placeholder: 'https://psitransfer.example.com', advanced: true, hint: 'Public address and upload password (only when they differ from the defaults).' },
+			{ id: 'uploadPassword', label: 'Upload password', type: 'secret', placeholder: 'PSITRANSFER_UPLOAD_PASS, if set', advanced: true }
+		],
+		requiredField: 'url',
+		help: 'The URL is the address the CatBoard server uses (an internal one such as http://psitransfer:3000 works). Share links use the public URL when it is set.'
+	},
+	{
+		key: 'jenkins',
+		name: 'Jenkins',
+		description: 'Latest builds, start a build',
+		icon: 'jenkins',
+		category: 'Development',
+		kind: 'single',
+		fields: [
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'http://jenkins:8080' },
+			{ id: 'username', label: 'Username', type: 'text' },
+			{ id: 'apiToken', label: 'API token', type: 'secret', placeholder: 'User menu > Security > API Token' },
+			{ id: 'publicUrl', label: 'Public URL', type: 'url', placeholder: 'https://jenkins.example.com', advanced: true, hint: 'Public address for the links to builds (only when it differs from the URL).' }
+		],
+		requiredField: 'url',
+		help: 'Create an API token for this user in Jenkins (user menu > Security > API Token). Starting builds needs the Job/Build permission.'
 	},
 	{
 		key: 'spoolman',

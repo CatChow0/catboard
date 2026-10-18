@@ -13,6 +13,7 @@
 	import NavbarAdGuardControl from './NavbarAdGuardControl.svelte';
 	import NavbarClock from './NavbarClock.svelte';
 	import NavbarWeather from './NavbarWeather.svelte';
+	import NavbarJenkins from './NavbarJenkins.svelte';
 
 	let { item, colSpan, onsearch }: {
 		item: NavbarItem;
@@ -44,4 +45,6 @@
 	<NavbarWeather config={item.config} {colSpan} />
 {:else if item.type === 'navbar-elegoo-print'}
 	<NavbarElegooPrint config={item.config} {colSpan} />
+{:else if item.type === 'navbar-jenkins'}
+	<NavbarJenkins config={item.config} {colSpan} />
 {/if}

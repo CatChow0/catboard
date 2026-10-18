@@ -298,6 +298,23 @@ http://stacker:8080
 
 If you can only reach Stacker through a reverse proxy with basic auth, enter its public URL and fill in the **Basic auth** username and password. CatBoard polls Stacker's `/api/snapshot` every 2 seconds, so the Stacker version must include that endpoint.
 
+### PsiTransfer
+
+1. In **Settings > Integrations > PsiTransfer**, enter the address CatBoard uses (e.g. `http://psitransfer:3000` when both share a Docker network)
+2. If that address is not the one people open, set the **Public URL** (e.g. `https://psitransfer.example.com`): share links use it
+3. If PsiTransfer has `PSITRANSFER_UPLOAD_PASS`, enter it as **Upload password** (it stays on the server)
+4. Add a **PsiTransfer** widget from **Add > Widgets**
+
+Files go through CatBoard in 384 KB chunks, so no `BODY_SIZE_LIMIT` change is needed, whatever the file size (PsiTransfer's own `maxFileSize` still applies).
+
+### Jenkins
+
+1. In Jenkins, create an API token for the user CatBoard will use (user menu > **Security** > **API Token**)
+2. In **Settings > Integrations > Jenkins**, enter the URL (e.g. `http://jenkins:8080`), the username and the token; set **Public URL** if the links should open another address
+3. Add a **Jenkins** widget (dashboard or navbar) from **Add > Widgets**, for all projects or one project
+
+The token's user needs Overall/Read and Job/Read, plus Job/Build to start builds (only CatBoard admins see the **Run** button). With an API token, Jenkins needs no CSRF crumb.
+
 ### Uptime Kuma
 
 To connect CatBoard to an Uptime Kuma instance:

@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![Version](https://img.shields.io/badge/version-3.1.0-blue)
 
 ## Features
 
@@ -26,7 +26,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP), with optional per-container CPU and RAM usage
 - **Stacker integration** -- Live CPU, memory, GPU, disk and network gauges and graphs from one or more Stacker servers, with selectable sections
-- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker)
+- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
@@ -144,6 +144,7 @@ Add them from **Add > Widgets** (badge *Navbar* or *Dashboard + navbar*; choose 
 | **Docker** | Docker logo and running/stopped counts (plus total CPU/RAM when enabled); click for the full container list |
 | **AdGuard Home** | Toggle protection status with colored state pill |
 | **3D printer** | Printer icon, mini progress bar, % and time left; click for the full print details (pause/resume/stop for admins) |
+| **Jenkins** | One project's last build (status, number), or for all projects the number running and the last failure; click for the latest builds (Run button for admins) |
 
 Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, Docker environment, printer, clock format or weather location. Every navbar widget also has **Icon size** and **Text size** sliders (50–250%, previewed live); the navbar row grows to fit larger widgets. Outside edit mode, clicking the Docker, Uptime Kuma or 3D printer widget opens a details popover with the same content as the standard widget (close it with a click outside or Escape).
 
@@ -173,6 +174,8 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **Spoolman** | Scrollable list of available spools (sorted by name, remaining filament or last use): colour swatch (multi-colour supported), name, vendor and material, remaining weight bar. Optional **Recently used** and **Running low / empty** sections, **Show only** to keep just those sections, and the order of the blocks (e.g. Recently used above the list); thresholds (% and/or grams) and archived spools configurable |
 | **3D Print Status** | Elegoo Centauri Carbon 2: model preview, state, progress, time left and end time, elapsed time, layers, nozzle/bed/chamber temperatures and speed mode; temperature cards with target; pause/resume/stop for admins. When idle the layout stays (empty preview, `--` values, disabled buttons); one line on a 1-row tile |
 | **Notes** | Markdown note (headings, bold/italic, links, lists, code, quotes, `- [ ]` checklists); edit with the Edit button, Ctrl+Enter to save |
+| **PsiTransfer** | Drop zone: drag files onto the tile or click it to pick them, choose how long PsiTransfer keeps them (its own retentions, one-time download included) and an optional password, then **Send**; the share link appears with **Copy** / **Open**, and the last links (with their expiry) stay listed, per browser. Options: default retention, skip the options step (send on drop), number of links kept. Any signed-in user can share files |
+| **Jenkins** | Latest builds of **all projects** or of **one project** (folders supported): status, number, time, duration, progress bar while running; a click opens the build in Jenkins. In project view, admins get **Run**, with a form for the job's parameters (text, choice, boolean, pre-filled with the defaults). Refreshed every 15 s, 5 s while a build runs |
 
 ### Integrations
 
@@ -188,6 +191,8 @@ Connections to external services are set up in **Settings > Integrations**: a se
 | **Jellyseerr / Overseerr** | URL and API key |
 | **qBittorrent** | Web UI URL, username, password |
 | **Spoolman** | URL |
+| **PsiTransfer** | URL (the server's address, e.g. `http://psitransfer:3000`); optional public URL for the share links and upload password (`PSITRANSFER_UPLOAD_PASS`) |
+| **Jenkins** | URL, username, API token (user menu > Security > API Token); optional public URL for the links to builds |
 | **Elegoo printers** | Centauri Carbon 2: name, IP, access code (if set); **Detect** reads the serial number. The printer must be in **LAN Only** mode (Settings > Network) |
 | **AdGuard Home** | URL, username, password |
 
@@ -235,6 +240,14 @@ Only admins (admin and mini-admin roles) can change or test connections, or use 
 | `GET` | `/api/integrations/elegoo/thumbnail` | Preview image of the current print (`printer`) |
 | `POST` | `/api/integrations/elegoo/action` | Pause, resume or stop the print (admins) |
 | `POST` | `/api/integrations/elegoo/discover` | Read a CC2's serial number and name over UDP (admins) |
+| `GET` | `/api/integrations/psitransfer/config` | PsiTransfer retentions, size limits and link base |
+| `POST` | `/api/integrations/psitransfer/upload` | Start sending a file of a bucket (`sid`, `name`, `size`, `retention`, `password`); returns an upload id |
+| `PATCH` | `/api/integrations/psitransfer/upload/[id]` | One chunk of that file (`Upload-Offset` header, raw bytes, 384 KB max) |
+| `POST` | `/api/integrations/psitransfer/done` | Close the bucket and return its share link (`sid`) |
+| `GET` | `/api/integrations/jenkins/jobs` | Every Jenkins job (folders as `folder/job`) |
+| `GET` | `/api/integrations/jenkins/builds` | Latest builds of a job or of all jobs (`job`, `limit`) |
+| `GET` | `/api/integrations/jenkins/params` | Parameters of a job (`job`) |
+| `POST` | `/api/integrations/jenkins/build` | Start a build, with parameters (`job`, `params`, admins) |
 | `GET` | `/api/integrations/stacker/snapshot` | New samples from a Stacker server (`serverId`, `since`, `static`) |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |

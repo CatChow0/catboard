@@ -139,6 +139,24 @@ async function run(key: IntegrationKey, v: Values): Promise<Result> {
 			const body = await res.json().catch(() => null);
 			return { ok: true, message: `AdGuard Home ${body?.version ?? ''}`.trim() };
 		}
+		case 'psitransfer': {
+			const res = await get(`${normalizeUrl(url)}/config.json`, v.uploadPassword ? { 'x-passwd': v.uploadPassword } : {});
+			if (res.status === 401) return { ok: false, message: 'PsiTransfer asks for an upload password: fill it in (advanced)' };
+			if (res.status === 403) return { ok: false, message: 'PsiTransfer refused the upload password' };
+			if (!res.ok) return httpError(res, 'PsiTransfer');
+			const body = await res.json().catch(() => null);
+			const n = Object.keys(body?.retentions ?? {}).length;
+			return n ? { ok: true, message: `PsiTransfer is reachable (${n} retention choices)` } : { ok: false, message: 'This does not look like PsiTransfer' };
+		}
+		case 'jenkins': {
+			const auth: Record<string, string> = v.username ? { Authorization: 'Basic ' + Buffer.from(`${v.username}:${v.apiToken ?? ''}`).toString('base64') } : {};
+			const res = await get(`${normalizeUrl(url)}/api/json?tree=mode`, auth);
+			if (res.status === 401) return { ok: false, message: 'Jenkins refused the username or API token' };
+			if (res.status === 403) return { ok: false, message: 'This Jenkins user may not read jobs (Overall/Read)' };
+			if (!res.ok) return httpError(res, 'Jenkins');
+			const version = res.headers.get('x-jenkins');
+			return version ? { ok: true, message: `Jenkins ${version}` } : { ok: false, message: 'This does not look like Jenkins' };
+		}
 		case 'elegoo':
 			return testElegoo(v);
 		default:

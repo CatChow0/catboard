@@ -26,10 +26,12 @@ import JellyseerrSettings from '$lib/components/widget-settings/JellyseerrSettin
 import QBittorrentSettings from '$lib/components/widget-settings/QBittorrentSettings.svelte';
 import SpoolmanSettings from '$lib/components/widget-settings/SpoolmanSettings.svelte';
 import PrintSettings from '$lib/components/widget-settings/PrintSettings.svelte';
+import PsiTransferSettings from '$lib/components/widget-settings/PsiTransferSettings.svelte';
+import JenkinsSettings from '$lib/components/widget-settings/JenkinsSettings.svelte';
 
 export type WidgetTarget = 'grid' | 'navbar';
-export type WidgetCategory = 'Basics' | 'System' | 'Monitoring' | 'Media' | 'Downloads' | '3D printing' | 'Network';
-export const WIDGET_CATEGORIES: WidgetCategory[] = ['Basics', 'System', 'Monitoring', 'Media', 'Downloads', '3D printing', 'Network'];
+export type WidgetCategory = 'Basics' | 'System' | 'Monitoring' | 'Media' | 'Downloads' | 'Files' | 'Development' | '3D printing' | 'Network';
+export const WIDGET_CATEGORIES: WidgetCategory[] = ['Basics', 'System', 'Monitoring', 'Media', 'Downloads', 'Files', 'Development', '3D printing', 'Network'];
 
 export type GridWidgetType = Exclude<DashboardItem['type'], 'service'>;
 export type NavbarWidgetType = Exclude<NavbarItem['type'], 'navbar-title'>;
@@ -316,6 +318,36 @@ export const WIDGETS: WidgetDef[] = [
 		settings: QBittorrentSettings,
 		prepare: (c) => ({ filter: c?.filter ?? 'active', limit: c?.limit ?? 8 }),
 		normalize: (d) => ({ filter: d.filter, limit: clamp(d.limit, 1, 50, 8) })
+	},
+
+	// --- Files ---
+	{
+		id: 'psitransfer',
+		name: 'PsiTransfer',
+		description: 'Drop files (or click) to share them, get the link',
+		icon: 'upload',
+		category: 'Files',
+		integrations: ['psitransfer'],
+		grid: { type: 'psitransfer', colSpan: 4, rowSpan: 2, minColSpan: 2 },
+		settings: PsiTransferSettings,
+		prepare: (c) => ({ retention: c?.retention ?? '', askOptions: c?.askOptions ?? true, history: c?.history ?? 5 }),
+		normalize: (d) => ({ retention: d.retention || undefined, askOptions: d.askOptions ? undefined : false, history: clamp(d.history, 0, 10, 5) })
+	},
+
+	// --- Development ---
+	{
+		id: 'jenkins',
+		name: 'Jenkins',
+		description: 'Latest builds of a project or of all, start a build',
+		icon: 'jenkins',
+		category: 'Development',
+		integrations: ['jenkins'],
+		grid: { type: 'jenkins', colSpan: 4, rowSpan: 3, minColSpan: 2 },
+		navbar: { type: 'navbar-jenkins', colSpan: 2 },
+		settings: JenkinsSettings,
+		prepare: (c) => ({ mode: c?.job ? 'job' : 'all', job: c?.job ?? '', limit: c?.limit ?? 8 }),
+		normalize: (d) => ({ job: d.mode === 'job' ? d.job || undefined : undefined, limit: clamp(d.limit, 1, 50, 8) }),
+		missing: (d) => (d.mode === 'job' && !d.job ? 'Pick a project' : null)
 	},
 
 	// --- 3D printing ---

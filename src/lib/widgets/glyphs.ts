@@ -31,6 +31,8 @@ export const GLYPHS = {
 	spool: { svg: '<circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" />' },
 	printer: { svg: '<rect x="3" y="2.5" width="18" height="19" rx="2" /><path d="M3 7.5h18M10 7.5v3h4v-3M12 10.5V12M7 18h10M9 18v-2.5h6V18" />' },
 	shield: { svg: '<path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" />' },
+	upload: { svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5M12 3v12" />' },
+	jenkins: { svg: '<circle cx="6" cy="6" r="2.5" /><circle cx="6" cy="18" r="2.5" /><circle cx="18" cy="12" r="2.5" /><path d="M6 8.5v7M8.3 7.2l7.4 3.6M8.3 16.8l7.4-3.6" />' },
 	shieldStats: { svg: '<path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z" /><path d="M8.5 15v-3M12 15V9M15.5 15v-5" />' }
 } satisfies Record<string, GlyphDef>;
 

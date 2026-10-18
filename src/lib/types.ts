@@ -147,7 +147,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem | SpoolmanItem | ElegooPrintItem;
+export type DashboardItem = ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem | SpoolmanItem | ElegooPrintItem | JenkinsItem | PsiTransferItem;
 
 // --- Weather ---
 
@@ -218,7 +218,7 @@ export interface NavbarWeatherItem extends NavbarItemBase {
 	config?: WeatherConfig;
 }
 
-export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem | NavbarClockItem | NavbarWeatherItem | NavbarElegooPrintItem;
+export type NavbarItem = NavbarTitleItem | NavbarSearchItem | NavbarCpuItem | NavbarRamItem | NavbarDiskItem | NavbarUptimeKumaStatusPageItem | NavbarDockerItem | NavbarAdGuardHomeItem | NavbarAdGuardHomeControlItem | NavbarClockItem | NavbarWeatherItem | NavbarElegooPrintItem | NavbarJenkinsItem;
 
 export interface NavbarLayout {
 	columns: number;
@@ -347,6 +347,10 @@ export interface IntegrationsConfig {
 	qbittorrent?: { url: string; username: string; password: string };
 	spoolman?: { url: string };
 	elegoo?: { printers: ElegooPrinter[] };
+	/** url: address used by the server; publicUrl: base of the share links (default: url). */
+	psitransfer?: { url: string; publicUrl?: string; uploadPassword?: string };
+	/** url: address used by the server; publicUrl: base of the links shown (default: url). */
+	jenkins?: { url: string; publicUrl?: string; username: string; apiToken: string };
 }
 
 /** A Stacker (web task manager) instance polled by the Stacker widget. */
@@ -724,4 +728,68 @@ export interface ElegooPrintItem extends DashboardItemBase {
 export interface NavbarElegooPrintItem extends NavbarItemBase {
 	type: 'navbar-elegoo-print';
 	config: ElegooPrintConfig;
+}
+
+// --- PsiTransfer ---
+
+export interface PsiTransferConfig {
+	/** Retention picked by default (a key of PsiTransfer's retentions, e.g. "604800" or "one-time"). */
+	retention?: string;
+	/** Ask for retention and password before sending (default true). */
+	askOptions?: boolean;
+	/** Share links remembered by the browser (default 5). */
+	history?: number;
+}
+
+export interface PsiTransferItem extends DashboardItemBase {
+	type: 'psitransfer';
+	config?: PsiTransferConfig;
+}
+
+// --- Jenkins ---
+
+export interface JenkinsConfig {
+	/** Full name of a job (folders joined with "/"); empty: every job. */
+	job?: string;
+	limit?: number;
+}
+
+export type JenkinsResult = 'SUCCESS' | 'FAILURE' | 'UNSTABLE' | 'ABORTED' | 'NOT_BUILT' | null;
+
+export interface JenkinsBuild {
+	job: string;
+	number: number;
+	result: JenkinsResult;
+	building: boolean;
+	timestamp: number;
+	duration: number;
+	estimatedDuration: number;
+	url: string;
+}
+
+export interface JenkinsData {
+	builds: JenkinsBuild[];
+	/** Project view: link to the job, whether it is queued, whether it takes parameters. */
+	jobUrl?: string;
+	inQueue?: boolean;
+	hasParameters?: boolean;
+	buildable?: boolean;
+}
+
+export interface JenkinsParameter {
+	name: string;
+	type: 'string' | 'text' | 'boolean' | 'choice' | 'password' | 'other';
+	description: string;
+	default: string | boolean;
+	choices?: string[];
+}
+
+export interface JenkinsItem extends DashboardItemBase {
+	type: 'jenkins';
+	config?: JenkinsConfig;
+}
+
+export interface NavbarJenkinsItem extends NavbarItemBase {
+	type: 'navbar-jenkins';
+	config?: JenkinsConfig;
 }
