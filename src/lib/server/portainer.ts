@@ -34,7 +34,8 @@ type RawEndpoint = { Id: number; Name: string; Status: number; Snapshots?: RawSn
 type RawStack = { Id: number; Name: string; EndpointId: number; Status: number; Type: number };
 
 export async function overview(conn: PortainerConn): Promise<PortainerData> {
-	const [eRes, sRes] = await Promise.all([portainer(conn, '/endpoints'), portainer(conn, '/stacks')]);
+	// Users without stack rights get 403 on /stacks: show the environments anyway.
+	const [eRes, sRes] = await Promise.all([portainer(conn, '/endpoints'), portainer(conn, '/stacks').catch(() => null)]);
 	if (!eRes.ok) throw new Error(`Portainer answered HTTP ${eRes.status}`);
 	const endpoints: PortainerEndpoint[] = ((await eRes.json()) as RawEndpoint[]).map((e) => {
 		const snap = e.Snapshots?.[0] ?? {};
@@ -48,8 +49,7 @@ export async function overview(conn: PortainerConn): Promise<PortainerData> {
 			unhealthy: snap.UnhealthyContainerCount ?? 0
 		};
 	});
-	// Users without stack rights get 403 on /stacks: show the environments anyway.
-	const stacks: PortainerStack[] = sRes.ok
+	const stacks: PortainerStack[] = sRes?.ok
 		? ((await sRes.json()) as RawStack[])
 				.map((s) => ({ id: s.Id, name: s.Name, endpointId: s.EndpointId, active: s.Status === 1, type: s.Type }))
 				.sort((a, b) => a.name.localeCompare(b.name))

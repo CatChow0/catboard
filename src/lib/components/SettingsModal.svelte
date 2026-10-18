@@ -364,7 +364,23 @@
 		return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 	}
 
-	let importData = $state<Record<string, unknown> | null>(null);
+	/** An export file (GET /api/export), as far as the summary reads it. */
+	interface ExportFile {
+		exportedAt?: string;
+		services?: { services?: unknown[] };
+		layout?: Partial<Layout>;
+		settings?: unknown;
+		integrations?: unknown;
+		[key: string]: unknown;
+	}
+	let importData = $state<ExportFile | null>(null);
+
+	/** Dashboards and tiles in an exported layout (every dashboard, widest breakpoint). */
+	function layoutSummary(l: Partial<Layout> | undefined): string {
+		const pages = [l?.layouts, ...Object.values(l?.pages ?? {})].filter(Boolean) as Record<string, { items?: unknown[] }>[];
+		const items = pages.reduce((n, p) => n + Math.max(0, ...Object.values(p).map((bp) => bp.items?.length ?? 0)), 0);
+		return `${pages.length} dashboard${pages.length === 1 ? '' : 's'}, ${items} item${items === 1 ? '' : 's'}`;
+	}
 	let importSections = $state<string[]>([]);
 	let importing = $state(false);
 	let exporting = $state(false);
@@ -914,7 +930,7 @@
 										<label class="section-check">
 											<input type="checkbox" checked={importSections.includes('layout')} onchange={() => toggleImportSection('layout')} />
 											<span>Layout</span>
-											<span class="section-count">{Array.isArray(importData.layout?.items) ? importData.layout.items.length : 0} items</span>
+											<span class="section-count">{layoutSummary(importData.layout)}</span>
 										</label>
 									{/if}
 									{#if importData.settings}

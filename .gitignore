@@ -24,3 +24,9 @@ android/keystore.properties
 *.jks
 *.keystore
 dist/
+
+# Test outputs
+/reports
+/test-results
+/playwright-report
+/coverage

@@ -7,7 +7,7 @@ import type {
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
 	NavbarItem, NavbarLayout, PerBreakpointLayout, Layout, CustomPalette, Settings, ServiceStatus,
 	SystemStats, UptimeKumaStatusPageData, UptimeKumaStatusPageConfig, DockerEnvironmentData, DockerWidgetConfig, IntegrationsConfig,
-	ArrCalendarData, ArrReleasesConfig, AdGuardHomeData, StackerConfig, DashboardMeta
+	ArrCalendarData, ArrReleasesConfig, AdGuardHomeData, StackerConfig, DashboardMeta, Breakpoint
 } from '$lib/types';
 
 export type {
@@ -115,13 +115,11 @@ export function toggleEditMode() {
 
 // --- Helpers ---
 
-function sanitizeBreakpoints(
-	breakpoints: { id?: string; minWidth: number; columns: number }[]
-): { id: string; minWidth: number; columns: number }[] {
+/** Breakpoints from older files may lack an id or a name: fill them in. */
+function sanitizeBreakpoints(breakpoints: { id?: string; name?: string; minWidth: number; columns: number }[]): Breakpoint[] {
 	return breakpoints.map((bp, i) => {
-		if (bp.id) return bp as { id: string; minWidth: number; columns: number };
-		let id = bp.minWidth === 0 ? 'mobile' : bp.minWidth === 800 ? 'tablet' : bp.minWidth === 1200 ? 'desktop' : `bp-${bp.minWidth}-${i}`;
-		return { ...bp, id };
+		const id = bp.id || (bp.minWidth === 0 ? 'mobile' : bp.minWidth === 800 ? 'tablet' : bp.minWidth === 1200 ? 'desktop' : `bp-${bp.minWidth}-${i}`);
+		return { ...bp, id, name: bp.name || id.charAt(0).toUpperCase() + id.slice(1) };
 	});
 }
 
@@ -136,7 +134,7 @@ function mergeGridConfig(layoutData: Layout): Layout {
 	return layoutData;
 }
 
-export function getActiveColumns(breakpoints: { id: string; minWidth: number; columns: number }[], windowWidth: number): number {
+export function getActiveColumns(breakpoints: Pick<Breakpoint, 'minWidth' | 'columns'>[], windowWidth: number): number {
 	const sorted = [...breakpoints].sort((a, b) => b.minWidth - a.minWidth);
 	for (const bp of sorted) {
 		if (windowWidth >= bp.minWidth) return bp.columns;
@@ -145,7 +143,7 @@ export function getActiveColumns(breakpoints: { id: string; minWidth: number; co
 }
 
 export function resolveActiveBreakpointId(
-	breakpoints: { id: string; minWidth: number; columns: number }[],
+	breakpoints: Pick<Breakpoint, 'id' | 'minWidth'>[],
 	windowWidth: number,
 	manualId: string | null
 ): string {
@@ -160,7 +158,7 @@ export function resolveActiveBreakpointId(
 }
 
 export function getBreakpointLabel(
-	breakpoints: { id: string; minWidth: number; columns: number }[],
+	breakpoints: Pick<Breakpoint, 'id' | 'name'>[],
 	breakpointId: string
 ): string {
 	const bp = breakpoints.find((b) => b.id === breakpointId);

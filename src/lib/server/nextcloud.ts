@@ -76,7 +76,11 @@ async function recentFiles(conn: NextcloudConn, limit: number): Promise<Nextclou
 </d:searchrequest>`;
 	const res = await nc(conn, '/remote.php/dav/', { method: 'SEARCH', headers: { 'Content-Type': 'text/xml', Accept: 'application/xml' }, body });
 	if (!res.ok) throw new Error(`Nextcloud search answered HTTP ${res.status}`);
-	const xml = await res.text();
+	return parseSearch(await res.text(), conn, limit);
+}
+
+/** Files of a WebDAV SEARCH answer: names decoded, paths relative to the user's root. */
+export function parseSearch(xml: string, conn: Pick<NextcloudConn, 'user' | 'publicBase'>, limit: number): NextcloudFile[] {
 	const prefix = `/remote.php/dav/files/${encodeURIComponent(conn.user)}`;
 	return [...xml.matchAll(/<d:response>([\s\S]*?)<\/d:response>/gi)]
 		.map(([, block]) => {

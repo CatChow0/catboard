@@ -26,7 +26,7 @@ export function jobPath(fullName: string): string {
 }
 
 /** Links Jenkins returns use its own URL setting: point them at the public base. */
-function publicLink(conn: JenkinsConn, url: string): string {
+export function publicLink(conn: JenkinsConn, url: string): string {
 	try {
 		const u = new URL(url);
 		const pub = new URL(conn.publicBase + '/');

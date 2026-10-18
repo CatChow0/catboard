@@ -12,3 +12,8 @@ README.md
 DOCKER.md
 android
 dist
+tests
+reports
+test-results
+playwright-report
+coverage

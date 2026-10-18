@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.2.0-blue)
+![Version](https://img.shields.io/badge/version-3.3.0-blue)
 
 ## Features
 
@@ -72,6 +72,26 @@ node build
 ```
 
 The server listens on port 3000 by default (configurable via the `PORT` environment variable).
+
+## Testing
+
+| Command | What it checks | Where |
+|---|---|---|
+| `npm run check` | TypeScript and Svelte types (must report 0 errors) | whole project |
+| `npm test` | Unit tests (Vitest): grid engine, search, Markdown escaping, themes and theme files, integration registry, widget catalog (every widget has a loader and a stable config), secret masking, status checks, integration clients with a fake `fetch` | `src/**/*.test.ts`, next to the code |
+| `npm run test:api` | API tests: the built app runs on a free port with an empty temporary config (admin + plain user created), routes are called like the widgets do, against fake Jenkins, PsiTransfer, Proxmox (HTTPS, self-signed), Portainer, Immich and Nextcloud servers. Needs `npm run build` first | `tests/api/` |
+| `npm run test:e2e` | Browser tests (Playwright, Chromium): login, lazy widgets, catalog, appearance and custom CSS, theme files, integration widgets, phone layout. Needs `npm run build` and `npx playwright install chromium` once | `tests/e2e/` |
+| `npm run test:all` | All of the above, in order | |
+
+- `npm run test:watch` reruns the unit tests on save; `npm run test:coverage` adds a coverage report (`coverage/`).
+- The fake services live in `tests/mocks/services.ts` (the certificate in `tests/mocks/certs` is a test-only self-signed one). A new integration should get a fake there, unit tests for its client and an API test for its routes.
+- With `CI=true`, every suite also writes a JUnit report to `reports/` and Playwright an HTML report to `playwright-report/`.
+
+### Continuous integration
+
+The `Jenkinsfile` runs, for every commit: install, type check, unit tests, build, API tests, then the browser tests in a `node:24` container (Chromium and its libraries are installed there). Any failure stops the build. Only commits on `main` then build and push the Docker image (`catchow/catboard:<version>`, `:<commit>` and `:latest`); other branches are only tested. Test results and the Playwright report are attached to each build.
+
+The agent needs Docker and a NodeJS installation named `node-24` (NodeJS plugin, **Manage Jenkins > Tools**), plus the Docker Pipeline and JUnit plugins.
 
 ## Configuration
 

@@ -3,7 +3,7 @@
 import type { DashboardItem, Service } from '$lib/types';
 
 /** Human name of a widget type, used for matching and for result labels. */
-const WIDGET_NAMES: Record<string, string[]> = {
+export const WIDGET_NAMES: Record<string, string[]> = {
 	calendar: ['Calendar'],
 	clock: ['Clock'],
 	weather: ['Weather'],
@@ -19,7 +19,13 @@ const WIDGET_NAMES: Record<string, string[]> = {
 	spoolman: ['Spoolman', 'filament'],
 	'elegoo-print': ['3D print status', 'printer', 'print', 'elegoo'],
 	'arr-releases': ['Arr releases', 'releases', 'arr'],
-	stacker: ['Stacker', 'system']
+	stacker: ['Stacker', 'system'],
+	psitransfer: ['PsiTransfer', 'upload', 'share', 'files'],
+	jenkins: ['Jenkins', 'builds', 'ci'],
+	proxmox: ['Proxmox', 'vm', 'containers', 'virtualisation'],
+	portainer: ['Portainer', 'stacks', 'containers'],
+	immich: ['Immich', 'photos'],
+	nextcloud: ['Nextcloud', 'files', 'cloud']
 };
 
 /** What a tile is called: service name, group / note title, or the widget name. */

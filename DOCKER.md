@@ -177,6 +177,8 @@ docker compose pull
 docker compose up -d
 ```
 
+Published images have passed the type check and the unit, API and browser tests: the Jenkins pipeline only builds and pushes an image from `main` once every test is green (see *Testing* in the README).
+
 ## Integrations
 
 Connections are set up in **Settings > Integrations** (admins). **Test connection** checks the typed values from the CatBoard server before saving, so a failure there (refused, unreachable, timeout) means the container cannot reach the service. Widgets are then added from **Add > Widgets**.

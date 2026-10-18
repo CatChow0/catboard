@@ -1,22 +1,32 @@
 {
 	"name": "catchow-catboard",
-	"version": "3.2.0",
+	"version": "3.3.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run --project unit",
+		"test:watch": "vitest --project unit",
+		"test:coverage": "vitest run --project unit --coverage",
+		"test:api": "vitest run --project api",
+		"test:e2e": "playwright test",
+		"test:all": "npm run check && npm test && npm run build && npm run test:api && npm run test:e2e"
 	},
 	"devDependencies": {
+		"@playwright/test": "1.63.0",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.58.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@types/bcryptjs": "^2.4.6",
 		"@types/uuid": "^10.0.0",
+		"@vitest/coverage-v8": "5.0.3",
 		"svelte": "^5.55.5",
+		"svelte-check": "4.7.6",
 		"typescript": "^6.0.3",
-		"vite": "^8.0.10"
+		"vite": "^8.0.10",
+		"vitest": "5.0.3"
 	},
 	"dependencies": {
 		"bcryptjs": "^3.0.3",
