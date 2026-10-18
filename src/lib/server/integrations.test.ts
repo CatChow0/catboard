@@ -43,6 +43,25 @@ describe('jenkins', () => {
 		expect(calls[0].headers.authorization).toBe('Basic dTp0');
 	});
 
+	it('failing lists only projects whose last finished build failed', async () => {
+		fakeFetch([
+			[/GET .*\/api\/json\?tree=/, () => json({ jobs: [
+				// Failed, then passed twice: fixed.
+				{ name: 'a', builds: [build(3, 900), build(2, 800), build(1, 700, { result: 'FAILURE' })] },
+				// Last finished build failed; a newer one is still running.
+				{ name: 'b', builds: [build(5, 600, { building: true, result: null }), build(4, 500, { result: 'FAILURE' })] },
+				{ name: 'team', jobs: [{ name: 'c', fullName: 'team/c', builds: [build(9, 550, { result: 'FAILURE' }), build(8, 100)] }] },
+				{ name: 'unstable', builds: [build(2, 400, { result: 'UNSTABLE' })] },
+				{ name: 'never-built', builds: [] }
+			] })]
+		]);
+		const data = await recentBuilds(conn, '', 2);
+		expect(data.failing?.map((f) => `${f.job}#${f.number}`)).toEqual(['team/c#9', 'b#4']);
+		expect(data.failing?.[0].url).toBe('https://ci.example.com/job/x/9/');
+		// The merged list is cut to 2 builds, the failing projects are still all there.
+		expect(data.builds).toHaveLength(2);
+	});
+
 	it('recentBuilds for one job reads its queue and parameters', async () => {
 		fakeFetch([[/job\/team\/job\/deploy\/api\/json/, () => json({ url: 'http://jenkins:8080/job/team/job/deploy/', buildable: true, inQueue: true, property: [{}, { parameterDefinitions: [{ name: 'X' }] }], builds: [build(1, 1)] })]]);
 		const data = await recentBuilds(conn, 'team/deploy', 5);

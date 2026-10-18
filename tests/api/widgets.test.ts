@@ -54,6 +54,19 @@ describe('Jenkins', () => {
 	});
 });
 
+describe('Jenkins failing projects', () => {
+	const failing = async () => ((await user.get('/api/integrations/jenkins/builds?limit=1')).body.failing as { job: string }[]).map((f) => f.job);
+
+	it('a project is failing until a later build passes', async () => {
+		expect(await failing()).toEqual([]);
+		await admin.post('/api/integrations/jenkins/build', { job: 'hello', params: { FAIL: '1' } });
+		expect(await failing()).toEqual(['hello']);
+		await admin.post('/api/integrations/jenkins/build', { job: 'hello' });
+		await admin.post('/api/integrations/jenkins/build', { job: 'hello' });
+		expect(await failing()).toEqual([]);
+	});
+});
+
 describe('PsiTransfer', () => {
 	async function send(files: { name: string; data: Buffer }[], extra: Record<string, unknown> = {}, as = user) {
 		const sid = randomBytes(6).toString('hex');

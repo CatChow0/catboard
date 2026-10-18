@@ -112,11 +112,19 @@ export async function listJobs(conn: JenkinsConn): Promise<{ fullName: string; c
 export async function recentBuilds(conn: JenkinsConn, job: string, limit: number): Promise<JenkinsData> {
 	if (!job) {
 		const data = await jenkinsJson<{ jobs: RawJob[] }>(conn, `api/json?tree=${jobsTree(`name,fullName,builds[${BUILD_FIELDS}]{0,5}`, 3)}`);
-		const builds = flatten(data.jobs)
+		const jobs = flatten(data.jobs);
+		const builds = jobs
 			.flatMap((j) => (j.builds ?? []).map((b) => toBuild(conn, j.fullName, b)))
 			.sort((a, b) => b.timestamp - a.timestamp)
 			.slice(0, limit);
-		return { builds };
+		// A project is failing while its latest finished build failed: a later
+		// success clears it, a build still running does not hide it.
+		const failing = jobs
+			.map((j) => ({ job: j.fullName, last: (j.builds ?? []).filter((b) => !b.building).sort((a, b) => b.number - a.number)[0] }))
+			.filter((j) => j.last?.result === 'FAILURE')
+			.sort((a, b) => b.last.timestamp - a.last.timestamp)
+			.map((j) => ({ job: j.job, number: j.last.number, url: publicLink(conn, j.last.url) }));
+		return { builds, failing };
 	}
 	const data = await jenkinsJson<RawJob & { inQueue?: boolean; property?: { parameterDefinitions?: unknown[] }[] }>(
 		conn,

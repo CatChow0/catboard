@@ -93,7 +93,8 @@ export function jenkinsMock(port?: number) {
 		if (req.method !== 'POST') return send(res, 405, '');
 		state.posts++;
 		state.lastParams = req.body.toString();
-		list.push(build(name, list.length + 1, base));
+		// A FAIL=1 parameter makes the build fail (to test failing projects).
+		list.push({ ...build(name, list.length + 1, base), ...(/(^|&)FAIL=1(&|$)/.test(state.lastParams) ? { result: 'FAILURE' } : {}) });
 		return send(res, 201, '', { Location: `${base}/queue/item/1/` });
 	}, { port }).then((m) => {
 		base = m.url;

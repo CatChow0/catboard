@@ -806,6 +806,8 @@ export interface JenkinsData {
 	inQueue?: boolean;
 	hasParameters?: boolean;
 	buildable?: boolean;
+	/** All-projects view: projects whose latest finished build failed, newest failure first. */
+	failing?: { job: string; number: number; url: string }[];
 }
 
 export interface JenkinsParameter {

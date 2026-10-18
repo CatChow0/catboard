@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.3.0-blue)
+![Version](https://img.shields.io/badge/version-3.3.1-blue)
 
 ## Features
 
@@ -170,7 +170,7 @@ Add them from **Add > Widgets** (badge *Navbar* or *Dashboard + navbar*; choose 
 | **Docker** | Docker logo and running/stopped counts (plus total CPU/RAM when enabled); click for the full container list |
 | **AdGuard Home** | Toggle protection status with colored state pill |
 | **3D printer** | Printer icon, mini progress bar, % and time left; click for the full print details (pause/resume/stop for admins) |
-| **Jenkins** | One project's last build (status, number), or for all projects the number running and the last failure; click for the latest builds (Run button for admins) |
+| **Jenkins** | One project's last build (status, number), or for all projects the number running and the projects whose last build failed (red with the project name, `+N` when several, the list on hover; green *All good* once they pass again); click for the latest builds (Run button for admins) |
 | **Proxmox VE** | Guests running / total and the busiest node's CPU; click for the nodes and guests (power buttons for admins) |
 
 Each navbar widget can be resized and reordered in edit mode. Click the edit button (blue, bottom-left) to configure widget-specific options like temperature sensor selection, disk paths, Uptime Kuma slug, Docker environment, printer, clock format or weather location. Every navbar widget also has **Icon size** and **Text size** sliders (50–250%, previewed live); the navbar row grows to fit larger widgets. Outside edit mode, clicking the Docker, Uptime Kuma or 3D printer widget opens a details popover with the same content as the standard widget (close it with a click outside or Escape).

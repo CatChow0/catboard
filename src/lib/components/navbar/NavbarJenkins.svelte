@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Navbar Jenkins: one job's last build (dot, number, progress while running),
-	// or for every job the number running and the last failure; click for the
-	// latest builds (and the Run button for admins).
+	// or for every job the number running and the projects whose last build
+	// failed; click for the latest builds (and the Run button for admins).
 	import type { JenkinsConfig } from '$lib/types';
 	import { isEditing } from '$lib/stores/dashboard';
 	import Glyph from '$lib/widgets/Glyph.svelte';
@@ -17,10 +17,10 @@
 	const data = $derived(poll.data);
 	const last = $derived(data?.builds[0]);
 	const running = $derived(data?.builds.filter((b) => b.building).length ?? 0);
-	const lastFailed = $derived(data?.builds.find((b) => !b.building && b.result === 'FAILURE'));
+	const failing = $derived(data?.failing ?? []);
 	const name = $derived(job ? (job.split('/').pop() ?? job) : 'Jenkins');
 	const lastState = $derived(!last ? 'none' : last.building ? 'running' : (last.result ?? 'NOT_BUILT').toLowerCase());
-	const label = $derived(job ? `${name}: ${last ? (last.building ? 'running' : (last.result ?? 'not built').toLowerCase()) : 'no build'}` : `Jenkins: ${running} running`);
+	const label = $derived(job ? `${name}: ${last ? (last.building ? 'running' : (last.result ?? 'not built').toLowerCase()) : 'no build'}` : `Jenkins: ${running} running, ${failing.length ? `${failing.length} failing` : 'all passing'}`);
 
 	let button = $state<HTMLButtonElement>();
 	let open = $state(false);
@@ -47,8 +47,9 @@
 			{#if last}<span class="muted">#{last.number}</span>{/if}
 		{:else}
 			{#if running}<span class="dot running"></span><span class="name">{running} running</span>{/if}
-			{#if lastFailed}
-				<span class="dot failure"></span><span class="muted fail" title="Last failure: {lastFailed.job} #{lastFailed.number}">{lastFailed.job.split('/').pop()}</span>
+			{#if failing.length}
+				<span class="dot failure"></span>
+				<span class="muted fail" title="Failing: {failing.map((f) => `${f.job} #${f.number}`).join(', ')}">{failing[0].job.split('/').pop()}{failing.length > 1 ? ` +${failing.length - 1}` : ''}</span>
 			{:else if !running}
 				<span class="dot success"></span><span class="muted">All good</span>
 			{/if}
