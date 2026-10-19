@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { getAccess } from '$lib/server/config';
 
 /** Admins (admin and mini-admin) may act on integrations and change their settings. */
 export function isAdmin(locals: App.Locals): boolean {
@@ -11,6 +12,17 @@ export function isAdmin(locals: App.Locals): boolean {
  */
 export function requireAdmin(locals: App.Locals): Response | null {
 	return isAdmin(locals) ? null : json({ error: 'Only an admin can do this' }, { status: 403 });
+}
+
+/** Admins, or every signed-in user when Settings > Admin allows it. */
+export async function canEditDashboards(locals: App.Locals): Promise<boolean> {
+	if (!locals.isAuthenticated) return false;
+	return isAdmin(locals) || (await getAccess()).dashboardEditors === 'everyone';
+}
+
+/** Guard for routes that change the shared dashboards: a 403 response, or null when allowed. */
+export async function requireEditor(locals: App.Locals): Promise<Response | null> {
+	return (await canEditDashboards(locals)) ? null : json({ error: 'Only an admin can change the dashboards' }, { status: 403 });
 }
 
 const SECRET_KEYS = new Set(['apiKey', 'password', 'accessCode', 'apiToken', 'uploadPassword', 'tokenSecret', 'appPassword']);

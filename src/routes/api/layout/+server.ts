@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getLayout, setLayout, dashboardList, dashboardLayouts, setDashboardLayouts, resolveDashboard, normalizeDashboards, MAIN_DASHBOARD } from '$lib/server/config';
 import type { Layout } from '$lib/types';
+import { requireEditor } from '$lib/server/auth';
 
 /**
  * GET ?dashboard=<id> — the grid config, the dashboard list and the requested
@@ -15,7 +16,9 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 /** PUT ?dashboard=<id> — saves that dashboard's layouts (and the grid config). */
-export const PUT: RequestHandler = async ({ request, url }) => {
+export const PUT: RequestHandler = async ({ request, url, locals }) => {
+	const denied = await requireEditor(locals);
+	if (denied) return denied;
 	const body = (await request.json()) as Partial<Layout>;
 	if (!body || typeof body.layouts !== 'object' || !body.layouts) return json({ error: 'layouts missing' }, { status: 400 });
 	const data = await getLayout();

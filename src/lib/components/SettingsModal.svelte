@@ -769,76 +769,78 @@
 					<button class="btn-add-bp" onclick={addBreakpoint}>Add Breakpoint</button>
 				</div>
 
-				<div class="settings-section">
-					<h3>Dashboard Layout</h3>
-					<p class="section-hint">Each dashboard has its own grid and navbar settings for every breakpoint. Empty fields use the default shown in grey.</p>
-					<div class="pair-picker">
-						<label class="pair-dash">
-							<span>Dashboard</span>
-							<select value={selDash} onchange={(e) => selectPair((e.currentTarget as HTMLSelectElement).value, selBp)}>
-								{#each $dashboards as d (d.id)}
-									<option value={d.id}>{d.name}{d.id === $activeDashboardId ? ' (shown)' : ''}</option>
+				{#if $currentUser?.canEdit}
+					<div class="settings-section">
+						<h3>Dashboard Layout</h3>
+						<p class="section-hint">Each dashboard has its own grid and navbar settings for every breakpoint. Empty fields use the default shown in grey.</p>
+						<div class="pair-picker">
+							<label class="pair-dash">
+								<span>Dashboard</span>
+								<select value={selDash} onchange={(e) => selectPair((e.currentTarget as HTMLSelectElement).value, selBp)}>
+									{#each $dashboards as d (d.id)}
+										<option value={d.id}>{d.name}{d.id === $activeDashboardId ? ' (shown)' : ''}</option>
+									{/each}
+								</select>
+							</label>
+							<div class="bp-tabs" role="tablist" aria-label="Breakpoint">
+								{#each breakpoints as bp (bp.id)}
+									<button
+										class="bp-tab"
+										class:active={selBp === bp.id}
+										class:edited={!!edits[pairKey(selDash, bp.id)]}
+										role="tab"
+										aria-selected={selBp === bp.id}
+										onclick={() => selectPair(selDash, bp.id)}
+									>
+										{bp.name || getBreakpointLabel(breakpoints, bp.id)}
+									</button>
 								{/each}
-							</select>
-						</label>
-						<div class="bp-tabs" role="tablist" aria-label="Breakpoint">
-							{#each breakpoints as bp (bp.id)}
-								<button
-									class="bp-tab"
-									class:active={selBp === bp.id}
-									class:edited={!!edits[pairKey(selDash, bp.id)]}
-									role="tab"
-									aria-selected={selBp === bp.id}
-									onclick={() => selectPair(selDash, bp.id)}
-								>
-									{bp.name || getBreakpointLabel(breakpoints, bp.id)}
-								</button>
-							{/each}
+							</div>
 						</div>
-					</div>
 
-					<div class="pair-grid">
-						<fieldset>
-							<legend>Grid</legend>
-							<div class="field-row">
-								<label for="lay-cell">Cell height (px)</label>
-								<input id="lay-cell" type="number" min="40" max="300" placeholder={String(defaultCellSize)} bind:value={form.cellSize} oninput={changed} />
-							</div>
-							<div class="field-row">
-								<label for="lay-gap">Gap (px)</label>
-								<input id="lay-gap" type="number" min="0" max="48" placeholder={String(defaultGap)} bind:value={form.gap} oninput={changed} />
-							</div>
-						</fieldset>
-						<fieldset>
-							<legend>Navbar</legend>
-							<div class="field-row">
-								<label for="lay-nbcols">Columns</label>
-								<input id="lay-nbcols" type="number" min="4" max="48" placeholder={String(GRID_DEFAULTS.navbarColumns)} bind:value={form.navbarColumns} oninput={changed} />
-							</div>
-							<div class="field-row">
-								<label for="lay-nbrow">Row height (px)</label>
-								<input id="lay-nbrow" type="number" min="28" max="120" placeholder={String(GRID_DEFAULTS.navbarRowHeight)} bind:value={form.rowHeight} oninput={changed} />
-							</div>
-							<div class="field-row">
-								<label for="lay-nbmt">Top margin (px)</label>
-								<input id="lay-nbmt" type="number" min="0" max="48" placeholder={String(GRID_DEFAULTS.navbarMarginTop)} bind:value={form.marginTop} oninput={changed} />
-							</div>
-							<div class="field-row">
-								<label for="lay-nbmb">Bottom margin (px)</label>
-								<input id="lay-nbmb" type="number" min="0" max="48" placeholder={String(GRID_DEFAULTS.navbarMarginBottom)} bind:value={form.marginBottom} oninput={changed} />
-							</div>
-						</fieldset>
-					</div>
+						<div class="pair-grid">
+							<fieldset>
+								<legend>Grid</legend>
+								<div class="field-row">
+									<label for="lay-cell">Cell height (px)</label>
+									<input id="lay-cell" type="number" min="40" max="300" placeholder={String(defaultCellSize)} bind:value={form.cellSize} oninput={changed} />
+								</div>
+								<div class="field-row">
+									<label for="lay-gap">Gap (px)</label>
+									<input id="lay-gap" type="number" min="0" max="48" placeholder={String(defaultGap)} bind:value={form.gap} oninput={changed} />
+								</div>
+							</fieldset>
+							<fieldset>
+								<legend>Navbar</legend>
+								<div class="field-row">
+									<label for="lay-nbcols">Columns</label>
+									<input id="lay-nbcols" type="number" min="4" max="48" placeholder={String(GRID_DEFAULTS.navbarColumns)} bind:value={form.navbarColumns} oninput={changed} />
+								</div>
+								<div class="field-row">
+									<label for="lay-nbrow">Row height (px)</label>
+									<input id="lay-nbrow" type="number" min="28" max="120" placeholder={String(GRID_DEFAULTS.navbarRowHeight)} bind:value={form.rowHeight} oninput={changed} />
+								</div>
+								<div class="field-row">
+									<label for="lay-nbmt">Top margin (px)</label>
+									<input id="lay-nbmt" type="number" min="0" max="48" placeholder={String(GRID_DEFAULTS.navbarMarginTop)} bind:value={form.marginTop} oninput={changed} />
+								</div>
+								<div class="field-row">
+									<label for="lay-nbmb">Bottom margin (px)</label>
+									<input id="lay-nbmb" type="number" min="0" max="48" placeholder={String(GRID_DEFAULTS.navbarMarginBottom)} bind:value={form.marginBottom} oninput={changed} />
+								</div>
+							</fieldset>
+						</div>
 
-					<div class="pair-actions">
-						<button class="btn-add-bp" onclick={copyToAllBreakpoints}>{copiedNotice ? 'Copied to every breakpoint' : 'Copy to every breakpoint'}</button>
-						<button class="btn-add-bp" onclick={resetPair}>Reset to defaults</button>
+						<div class="pair-actions">
+							<button class="btn-add-bp" onclick={copyToAllBreakpoints}>{copiedNotice ? 'Copied to every breakpoint' : 'Copy to every breakpoint'}</button>
+							<button class="btn-add-bp" onclick={resetPair}>Reset to defaults</button>
+						</div>
+						<p class="section-hint">
+							{#if isLivePair}Previewed live on the dashboard behind.{:else}This breakpoint is not the one on screen: changes apply after saving.{/if}
+							{#if pendingCount}<b>{pendingCount} unsaved {pendingCount > 1 ? 'layouts' : 'layout'}.</b>{/if}
+						</p>
 					</div>
-					<p class="section-hint">
-						{#if isLivePair}Previewed live on the dashboard behind.{:else}This breakpoint is not the one on screen: changes apply after saving.{/if}
-						{#if pendingCount}<b>{pendingCount} unsaved {pendingCount > 1 ? 'layouts' : 'layout'}.</b>{/if}
-					</p>
-				</div>
+				{/if}
 			{:else if activeTab === 'cache'}
 				<div class="settings-section">
 					<h3>Icon Cache</h3>
@@ -869,22 +871,24 @@
 							{/if}
 						</div>
 					{/if}
-					<div class="cache-actions">
-						<button class="btn-rebuild-cache" onclick={rebuildIconCache} disabled={cacheRebuilding}>
-							{#if cacheRebuilding}
-								Rebuilding...
-							{:else}
-								Rebuild Icon Cache
-							{/if}
-						</button>
-						<button class="btn-clear-cache" onclick={clearIconCache} disabled={cacheClearing || cacheCount === 0}>
-							{#if cacheClearing}
-								Clearing...
-							{:else}
-								Clear Icon Cache
-							{/if}
-						</button>
-					</div>
+					{#if showAdmin}
+						<div class="cache-actions">
+							<button class="btn-rebuild-cache" onclick={rebuildIconCache} disabled={cacheRebuilding}>
+								{#if cacheRebuilding}
+									Rebuilding...
+								{:else}
+									Rebuild Icon Cache
+								{/if}
+							</button>
+							<button class="btn-clear-cache" onclick={clearIconCache} disabled={cacheClearing || cacheCount === 0}>
+								{#if cacheClearing}
+									Clearing...
+								{:else}
+									Clear Icon Cache
+								{/if}
+							</button>
+						</div>
+					{/if}
 				</div>
 			{:else if activeTab === 'integrations'}
 				<IntegrationsPanel initial={initialIntegration} />

@@ -1,9 +1,12 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getIntegrations } from '$lib/server/config';
+import { requireAdmin } from '$lib/server/auth';
 import { pausedInstances, basicAuth, setAdGuardProtection } from '$lib/server/adguard-home';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const denied = requireAdmin(locals);
+	if (denied) return denied;
 	const integrations = await getIntegrations();
 	if (!integrations.adguardHome?.url) {
 		return json({ error: 'Not configured' }, { status: 404 });

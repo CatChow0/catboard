@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getServices, setServices } from '$lib/server/config';
 import { resolveIcon } from '$lib/server/icon-cache';
+import { requireEditor } from '$lib/server/auth';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const data = await getServices();
@@ -10,7 +11,9 @@ export const GET: RequestHandler = async ({ params }) => {
 	return json(service);
 };
 
-export const PUT: RequestHandler = async ({ params, request }) => {
+export const PUT: RequestHandler = async ({ params, request, locals }) => {
+	const denied = await requireEditor(locals);
+	if (denied) return denied;
 	const data = await getServices();
 	const index = data.services.findIndex((s) => s.id === params.id);
 	if (index === -1) return json({ error: 'Not found' }, { status: 404 });
@@ -24,7 +27,9 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 	return json(data.services[index]);
 };
 
-export const DELETE: RequestHandler = async ({ params }) => {
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	const denied = await requireEditor(locals);
+	if (denied) return denied;
 	const data = await getServices();
 	const index = data.services.findIndex((s) => s.id === params.id);
 	if (index === -1) return json({ error: 'Not found' }, { status: 404 });

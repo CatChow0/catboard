@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AdGuardHomeConfig } from '$lib/types';
-	import { adguardHomeData } from '$lib/stores/dashboard';
+	import { adguardHomeData, currentUser } from '$lib/stores/dashboard';
 
 	let { config }: { config: AdGuardHomeConfig } = $props();
 
@@ -36,6 +36,8 @@
 			loading = false;
 		}
 	}
+	// Pausing DNS filtering is an admin action (the server refuses it to others).
+	const isAdmin = $derived($currentUser?.role === 'admin' || $currentUser?.role === 'mini-admin');
 </script>
 
 <div class="navbar-adguard-wrapper" style:justify-content={align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start'}>
@@ -44,8 +46,8 @@
 		class:active={isActive}
 		class:paused={isPaused}
 		onclick={toggle}
-		disabled={loading}
-		title={isPaused ? 'AdGuard Paused' : isActive ? 'AdGuard Active - click to disable' : 'AdGuard Inactive - click to enable'}
+		disabled={loading || !isAdmin}
+		title={!isAdmin ? `AdGuard ${isPaused ? 'paused' : isActive ? 'active' : 'off'} (only an admin can change it)` : isPaused ? 'AdGuard Paused' : isActive ? 'AdGuard Active - click to disable' : 'AdGuard Inactive - click to enable'}
 	>
 	<svg class="shield" style="width: calc(14px * var(--nb-icon, 1)); height: calc(14px * var(--nb-icon, 1))" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 		<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

@@ -1,8 +1,9 @@
 <script lang="ts">
 	// Markdown notepad. Edit in place (no need for dashboard edit mode);
-	// checklist boxes can be ticked directly in the rendered note.
+	// checklist boxes can be ticked directly in the rendered note. The note is
+	// part of the dashboard: users who may not change it get it read-only.
 	import type { NotesConfig } from '$lib/types';
-	import { updateDashboardItem } from '$lib/stores/dashboard';
+	import { updateDashboardItem, currentUser } from '$lib/stores/dashboard';
 	import { renderMarkdown, toggleTask } from '$lib/utils/markdown';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -13,13 +14,16 @@
 	let pending = $state<string | null>(null);
 	const content = $derived(pending ?? config?.content ?? '');
 
-	const html = $derived(renderMarkdown(content));
+	const canEdit = $derived(!!$currentUser?.canEdit);
+	// Read-only: checklist boxes are shown but cannot be ticked.
+	const html = $derived(canEdit ? renderMarkdown(content) : renderMarkdown(content).replace(/<input type="checkbox"/g, '<input type="checkbox" disabled'));
 
 	let editing = $state(false);
 	let draft = $state('');
 	let textarea = $state<HTMLTextAreaElement>();
 
 	function startEdit() {
+		if (!canEdit) return;
 		draft = content;
 		editing = true;
 		queueMicrotask(() => textarea?.focus());
@@ -51,7 +55,7 @@
 	// Checklist boxes carry the source line they come from; the change bubbles here.
 	function onNoteChange(e: Event) {
 		const box = e.target as HTMLInputElement;
-		if (box.type !== 'checkbox' || box.dataset.line == null) return;
+		if (!canEdit || box.type !== 'checkbox' || box.dataset.line == null) return;
 		save(toggleTask(content, Number(box.dataset.line)));
 	}
 
@@ -66,7 +70,7 @@
 			{#if editing}
 				<span class="nt-hint">Markdown · Ctrl+Enter to save · Esc to cancel</span>
 				<button class="nt-btn primary" onclick={finishEdit} onpointerdown={(e) => e.stopPropagation()}>Save</button>
-			{:else}
+			{:else if canEdit}
 				<button class="nt-btn" onclick={startEdit} onpointerdown={(e) => e.stopPropagation()} aria-label="Edit note">Edit</button>
 			{/if}
 		</div>
@@ -84,8 +88,10 @@
 				<!-- Safe: renderMarkdown escapes all user text before adding its own tags. -->
 				{@html html}
 			</div>
-		{:else}
+		{:else if canEdit}
 			<button class="nt-empty" onclick={startEdit} onpointerdown={(e) => e.stopPropagation()}>Empty note. Click to write something.</button>
+		{:else}
+			<p class="nt-readonly">Empty note.</p>
 		{/if}
 	</div>
 	<EditButtons label="note" {ondelete} onedit={() => (showEdit = true)} />
@@ -96,6 +102,12 @@
 {/if}
 
 <style>
+	.nt-readonly {
+		margin: auto;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
 	.nt-tile {
 		position: relative;
 		height: 100%;

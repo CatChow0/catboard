@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getServices, setServices } from '$lib/server/config';
 import { resolveIcon } from '$lib/server/icon-cache';
+import { requireEditor } from '$lib/server/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 export const GET: RequestHandler = async () => {
@@ -9,7 +10,9 @@ export const GET: RequestHandler = async () => {
 	return json(data);
 };
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const denied = await requireEditor(locals);
+	if (denied) return denied;
 	const data = await getServices();
 	const body = await request.json();
 

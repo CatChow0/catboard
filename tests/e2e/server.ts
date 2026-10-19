@@ -20,7 +20,7 @@ const base = `http://127.0.0.1:${E2E_PORT}`;
 const configDir = await mkdtemp(join(tmpdir(), 'catboard-e2e-'));
 const mocks = await startAll();
 const app = spawn(process.execPath, ['build'], {
-	env: { ...process.env, CONFIG_DIR: configDir, PORT: String(E2E_PORT), HOST: '127.0.0.1', ORIGIN: base, SESSION_SECRET: 'e2e-tests-only', NODE_ENV: 'production' },
+	env: { ...process.env, CONFIG_DIR: configDir, PORT: String(E2E_PORT), HOST: '127.0.0.1', ORIGIN: base, SESSION_SECRET: 'e2e-tests-only', NODE_ENV: 'production', LOGIN_RATE_LIMIT_MS: '1000' },
 	stdio: 'inherit'
 });
 

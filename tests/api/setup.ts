@@ -51,7 +51,7 @@ export default async function setup(project: TestProject) {
 	const port = await freePort();
 	const baseUrl = `http://127.0.0.1:${port}`;
 	server = spawn(process.execPath, ['build'], {
-		env: { ...process.env, CONFIG_DIR: configDir, PORT: String(port), HOST: '127.0.0.1', ORIGIN: baseUrl, SESSION_SECRET: 'api-tests-only', NODE_ENV: 'production' },
+		env: { ...process.env, CONFIG_DIR: configDir, PORT: String(port), HOST: '127.0.0.1', ORIGIN: baseUrl, SESSION_SECRET: 'api-tests-only', NODE_ENV: 'production', LOGIN_RATE_LIMIT_MS: '1000' },
 		stdio: ['ignore', 'pipe', 'pipe']
 	});
 	let output = '';

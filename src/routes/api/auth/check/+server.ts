@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { isSetupDone } from '$lib/server/config';
+import { canEditDashboards } from '$lib/server/auth';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	const setupDone = await isSetupDone();
@@ -8,6 +9,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		authenticated: locals.isAuthenticated,
 		needsSetup: !setupDone,
 		username: locals.username,
-		role: locals.role
+		role: locals.role,
+		canEdit: await canEditDashboards(locals)
 	});
 };

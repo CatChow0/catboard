@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { isAdmin, maskSecrets, requireAdmin } from './auth';
+import { describe, expect, it, vi } from 'vitest';
+import { canEditDashboards, isAdmin, maskSecrets, requireAdmin, requireEditor } from './auth';
 
-const locals = (role: string | null) => ({ role, username: 'x', isAuthenticated: true }) as unknown as App.Locals;
+const access = vi.hoisted(() => ({ dashboardEditors: 'admins' as 'admins' | 'everyone' }));
+vi.mock('$lib/server/config', () => ({ getAccess: async () => ({ ...access }) }));
+
+const locals = (role: string | null, isAuthenticated = true) => ({ role, username: 'x', isAuthenticated }) as unknown as App.Locals;
 
 describe('isAdmin / requireAdmin', () => {
 	it('admins and mini-admins may act', () => {
@@ -47,5 +50,24 @@ describe('maskSecrets', () => {
 		expect(maskSecrets(null)).toBeNull();
 		expect(maskSecrets('apiKey')).toBe('apiKey');
 		expect(maskSecrets([1, { password: 'x' }])).toEqual([1, { password: '' }]);
+	});
+});
+
+describe('canEditDashboards', () => {
+	it('with "admins": only admins and mini-admins', async () => {
+		access.dashboardEditors = 'admins';
+		expect(await canEditDashboards(locals('admin'))).toBe(true);
+		expect(await canEditDashboards(locals('mini-admin'))).toBe(true);
+		expect(await canEditDashboards(locals('user'))).toBe(false);
+		const res = (await requireEditor(locals('user')))!;
+		expect(res.status).toBe(403);
+		expect(await res.json()).toEqual({ error: 'Only an admin can change the dashboards' });
+	});
+
+	it('with "everyone": every signed-in user, never an anonymous one', async () => {
+		access.dashboardEditors = 'everyone';
+		expect(await canEditDashboards(locals('user'))).toBe(true);
+		expect(await requireEditor(locals('user'))).toBeNull();
+		expect(await canEditDashboards(locals(null, false))).toBe(false);
 	});
 });

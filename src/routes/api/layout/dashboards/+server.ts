@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { getLayout, setLayout, dashboardList, dashboardLayouts, setDashboardLayouts, normalizeDashboards, MAIN_DASHBOARD } from '$lib/server/config';
 import { findNextAvailablePosition } from '$lib/utils/grid';
 import type { DashboardItem, DashboardMeta, Layout, PerBreakpointLayout } from '$lib/types';
+import { requireEditor } from '$lib/server/auth';
 
 const clean = (s: unknown) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
 
@@ -58,7 +59,9 @@ const bounded = (v: unknown, min: number, max: number): number | undefined => {
 };
 
 /** POST {action, ...} — manage dashboards, copy / move tiles between them, and per-breakpoint layout settings. */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const denied = await requireEditor(locals);
+	if (denied) return denied;
 	const body = await request.json().catch(() => ({}));
 	const data: Layout = await getLayout();
 	const list = [...dashboardList(data)];

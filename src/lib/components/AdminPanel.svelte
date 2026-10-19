@@ -94,11 +94,48 @@
 
 	let isAdmin = $derived($currentUser?.role === 'admin');
 
+	// Who may change the shared dashboards (services, layout, dashboards).
+	let editors = $state<'admins' | 'everyone' | null>(null);
+	let accessMessage = $state('');
+
+	async function fetchAccess() {
+		const res = await fetch('/api/access').catch(() => null);
+		if (res?.ok) editors = (await res.json()).dashboardEditors;
+	}
+
+	async function setEditors(value: 'admins' | 'everyone') {
+		const previous = editors;
+		editors = value;
+		accessMessage = '';
+		const res = await fetch('/api/access', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dashboardEditors: value }) }).catch(() => null);
+		if (!res?.ok) {
+			editors = previous;
+			accessMessage = 'Not saved';
+		} else accessMessage = 'Saved';
+	}
+
 	import { onMount } from 'svelte';
-	onMount(fetchUsers);
+	onMount(() => {
+		fetchUsers();
+		fetchAccess();
+	});
 </script>
 
 <div class="admin-panel">
+	{#if editors}
+		<div class="access cb-form">
+			<h4>Who can edit dashboards</h4>
+			<div class="seg">
+				<button type="button" class:active={editors === 'admins'} onclick={() => setEditors('admins')}>Admins only</button>
+				<button type="button" class:active={editors === 'everyone'} onclick={() => setEditors('everyone')}>Every user</button>
+			</div>
+			<p class="hint">
+				Services, tiles, widgets and dashboards are shared. With <b>Admins only</b>, other users see them read-only (their own appearance settings stay theirs).
+				{#if accessMessage}<span class="access-msg">{accessMessage}</span>{/if}
+			</p>
+		</div>
+	{/if}
+
 	{#if error}
 		<div class="error-msg">{error}</div>
 	{/if}
@@ -289,6 +326,25 @@
 	.edit-form input:focus,
 	.edit-form select:focus {
 		border-color: var(--accent);
+	}
+
+	.access {
+		padding-bottom: 16px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.access h4 {
+		font-size: 0.9rem;
+		margin-bottom: 10px;
+	}
+
+	.access .hint {
+		margin-top: 8px;
+	}
+
+	.access-msg {
+		margin-left: 6px;
+		color: var(--success, #22c55e);
 	}
 
 	.create-user {

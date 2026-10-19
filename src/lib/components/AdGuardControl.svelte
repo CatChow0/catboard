@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AdGuardHomeConfig } from '$lib/types';
-	import { adguardHomeData, isEditing, settings } from '$lib/stores/dashboard';
+	import { adguardHomeData, isEditing, settings, currentUser } from '$lib/stores/dashboard';
 
 	let { config, colSpan = 1, rowSpan = 1, ondelete, itemid }: {
 		config?: AdGuardHomeConfig;
@@ -61,6 +61,8 @@
 			actionLoading = false;
 		}
 	}
+	// Pausing DNS filtering is an admin action (the server refuses it to others).
+	const isAdmin = $derived($currentUser?.role === 'admin' || $currentUser?.role === 'mini-admin');
 </script>
 
 <div class="adguard-control-tile">
@@ -77,8 +79,8 @@
 			class:anim-subtle={animations === 'subtle'}
 			class:anim-full={animations === 'full'}
 			onclick={() => toggleProtection(!isActive)}
-			disabled={actionLoading}
-			title={isPaused ? 'AdGuard Paused - click to resume' : isActive ? 'AdGuard Active - click to disable' : 'AdGuard Inactive - click to enable'}
+			disabled={actionLoading || !isAdmin}
+			title={!isAdmin ? `AdGuard ${isPaused ? 'paused' : isActive ? 'active' : 'off'} (only an admin can change it)` : isPaused ? 'AdGuard Paused - click to resume' : isActive ? 'AdGuard Active - click to disable' : 'AdGuard Inactive - click to enable'}
 		>
 			<svg class="shield" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -87,7 +89,7 @@
 			<span class="label">{isPaused ? 'Paused' : isActive ? 'Active' : 'Off'}</span>
 		</button>
 
-		{#if isActive && !isPaused && showAll}
+		{#if isActive && !isPaused && showAll && isAdmin}
 			<div class="pause-section">
 				<span class="pause-label">Pause for</span>
 				<div class="pause-buttons">

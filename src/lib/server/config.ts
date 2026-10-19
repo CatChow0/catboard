@@ -353,6 +353,23 @@ export async function isSetupDone(): Promise<boolean> {
 	return config.users.length > 0;
 }
 
+// --- Access ---
+
+/** Who may change the shared dashboards (services, layout, dashboards). */
+export interface AccessConfig {
+	dashboardEditors: 'admins' | 'everyone';
+}
+
+/** Installs from before this setting existed keep their behaviour: everyone edits. */
+export async function getAccess(): Promise<AccessConfig> {
+	const saved = await readConfig<Partial<AccessConfig>>('access.json', { dashboardEditors: 'everyone' });
+	return { dashboardEditors: saved.dashboardEditors === 'admins' ? 'admins' : 'everyone' };
+}
+
+export async function setAccess(data: AccessConfig): Promise<void> {
+	return writeConfig('access.json', data);
+}
+
 export async function getIntegrations(): Promise<IntegrationsConfig> {
 	return readConfig('integrations.json', {});
 }

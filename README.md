@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.3.1-blue)
+![Version](https://img.shields.io/badge/version-3.4.0-blue)
 
 ## Features
 
@@ -33,7 +33,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins, Proxmox VE, Portainer, Immich, Nextcloud)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
-- **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings
+- **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings, a choice of who may edit the shared dashboards, and a limit on failed login attempts
 - **Theme system** -- 22 presets (Dark, Light, Nord, Dracula, Solarized, Catppuccin Mocha / Latte / Frappé, Gruvbox, One Dark, Tokyo Night, Rosé Pine, Everforest, Kanagawa, GitHub Dark / Light, Monokai, OLED Black, and TMOG in cyan/green/amber with a self-hosted Michroma display font), an **Auto** theme that follows the device's light/dark mode, custom palettes, style presets (default, sharp, pill) or a corner radius, animation options
 - **Customization** -- Font (Google Fonts) and text size, accent color, see-through and blurred cards, **custom CSS** (per user, applied live) and theme files to export and import a whole look
 - **Fast loading** -- Each widget's code is downloaded only when a dashboard shows it; popups load when first opened; live streams and refreshes pause while the tab is hidden; service status checks are shared between viewers
@@ -234,6 +234,22 @@ Connections to external services are set up in **Settings > Integrations**: a se
 **Test connection** tries the values typed, before saving them, from the CatBoard server (so it checks what the widgets will reach): the answer shows the version found (e.g. *Radarr 5.2.1*) or the reason of the failure (wrong key, connection refused, no answer within 5 s...). Lists (Docker, Stacker, printers) test every item. Each connection has its own **Save**; a dot in the list marks unsaved changes, and **Revert** drops them. Emptying a connection's URL and saving removes it.
 
 Only admins (admin and mini-admin roles) can change or test connections, or use widget actions (approve/decline, pause/resume/stop). Other users see the list read-only and the widgets, and integration secrets are hidden from them.
+
+### Users and permissions
+
+| | Admin | Mini-admin | User |
+|---|---|---|---|
+| See the dashboards and widgets | ✓ | ✓ | ✓ |
+| Own appearance settings (theme, custom CSS, breakpoints) | ✓ | ✓ | ✓ |
+| Share files with PsiTransfer | ✓ | ✓ | ✓ |
+| Change services, tiles, widgets, notes and dashboards | ✓ | ✓ | only with *Every user* (below) |
+| Widget actions (AdGuard pause, Jenkins run, Proxmox / Portainer power, qBittorrent, Jellyseerr, printer) | ✓ | ✓ | |
+| Integrations, icon cache, export / import | ✓ | ✓ (export / import: admin only) | |
+| Users | ✓ | | |
+
+**Settings > Admin > Who can edit dashboards** chooses whether the shared dashboards can be changed by admins only (default for new installs) or by every user (installs from before V3.4 keep this, the previous behaviour). Read-only users get no Edit button and see notes without being able to edit them; the server refuses their changes anyway.
+
+After 5 failed logins on an account within 15 minutes, that account must wait 30 s before trying again, doubling at each new failure up to 15 minutes (20 failures for a client address). A successful login clears it.
 
 ### Appearance
 

@@ -101,13 +101,16 @@ export const dockerData = writable<Record<string, DockerEnvironmentData>>({});
 export const adguardHomeData = writable<Record<string, AdGuardHomeData>>({});
 export const arrCalendarData = writable<ArrCalendarData>({ entries: [], updatedAt: 0 });
 export const isEditing = writable(false);
-export const currentUser = writable<{ username: string; role: string } | null>(null);
+/** canEdit: may change the shared dashboards (Settings > Admin decides for non-admins). */
+export const currentUser = writable<{ username: string; role: string; canEdit: boolean } | null>(null);
 export const activeBreakpointId = writable<string>('desktop');
 export const manualBreakpointId = writable<string | null>(null);
 export const searchQuery = writable<string>('');
 
 /** Enter / leave edit mode. Entering pins the breakpoint being edited so resizing the window doesn't switch layouts mid-edit. */
 export function toggleEditMode() {
+	// Read-only users never enter edit mode (the server refuses their changes anyway).
+	if (!get(isEditing) && !get(currentUser)?.canEdit) return;
 	if (!get(isEditing)) manualBreakpointId.set(get(activeBreakpointId));
 	else manualBreakpointId.set(null);
 	isEditing.update((v) => !v);
@@ -178,7 +181,7 @@ export async function loadDashboard(windowWidth?: number) {
 		api<{ services: Service[] }>('/api/services'),
 		fetchInitialLayout(),
 		api<Settings>('/api/settings'),
-		api<{ authenticated: boolean; needsSetup: boolean; username?: string; role?: string }>('/api/auth/check'),
+		api<{ authenticated: boolean; needsSetup: boolean; username?: string; role?: string; canEdit?: boolean }>('/api/auth/check'),
 		// Icons stored by this browser are ready before the tiles render (result unused).
 		initIconCache()
 	]);
@@ -245,7 +248,7 @@ export async function loadDashboard(windowWidth?: number) {
 	}
 	settings.set(settingsData);
 	if (authData.authenticated && authData.username && authData.role) {
-		currentUser.set({ username: authData.username, role: authData.role });
+		currentUser.set({ username: authData.username, role: authData.role, canEdit: authData.canEdit !== false });
 	} else {
 		currentUser.set(null);
 	}

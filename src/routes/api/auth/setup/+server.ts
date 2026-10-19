@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { isSetupDone, setUsers } from '$lib/server/config';
+import { isSetupDone, setUsers, setAccess } from '$lib/server/config';
 import { hashPassword } from '$lib/auth/session';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -23,6 +23,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			isMainAdmin: true
 		}]
 	});
+	// New installs: only admins change the dashboards (Settings > Admin to open it up).
+	await setAccess({ dashboardEditors: 'admins' });
 
 	return json({ success: true });
 };

@@ -426,6 +426,10 @@ Generate a strong secret:
 openssl rand -hex 32
 ```
 
+### Login attempt limit
+
+Failed logins are limited per account and per client address. Behind a reverse proxy every request comes from the proxy's address: set `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` (one proxy) so CatBoard sees the real client address. Without them, the per-account limit still applies.
+
 ### HTTPS
 
 Docker does not handle TLS termination. Use a reverse proxy:
