@@ -59,8 +59,7 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="disk-widget" onclick={cycle} role="button" tabindex={-1}>
+<div class="disk-widget" onclick={cycle} onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), cycle())} role="button" tabindex={totalPages > 1 ? 0 : -1} aria-label={totalPages > 1 ? `Disks, page ${page + 1} of ${totalPages}: next page` : 'Disks'}>
 	{#if totalPages > 1}
 		<span class="disk-page-indicator" class:left={indicatorSide === 'left'} class:right={indicatorSide === 'right'}>{page + 1}/{totalPages}</span>
 	{/if}

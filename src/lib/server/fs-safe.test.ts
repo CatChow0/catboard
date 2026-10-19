@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readJson, withLock, writeFileAtomic, writeJsonAtomic } from './fs-safe';
+import { readJson, renameWithRetry, withLock, writeFileAtomic, writeJsonAtomic } from './fs-safe';
 
 let dir = '';
 beforeEach(async () => {
@@ -91,5 +91,32 @@ describe('withLock', () => {
 			withLock('fast', async () => { order.push('fast'); })
 		]);
 		expect(order).toEqual(['fast', 'slow']);
+	});
+});
+
+describe('renameWithRetry', () => {
+	const fail = (code: string, times: number) => {
+		let calls = 0;
+		const rn = async () => {
+			if (++calls <= times) throw Object.assign(new Error(code), { code });
+		};
+		return { rn: rn as never, calls: () => calls };
+	};
+
+	it('tries again while Windows holds the file (EPERM, EACCES, EBUSY)', async () => {
+		for (const code of ['EPERM', 'EACCES', 'EBUSY']) {
+			const f = fail(code, 3);
+			await renameWithRetry('a', 'b', f.rn);
+			expect(f.calls()).toBe(4);
+		}
+	});
+
+	it('gives up after a while, and at once on other errors', async () => {
+		const busy = fail('EPERM', 100);
+		await expect(renameWithRetry('a', 'b', busy.rn)).rejects.toThrow('EPERM');
+		expect(busy.calls()).toBe(8);
+		const missing = fail('ENOENT', 1);
+		await expect(renameWithRetry('a', 'b', missing.rn)).rejects.toThrow('ENOENT');
+		expect(missing.calls()).toBe(1);
 	});
 });

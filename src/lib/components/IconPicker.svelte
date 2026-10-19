@@ -133,8 +133,16 @@
 	</div>
 
 	{#if open}
-		<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-		<div class="dropdown" onclick={(e) => e.stopPropagation()}>
+		<!-- Clicks and keys stay in the picker; Escape closes it, not the dialog around it. -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="dropdown"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => {
+				e.stopPropagation();
+				if (e.key === 'Escape') open = false;
+			}}
+		>
 			<div class="tabs" role="tablist">
 				<button type="button" class="tab" class:active={tab === 'library'} role="tab" aria-selected={tab === 'library'} onclick={() => (tab = 'library')}>Libraries</button>
 				<button type="button" class="tab" class:active={tab === 'url'} role="tab" aria-selected={tab === 'url'} onclick={() => (tab = 'url')}>URL</button>

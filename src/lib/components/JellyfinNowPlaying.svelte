@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Streams currently playing on Jellyfin: who watches what, progress, and
 	// whether it is played directly or transcoded.
+	import { pollJson } from '$lib/utils/pollJson.svelte';
 	import type { JellyfinSession } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
 
@@ -9,40 +10,10 @@
 	const POLL_MS = 10_000;
 	const compact = $derived(rowSpan === 1);
 
-	let sessions = $state<JellyfinSession[]>([]);
-	let loading = $state(true);
-	let error = $state('');
-
-	$effect(() => {
-		let stopped = false;
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		async function load() {
-			clearTimeout(timer);
-			if (!document.hidden) {
-				try {
-					const res = await fetch('/api/integrations/jellyfin/sessions');
-					const body = await res.json();
-					if (stopped) return;
-					if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-					sessions = body.sessions ?? [];
-					error = '';
-				} catch (e) {
-					if (!stopped) error = e instanceof Error ? e.message : String(e);
-				} finally {
-					loading = false;
-				}
-			}
-			if (!stopped) timer = setTimeout(load, POLL_MS);
-		}
-		const onVisible = () => !document.hidden && load();
-		document.addEventListener('visibilitychange', onVisible);
-		load();
-		return () => {
-			stopped = true;
-			clearTimeout(timer);
-			document.removeEventListener('visibilitychange', onVisible);
-		};
-	});
+	const poll = pollJson<{ sessions?: JellyfinSession[] }>(() => '/api/integrations/jellyfin/sessions', POLL_MS);
+	const sessions = $derived(poll.data?.sessions ?? []);
+	const loading = $derived(!poll.data && !poll.error);
+	const error = $derived(poll.error);
 
 	const pct = (s: JellyfinSession) => (s.runtimeSec > 0 ? Math.min(100, (s.positionSec / s.runtimeSec) * 100) : 0);
 

@@ -2,6 +2,7 @@
 	// Spoolman: the list of available spools (scrollable), plus optional
 	// "Recently used" and "Running low / empty" sections. "Show only" hides the
 	// list and keeps just the enabled sections. A one-row tile shows a summary.
+	import { pollJson } from '$lib/utils/pollJson.svelte';
 	import type { SpoolInfo, SpoolmanConfig, SpoolmanData } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -28,38 +29,9 @@
 	const archived = $derived(config?.includeArchived ?? false);
 	const compact = $derived(rowSpan <= 1);
 
-	let data = $state<SpoolmanData | null>(null);
-	let error = $state('');
-
-	$effect(() => {
-		const q = `limit=${limit}&lowPercent=${lowPercent}&lowGrams=${lowGrams}&archived=${archived ? 1 : 0}&sort=${sort}`;
-		let stopped = false;
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		async function load() {
-			clearTimeout(timer);
-			if (!document.hidden) {
-				try {
-					const res = await fetch(`/api/integrations/spoolman/spools?${q}`);
-					const body = await res.json();
-					if (stopped) return;
-					if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-					data = body;
-					error = '';
-				} catch (e) {
-					if (!stopped) error = e instanceof Error ? e.message : String(e);
-				}
-			}
-			if (!stopped) timer = setTimeout(load, POLL_MS);
-		}
-		const onVisible = () => !document.hidden && load();
-		document.addEventListener('visibilitychange', onVisible);
-		load();
-		return () => {
-			stopped = true;
-			clearTimeout(timer);
-			document.removeEventListener('visibilitychange', onVisible);
-		};
-	});
+	const poll = pollJson<SpoolmanData>(() => `/api/integrations/spoolman/spools?limit=${limit}&lowPercent=${lowPercent}&lowGrams=${lowGrams}&archived=${archived ? 1 : 0}&sort=${sort}`, POLL_MS);
+	const data = $derived(poll.data);
+	const error = $derived(poll.error);
 
 	/** Single colour, or hard-edged stripes for multi-colour filaments. */
 	function swatch(s: SpoolInfo): string {

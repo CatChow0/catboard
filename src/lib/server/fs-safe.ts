@@ -13,6 +13,23 @@ import { basename, dirname, join } from 'node:path';
 const queues = new Map<string, Promise<unknown>>();
 let counter = 0;
 
+// Windows refuses to replace a file another handle is reading at that moment
+// (EPERM / EACCES / EBUSY): try again for a short while, like graceful-fs.
+const RETRY_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
+const RETRY_DELAYS = [10, 20, 40, 80, 160, 320, 640];
+
+export async function renameWithRetry(from: string, to: string, rn: typeof rename = rename): Promise<void> {
+	for (let attempt = 0; ; attempt++) {
+		try {
+			return await rn(from, to);
+		} catch (err) {
+			const code = (err as NodeJS.ErrnoException).code ?? '';
+			if (!RETRY_CODES.has(code) || attempt >= RETRY_DELAYS.length) throw err;
+			await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+		}
+	}
+}
+
 /** Runs fn after every earlier call with the same key has finished. */
 export function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
 	const previous = queues.get(key) ?? Promise.resolve();
@@ -36,7 +53,7 @@ export function writeFileAtomic(file: string, data: string | Buffer): Promise<vo
 			await handle.close();
 		}
 		try {
-			await rename(tmp, file);
+			await renameWithRetry(tmp, file);
 		} catch (err) {
 			await unlink(tmp).catch(() => {});
 			throw err;

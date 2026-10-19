@@ -45,6 +45,8 @@
 		type GridMetrics
 	} from '$lib/utils/grid';
 	import { flipOnMove } from '$lib/utils/flip';
+	import { swipeDirection } from '$lib/utils/swipe';
+	import { tileMenu } from './dashboard/tile-menu';
 
 	let showAddPopup = $state(false);
 	let showSettings = $state(false);
@@ -715,8 +717,6 @@
 
 	// --- Dashboards: touch swipe, slide transition, notices ----------------------
 
-	const SWIPE_MIN_PX = 60;
-	const SWIPE_MAX_MS = 600;
 	let swipe: { id: number; x: number; y: number; t: number } | null = null;
 
 	function swipeStart(e: PointerEvent) {
@@ -727,13 +727,11 @@
 	function swipeEnd(e: PointerEvent) {
 		const s = swipe;
 		swipe = null;
-		if (!s || e.pointerId !== s.id || Date.now() - s.t > SWIPE_MAX_MS) return;
-		const dx = e.clientX - s.x;
-		const dy = e.clientY - s.y;
-		if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+		if (!s || e.pointerId !== s.id) return;
+		const dir = swipeDirection(s, { x: e.clientX, y: e.clientY, t: Date.now() });
+		if (!dir) return;
 		swallowClick();
-		// Finger moves left -> the next dashboard comes in from the right.
-		void switchDashboard(dx < 0 ? 'next' : 'prev');
+		void switchDashboard(dir);
 	}
 
 	/** Slide the dashboard page in / out horizontally; none when animations are off. */
@@ -808,32 +806,20 @@
 		selectedChildIds = new Map();
 	}
 
-	/** Dashboards (current first) > breakpoints (current first). */
-	function targetsMenu(ids: string[], copy: boolean): MenuItem[] {
-		const bps = [...$layout.grid.breakpoints].sort((a, b) => (a.id === $activeBreakpointId ? -1 : b.id === $activeBreakpointId ? 1 : b.minWidth - a.minWidth));
-		const dashes = [...$dashboards].sort((a, b) => (a.id === $activeDashboardId ? -1 : b.id === $activeDashboardId ? 1 : 0));
-		return dashes.map((d) => ({
-			label: d.name,
-			hint: d.id === $activeDashboardId ? 'current' : undefined,
-			children: bps.map((bp) => {
-				const here = d.id === $activeDashboardId && bp.id === $activeBreakpointId;
-				return {
-					label: getBreakpointLabel($layout.grid.breakpoints, bp.id),
-					hint: here ? (copy ? 'duplicate' : 'here') : bp.id === $activeBreakpointId ? 'current' : undefined,
-					disabled: here && !copy,
-					onselect: () => runTransfer(ids, d.id, bp.id, copy)
-				};
-			})
-		}));
-	}
-
 	// The menu closes (menu = null) before running an action: actions capture the ids.
 	function buildMenu(ids: string[]): MenuItem[] {
-		return [
-			{ label: 'Copy to', children: targetsMenu(ids, true) },
-			{ label: 'Move to', children: targetsMenu(ids, false) },
-			{ label: ids.length > 1 ? `Delete ${ids.length} tiles` : 'Delete', danger: true, onselect: () => deleteSelection(ids) }
-		];
+		return tileMenu(
+			{
+				dashboards: $dashboards,
+				breakpoints: $layout.grid.breakpoints,
+				activeDashboard: $activeDashboardId,
+				activeBreakpoint: $activeBreakpointId,
+				label: (bp) => getBreakpointLabel($layout.grid.breakpoints, bp),
+				transfer: (to, bp, copy) => runTransfer(ids, to, bp, copy),
+				remove: () => deleteSelection(ids)
+			},
+			ids.length
+		);
 	}
 
 	const menuItems = $derived<MenuItem[]>(menu ? buildMenu(menu.ids) : []);

@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.5.0-blue)
+![Version](https://img.shields.io/badge/version-3.6.0-blue)
 
 ## Features
 
@@ -77,7 +77,7 @@ The server listens on port 3000 by default (configurable via the `PORT` environm
 
 | Command | What it checks | Where |
 |---|---|---|
-| `npm run check` | TypeScript and Svelte types (must report 0 errors) | whole project |
+| `npm run check` | TypeScript, Svelte types and accessibility (must report 0 errors and 0 warnings) | whole project |
 | `npm test` | Unit tests (Vitest): grid engine, search, Markdown escaping, themes and theme files, integration registry, widget catalog (every widget has a loader and a stable config), secret masking, status checks, integration clients with a fake `fetch` | `src/**/*.test.ts`, next to the code |
 | `npm run test:api` | API tests: the built app runs on a free port with an empty temporary config (admin + plain user created), routes are called like the widgets do, against fake Jenkins, PsiTransfer, Proxmox (HTTPS, self-signed), Portainer, Immich and Nextcloud servers. Needs `npm run build` first | `tests/api/` |
 | `npm run test:e2e` | Browser tests (Playwright, Chromium): login, lazy widgets, catalog, appearance and custom CSS, theme files, integration widgets, phone layout. Needs `npm run build` and `npx playwright install chromium` once | `tests/e2e/` |

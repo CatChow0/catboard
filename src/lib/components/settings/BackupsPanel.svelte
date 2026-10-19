@@ -85,7 +85,7 @@
 					<li>
 						<span class="bk-date">{when(b.date)}</span>
 						<span class="bk-tag" class:auto={b.reason === 'daily'}>{REASONS[b.reason]}</span>
-						<span class="bk-size" title={b.files.join(', ')}>{b.files.length} files · {kb(b.size)}</span>
+						<span class="bk-size" title={b.files.join(', ')}>{b.files.length} file{b.files.length === 1 ? '' : 's'} · {kb(b.size)}</span>
 						<a class="btn-reset" href="/api/backups/{encodeURIComponent(b.id)}" download>Download</a>
 						{#if confirming === b.id}
 							<button class="btn-reset danger" onclick={() => restore(b.id)} disabled={busy}>Confirm restore</button>

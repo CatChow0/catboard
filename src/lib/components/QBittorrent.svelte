@@ -1,6 +1,8 @@
 <script lang="ts">
 	// qBittorrent: speeds (with a 60 s graph), counters and the busiest
 	// torrents. Admins can pause/resume single torrents or everything.
+	import { untrack } from 'svelte';
+	import { pollJson } from '$lib/utils/pollJson.svelte';
 	import type { QBittorrentConfig, QBittorrentData, Torrent } from '$lib/types';
 	import { currentUser } from '$lib/stores/dashboard';
 	import EditButtons from './widget/EditButtons.svelte';
@@ -24,42 +26,18 @@
 	const compact = $derived(rowSpan <= 1);
 	const showGraph = $derived(rowSpan >= 3);
 
-	let data = $state<QBittorrentData | null>(null);
-	let error = $state('');
 	let history = $state<{ t: number; dl: number; ul: number }[]>([]);
 	let busy = $state(false);
-	let reload = $state(0);
+	let actionError = $state('');
 
+	const poll = pollJson<QBittorrentData>(() => `/api/integrations/qbittorrent/status?filter=${filter}&limit=${limit}`, POLL_MS);
+	const data = $derived(poll.data);
+	const error = $derived(actionError || poll.error);
+
+	// Each new reading adds a point to the speed graph.
 	$effect(() => {
-		const q = `filter=${filter}&limit=${limit}`;
-		void reload;
-		let stopped = false;
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		async function load() {
-			clearTimeout(timer);
-			if (!document.hidden) {
-				try {
-					const res = await fetch(`/api/integrations/qbittorrent/status?${q}`);
-					const body = await res.json();
-					if (stopped) return;
-					if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-					data = body;
-					history = [...history, { t: Date.now(), dl: body.dlSpeed, ul: body.upSpeed }].slice(-HISTORY);
-					error = '';
-				} catch (e) {
-					if (!stopped) error = e instanceof Error ? e.message : String(e);
-				}
-			}
-			if (!stopped) timer = setTimeout(load, POLL_MS);
-		}
-		const onVisible = () => !document.hidden && load();
-		document.addEventListener('visibilitychange', onVisible);
-		load();
-		return () => {
-			stopped = true;
-			clearTimeout(timer);
-			document.removeEventListener('visibilitychange', onVisible);
-		};
+		const d = poll.data;
+		if (d) untrack(() => (history = [...history, { t: Date.now(), dl: d.dlSpeed, ul: d.upSpeed }].slice(-HISTORY)));
 	});
 
 	const graphMax = $derived(niceMax(Math.max(0, ...history.map((h) => Math.max(h.dl, h.ul))), 1 << 20));
@@ -75,9 +53,10 @@
 			});
 			const body = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-			reload++;
+			actionError = '';
+			poll.refresh();
 		} catch (e) {
-			error = e instanceof Error ? e.message : String(e);
+			actionError = e instanceof Error ? e.message : String(e);
 		} finally {
 			busy = false;
 		}

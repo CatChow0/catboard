@@ -41,9 +41,8 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-<div class="modal-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<form class="modal" class:closing onclick={(e) => e.stopPropagation()} onsubmit={handleSubmit}>
+<div class="modal-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.target === e.currentTarget && close()} onkeydown={(e) => e.key === 'Escape' && close()}>
+	<form class="modal" class:closing onsubmit={handleSubmit}>
 		<h2>{service ? 'Edit Service' : 'Add Service'}</h2>
 		<div class="form-group">
 			<label for="name">Name</label>
@@ -54,7 +53,7 @@
 			<input id="url" type="url" bind:value={url} required placeholder="https://proxmox.home.local" />
 		</div>
 		<div class="form-group">
-			<label>Icon</label>
+			<span class="form-label">Icon</span>
 			<IconPicker value={icon} onchange={(v) => (icon = v)} {name} {url} />
 		</div>
 		<div class="form-group">
@@ -116,7 +115,8 @@
 		margin-bottom: 14px;
 	}
 
-	.form-group label {
+	.form-group label,
+	.form-group .form-label {
 		display: block;
 		font-size: 0.85rem;
 		font-weight: 500;

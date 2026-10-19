@@ -84,7 +84,7 @@
 			});
 	});
 
-	// Close day popup on outside click
+	// Close day popup on outside click or Escape
 	$effect(() => {
 		if (selectedDay === null) return;
 		function handleClick(e: MouseEvent) {
@@ -93,8 +93,15 @@
 				selectedDay = null;
 			}
 		}
+		function handleKey(e: KeyboardEvent) {
+			if (e.key === 'Escape') selectedDay = null;
+		}
 		setTimeout(() => document.addEventListener('click', handleClick), 0);
-		return () => document.removeEventListener('click', handleClick);
+		document.addEventListener('keydown', handleKey);
+		return () => {
+			document.removeEventListener('click', handleClick);
+			document.removeEventListener('keydown', handleKey);
+		};
 	});
 
 	function toggleDay(day: number, e: MouseEvent) {
@@ -221,7 +228,7 @@
 </div>
 
 {#if selectedDay !== null}
-	<div class="day-popup" style={popupStyle} onclick={(e) => e.stopPropagation()}>
+	<div class="day-popup" style={popupStyle} role="dialog" aria-label="Releases of the day">
 		{#each selectedDayEntries as entry}
 			<div class="day-popup-entry">
 				{#if entry.posterUrl}
