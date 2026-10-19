@@ -18,11 +18,12 @@ beforeAll(async () => {
 		proxmox: { clusters: [{ id: 'c1', name: 'Lab', url: mocks.proxmox.url, ...TOKENS.proxmox, insecure: 'true' }] },
 		portainer: { url: mocks.portainer.url, ...TOKENS.portainer, publicUrl: 'https://portainer.example.com' },
 		immich: { url: mocks.immich.url, apiKey: TOKENS.immich.adminKey, publicUrl: 'https://photos.example.com' },
-		nextcloud: { url: mocks.nextcloud.url, ...TOKENS.nextcloud, publicUrl: 'https://cloud.example.com' }
+		nextcloud: { url: mocks.nextcloud.url, ...TOKENS.nextcloud, publicUrl: 'https://cloud.example.com' },
+		gitea: { url: mocks.gitea.url, ...TOKENS.gitea, publicUrl: 'https://git.example.com' }
 	});
 });
 afterAll(async () => {
-	await admin.put('/api/integrations', { jenkins: null, psitransfer: null, proxmox: null, portainer: null, immich: null, nextcloud: null });
+	await admin.put('/api/integrations', { jenkins: null, psitransfer: null, proxmox: null, portainer: null, immich: null, nextcloud: null, gitea: null });
 	await mocks.close();
 });
 
@@ -176,6 +177,21 @@ describe('Nextcloud', () => {
 		const data = (await user.get('/api/integrations/nextcloud/overview?server=0&files=0')).body;
 		expect(data.server).toBeNull();
 		expect(data.files).toEqual([]);
+	});
+});
+
+describe('Gitea / Forgejo', () => {
+	it('gives the recent repositories and the open issues and pull requests', async () => {
+		const data = (await user.get('/api/integrations/gitea/overview?repos=2&issues=3')).body;
+		expect(data).toMatchObject({ user: 'Ann', url: 'https://git.example.com', counts: { issues: 3, pulls: 1 } });
+		expect(data.repos.map((r: { name: string }) => r.name)).toEqual(['ann/catboard', 'homelab/infra']);
+		expect(data.repos[1]).toMatchObject({ private: true, issues: 1, url: 'https://git.example.com/homelab/infra' });
+		expect(data.open.map((i: { number: number; pull: boolean }) => [i.number, i.pull])).toEqual([[8, true], [7, false], [3, false]]);
+	});
+
+	it('only asks for what the widget shows', async () => {
+		const data = (await user.get('/api/integrations/gitea/overview?repos=0&issues=0')).body;
+		expect(data).toMatchObject({ repos: [], open: [], counts: null });
 	});
 });
 

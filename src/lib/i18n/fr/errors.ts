@@ -118,4 +118,8 @@ export const errors = {
 	'test.nextcloudOk': 'Nextcloud, connecté en tant que {user}',
 	'test.printerOk': '{model} {serial}',
 	'test.printerSerial': '{model} {serial} (le champ numéro de série indique {typed})',
+	'errors.giteaAuth': 'Gitea a refusé le jeton d\'accès',
+	'errors.giteaScope': 'Ce jeton n\'a pas le droit de lire ceci (il faut l\'accès en lecture à user, repository et issue)',
+	'errors.enterToken': 'Saisis le jeton d\'accès',
+	'test.giteaOk': 'Gitea / Forgejo {version}, connecté en tant que {user}',
 } satisfies Partial<Dict>;

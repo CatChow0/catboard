@@ -33,4 +33,5 @@ export const widget = {
 	'widget.lblQbittorrent': 'le widget qBittorrent',
 	'widget.lblRequests': 'le widget des demandes',
 	'widget.lblSpoolman': 'le widget Spoolman',
+	'widget.lblGitea': 'le widget Gitea',
 } satisfies Partial<Dict>;

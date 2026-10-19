@@ -147,7 +147,7 @@ export interface UptimeKumaStatusPageData {
 	overallUptime: number;
 }
 
-export type DashboardItem = ProxmoxItem | PortainerItem | ImmichItem | NextcloudItem | ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem | SpoolmanItem | ElegooPrintItem | JenkinsItem | PsiTransferItem;
+export type DashboardItem = ProxmoxItem | PortainerItem | ImmichItem | NextcloudItem | GiteaItem | ServiceItem | CollapsibleGroupItem | StandardGroupItem | CalendarItem | ClockItem | WeatherItem | UptimeKumaStatusPageItem | DockerItem | AdGuardHomeItem | AdGuardHomeControlItem | JellyfinLatestItem | ArrReleasesItem | StackerItem | JellyfinNowPlayingItem | JellyseerrRequestsItem | QBittorrentItem | NotesItem | SpoolmanItem | ElegooPrintItem | JenkinsItem | PsiTransferItem;
 
 // --- Weather ---
 
@@ -374,6 +374,8 @@ export interface IntegrationsConfig {
 	portainer?: { url: string; publicUrl?: string; apiKey: string; insecure?: string };
 	immich?: { url: string; publicUrl?: string; apiKey: string };
 	nextcloud?: { url: string; publicUrl?: string; username: string; appPassword: string };
+	/** Gitea or Forgejo (same API). */
+	gitea?: { url: string; publicUrl?: string; apiToken: string };
 }
 
 /** A Proxmox VE node or cluster, read with an API token. */
@@ -965,4 +967,46 @@ export interface NextcloudData {
 export interface NextcloudItem extends DashboardItemBase {
 	type: 'nextcloud';
 	config?: NextcloudConfig;
+}
+
+// --- Gitea / Forgejo ---
+
+export interface GiteaConfig {
+	/** Recent repositories shown (0 hides them). */
+	repos?: number;
+	/** Open issues and pull requests shown (0 hides them). */
+	issues?: number;
+}
+
+export interface GiteaRepo {
+	name: string;
+	url: string;
+	updated: number;
+	stars: number;
+	issues: number;
+	pulls: number;
+	private: boolean;
+}
+
+export interface GiteaIssue {
+	title: string;
+	number: number;
+	repo: string;
+	url: string;
+	updated: number;
+	pull: boolean;
+	author: string;
+}
+
+export interface GiteaData {
+	user: string;
+	url: string;
+	repos: GiteaRepo[];
+	open: GiteaIssue[];
+	counts: { issues: number; pulls: number } | null;
+}
+
+export interface GiteaItem extends DashboardItemBase {
+	type: 'gitea';
+	config?: GiteaConfig;
 }

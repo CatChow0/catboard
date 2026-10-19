@@ -57,7 +57,8 @@ await post('/api/integrations', {
 	proxmox: { clusters: [{ id: 'c1', name: 'Lab', url: mocks.proxmox.url, ...TOKENS.proxmox, insecure: 'true' }] },
 	portainer: { url: mocks.portainer.url, ...TOKENS.portainer },
 	immich: { url: mocks.immich.url, apiKey: TOKENS.immich.adminKey },
-	nextcloud: { url: mocks.nextcloud.url, ...TOKENS.nextcloud }
+	nextcloud: { url: mocks.nextcloud.url, ...TOKENS.nextcloud },
+	gitea: { url: mocks.gitea.url, ...TOKENS.gitea }
 }, cookie, 'PUT');
 await post('/api/services', { name: 'Grafana', url: mocks.status.url + '/grafana', description: 'Dashboards', statusCheck: { enabled: true, method: 'HEAD' } }, cookie);
 

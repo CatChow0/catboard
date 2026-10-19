@@ -125,4 +125,8 @@ export const catalog = {
 	'widgetDef.needCluster': 'Pick a cluster',
 	'widgetDef.needProject': 'Pick a project',
 	'widgetDef.needPrinter': 'Pick a printer',
+	'integ.gitea.desc': 'Recent repositories, open issues and pull requests',
+	'integ.gitea.publicUrl.hint': 'Public address for the header link (only when it differs from the URL).',
+	'integ.gitea.help': 'Create a token in Settings > Applications with read access to user, repository and issue. CatBoard only reads.',
+	'widgetDef.gitea.desc': 'Recent repositories, open issues and pull requests',
 } satisfies Record<string, Entry>;

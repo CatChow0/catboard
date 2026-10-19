@@ -350,6 +350,12 @@ Thumbnails go through CatBoard: the browser never needs the key nor to reach Imm
 
 Server info needs a Nextcloud admin account and the **Monitoring** (serverinfo) app.
 
+### Gitea / Forgejo
+
+1. In Gitea or Forgejo, **Settings > Applications**: generate a token with **read** access to *user*, *repository* and *issue*
+2. In **Settings > Integrations > Gitea / Forgejo**, enter the URL and the token
+3. Add a **Gitea / Forgejo** widget
+
 ### Uptime Kuma
 
 To connect CatBoard to an Uptime Kuma instance:

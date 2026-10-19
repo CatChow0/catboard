@@ -125,4 +125,8 @@ export const catalog = {
 	'widgetDef.needCluster': 'Choisis un cluster',
 	'widgetDef.needProject': 'Choisis un projet',
 	'widgetDef.needPrinter': 'Choisis une imprimante',
+	'integ.gitea.desc': 'Dépôts récents, issues et pull requests ouvertes',
+	'integ.gitea.publicUrl.hint': 'Adresse publique pour le lien du titre (seulement si elle diffère de l\'URL).',
+	'integ.gitea.help': 'Crée un jeton dans Paramètres > Applications avec un accès en lecture à user, repository et issue. CatBoard ne fait que lire.',
+	'widgetDef.gitea.desc': 'Dépôts récents, issues et pull requests ouvertes',
 } satisfies Partial<Dict>;

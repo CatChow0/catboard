@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.7.0-blue)
+![Version](https://img.shields.io/badge/version-3.8.0-blue)
 
 ## Features
 
@@ -30,7 +30,8 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Portainer integration** -- Containers per environment and the stacks; admins can start and stop stacks
 - **Immich integration** -- Photo, video and storage counts and the latest photos (thumbnails proxied by CatBoard)
 - **Nextcloud integration** -- Storage quota, server info and the latest modified files
-- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins, Proxmox VE, Portainer, Immich, Nextcloud)
+- **Gitea / Forgejo integration** -- Recently updated repositories and the open issues and pull requests, with their totals
+- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins, Proxmox VE, Portainer, Immich, Nextcloud, Gitea/Forgejo)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings, a choice of who may edit the shared dashboards, and a limit on failed login attempts
@@ -80,7 +81,7 @@ The server listens on port 3000 by default (configurable via the `PORT` environm
 |---|---|---|
 | `npm run check` | TypeScript, Svelte types and accessibility (must report 0 errors and 0 warnings) | whole project |
 | `npm test` | Unit tests (Vitest): grid engine, search, Markdown escaping, themes and theme files, integration registry, widget catalog (every widget has a loader and a stable config), secret masking, status checks, integration clients with a fake `fetch` | `src/**/*.test.ts`, next to the code |
-| `npm run test:api` | API tests: the built app runs on a free port with an empty temporary config (admin + plain user created), routes are called like the widgets do, against fake Jenkins, PsiTransfer, Proxmox (HTTPS, self-signed), Portainer, Immich and Nextcloud servers. Needs `npm run build` first | `tests/api/` |
+| `npm run test:api` | API tests: the built app runs on a free port with an empty temporary config (admin + plain user created), routes are called like the widgets do, against fake Jenkins, PsiTransfer, Proxmox (HTTPS, self-signed), Portainer, Immich, Nextcloud and Gitea servers. Needs `npm run build` first | `tests/api/` |
 | `npm run test:e2e` | Browser tests (Playwright, Chromium): login, lazy widgets, catalog, appearance and custom CSS, theme files, integration widgets, phone layout. Needs `npm run build` and `npx playwright install chromium` once | `tests/e2e/` |
 | `npm run test:all` | All of the above, in order | |
 
@@ -208,6 +209,7 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **Portainer stacks** | Each environment with its running / stopped (and unhealthy) container counts, then the stacks with their state; option: one environment or all. Admins can start and stop stacks (stopping asks first). Refreshed every 30 s |
 | **Immich** | Photo, video and storage counts (the whole server with an admin key, else the key owner's library) and a grid of the latest photos linking to Immich; options: show the counts, number of photos (0 hides them). Refreshed every 5 min |
 | **Nextcloud** | Storage used and quota, server info (version, active users, files, free space; needs a Nextcloud admin and the Monitoring app) and the latest modified files linking to Nextcloud; options: show the quota, show server info, number of files. Refreshed every 2 min |
+| **Gitea / Forgejo** | Recently updated repositories (private ones marked, open issues + PRs per repository) and the open issues and pull requests of the repositories the token reads, last updated first, with the totals; links open Gitea |
 
 ### Integrations
 
@@ -229,6 +231,7 @@ Connections to external services are set up in **Settings > Integrations**: a se
 | **Portainer** | URL, access token (My account > Access tokens), **Skip TLS verification**; optional public URL for the links |
 | **Immich** | URL and API key (Account settings > API keys); optional public URL for the links to photos |
 | **Nextcloud** | URL, username and an app password (Personal settings > Security); optional public URL for the links to files |
+| **Gitea / Forgejo** | URL and an access token (Settings > Applications, read access to user, repository and issue); optional public URL for the header link |
 | **Elegoo printers** | Centauri Carbon 2: name, IP, access code (if set); **Detect** reads the serial number. The printer must be in **LAN Only** mode (Settings > Network) |
 | **AdGuard Home** | URL, username, password |
 
@@ -330,6 +333,7 @@ After 5 failed logins on an account within 15 minutes, that account must wait 30
 | `GET` | `/api/integrations/immich/summary` | Immich statistics and the latest photos (`photos`) |
 | `GET` | `/api/integrations/immich/thumb/[id]` | A photo thumbnail, fetched with the API key on the server |
 | `GET` | `/api/integrations/nextcloud/overview` | Quota, server info and recent files (`server`, `files`) |
+| `GET` | `/api/integrations/gitea/overview` | Recent repositories, open issues and pull requests with totals (`repos`, `issues`) |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |
 | `GET` | `/api/version` | Current vs latest Docker image version |

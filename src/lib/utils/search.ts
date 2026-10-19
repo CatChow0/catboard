@@ -25,7 +25,8 @@ export const WIDGET_NAMES: Record<string, string[]> = {
 	proxmox: ['Proxmox', 'vm', 'containers', 'virtualisation'],
 	portainer: ['Portainer', 'stacks', 'containers'],
 	immich: ['Immich', 'photos'],
-	nextcloud: ['Nextcloud', 'files', 'cloud']
+	nextcloud: ['Nextcloud', 'files', 'cloud'],
+	gitea: ['Gitea', 'Forgejo', 'git', 'repositories', 'issues']
 };
 
 /** What a tile is called: service name, group / note title, or the widget name. */

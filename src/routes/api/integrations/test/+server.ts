@@ -9,6 +9,7 @@ import type { IntegrationKey } from '$lib/integrations/registry';
 import { httpFetch, isOn } from '$lib/server/http';
 import { pveConnOf, pve } from '$lib/server/proxmox';
 import { nextcloudConnOf, ocsUser } from '$lib/server/nextcloud';
+import { giteaConnOf, giteaUser } from '$lib/server/gitea';
 import { AppError, msg } from '$lib/server/api-error';
 import type { Key, Params } from '$lib/i18n';
 import { translate } from '$lib/i18n';
@@ -192,6 +193,14 @@ async function run(key: IntegrationKey, v: Values): Promise<Result> {
 			if (!v.username) return { ok: false, ...msg('errors.enterUsername') };
 			const user = await ocsUser(nextcloudConnOf({ url, username: v.username, appPassword: v.appPassword }));
 			return { ok: true, ...msg('test.nextcloudOk', { user: user.displayname || v.username }) };
+		}
+		case 'gitea': {
+			const conn = giteaConnOf({ url, apiToken: v.apiToken });
+			const ver = await get(`${conn.base}/api/v1/version`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+			if (!ver?.version) return { ok: false, ...msg('errors.notLike', { name: 'Gitea / Forgejo' }) };
+			if (!v.apiToken) return { ok: false, ...msg('errors.enterToken') };
+			const user = await giteaUser(conn);
+			return { ok: true, ...msg('test.giteaOk', { version: ver.version, user: user.full_name || user.login || '' }) };
 		}
 		case 'elegoo':
 			return testElegoo(v);

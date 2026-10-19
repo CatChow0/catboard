@@ -8,6 +8,7 @@ import { pveConnOf, resources, guestAction } from './proxmox';
 import { overview as portainerOverview, stackAction, type PortainerConn } from './portainer';
 import { summary as immichSummary, isAssetId, type ImmichConn } from './immich';
 import { parseSearch, overview as nextcloudOverview, nextcloudConnOf } from './nextcloud';
+import { overview as giteaOverview, giteaConnOf } from './gitea';
 
 vi.mock('$lib/server/config', () => ({ getIntegrations: async () => ({}) }));
 afterEach(() => vi.unstubAllGlobals());
@@ -302,5 +303,43 @@ describe('nextcloud', () => {
 	it('explains a wrong app password', async () => {
 		fakeFetch([[/./, () => new Response('', { status: 401 })]]);
 		await expect(nextcloudOverview(conn, { server: false, files: 0 })).rejects.toThrow('app password');
+	});
+});
+
+// --- Gitea / Forgejo ---------------------------------------------------------------
+describe('gitea', () => {
+	const conn = giteaConnOf({ url: 'http://git:3000/', publicUrl: 'https://git.example.com', apiToken: 'tok' });
+	const repo = (name: string, at: string) => ({ full_name: name, html_url: `https://git.example.com/${name}`, updated_at: at });
+	const issue = (n: number, at: string, pull = false) => ({ number: n, title: `#${n}`, html_url: `u${n}`, updated_at: at, repository: { full_name: 'a/b' }, pull_request: pull ? {} : null });
+
+	it('sorts repositories by update, merges issues and pull requests with their totals', async () => {
+		const { calls } = fakeFetch([
+			['/api/v1/user', () => json({ login: 'ann' })],
+			['/api/v1/user/repos', () => json([repo('a/old', '2026-01-01T00:00:00Z'), repo('a/new', '2026-10-01T00:00:00Z'), repo('a/mid', '2026-05-01T00:00:00Z')])],
+			[/type=issues/, () => json([issue(1, '2026-10-02T00:00:00Z'), issue(2, '2026-09-01T00:00:00Z')], { headers: { 'x-total-count': '9' } })],
+			[/type=pulls/, () => json([issue(3, '2026-10-03T00:00:00Z', true)], { headers: { 'x-total-count': '1' } })]
+		]);
+		const data = await giteaOverview(conn, { repos: 2, issues: 2 });
+		expect(data.user).toBe('ann');
+		expect(data.url).toBe('https://git.example.com');
+		expect(data.repos.map((r) => r.name)).toEqual(['a/new', 'a/mid']);
+		expect(data.open.map((i) => [i.number, i.pull])).toEqual([[3, true], [1, false]]);
+		expect(data.counts).toEqual({ issues: 9, pulls: 1 });
+		expect(calls.every((c) => c.headers.authorization === 'token tok')).toBe(true);
+		expect(calls.every((c) => c.url.startsWith('http://git:3000/api/v1/'))).toBe(true);
+	});
+
+	it('asks only for what is shown', async () => {
+		const { calls } = fakeFetch([['/api/v1/user', () => json({ login: 'ann', full_name: 'Ann' })]]);
+		const data = await giteaOverview(conn, { repos: 0, issues: 0 });
+		expect(data).toMatchObject({ user: 'Ann', repos: [], open: [], counts: null });
+		expect(calls).toHaveLength(1);
+	});
+
+	it('explains a refused token or a missing scope', async () => {
+		fakeFetch([[/./, () => new Response('', { status: 401 })]]);
+		await expect(giteaOverview(conn, { repos: 0, issues: 0 })).rejects.toThrow('refused the access token');
+		fakeFetch([[/./, () => new Response('', { status: 403 })]]);
+		await expect(giteaOverview(conn, { repos: 0, issues: 0 })).rejects.toMatchObject({ code: 'errors.giteaScope' });
 	});
 });

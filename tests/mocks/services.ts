@@ -13,7 +13,8 @@ export const TOKENS = {
 	proxmox: { tokenId: 'catboard@pve!dash', tokenSecret: '11111111-2222-3333-4444-555555555555' },
 	portainer: { apiKey: 'ptr_test' },
 	immich: { adminKey: 'immich-admin', userKey: 'immich-user' },
-	nextcloud: { username: 'ann', appPassword: 'nc-app-pass' }
+	nextcloud: { username: 'ann', appPassword: 'nc-app-pass' },
+	gitea: { apiToken: 'gitea-token' }
 };
 
 type Req = http.IncomingMessage & { body: Buffer };
@@ -240,6 +241,34 @@ export function nextcloudMock(port?: number) {
 	}, { port });
 }
 
+// --- Gitea / Forgejo -----------------------------------------------------------
+export function giteaMock(port?: number) {
+	const day = 86400e3;
+	const repos = [
+		{ full_name: 'ann/old-tool', updated_at: new Date(Date.now() - 30 * day).toISOString(), stars_count: 1, open_issues_count: 0, open_pr_counter: 0, private: false },
+		{ full_name: 'ann/catboard', updated_at: new Date(Date.now() - 60e3).toISOString(), stars_count: 12, open_issues_count: 2, open_pr_counter: 1, private: false },
+		{ full_name: 'homelab/infra', updated_at: new Date(Date.now() - day).toISOString(), stars_count: 0, open_issues_count: 1, open_pr_counter: 0, private: true }
+	].map((r) => ({ ...r, html_url: `https://git.example.com/${r.full_name}` }));
+	const issue = (repo: string, number: number, title: string, ago: number, pull = false) => ({
+		number, title, html_url: `https://git.example.com/${repo}/${pull ? 'pulls' : 'issues'}/${number}`, updated_at: new Date(Date.now() - ago).toISOString(),
+		user: { login: 'bob' }, repository: { full_name: repo }, pull_request: pull ? { merged: false } : null
+	});
+	const issues = [issue('ann/catboard', 7, 'Dark theme flickers', 5 * 60e3), issue('homelab/infra', 3, 'Renew certificates', 2 * day), issue('ann/catboard', 6, 'Old bug', 3 * day)];
+	const pulls = [issue('ann/catboard', 8, 'Add French', 60e3, true)];
+	return serve((req, res, url) => {
+		if (url.pathname === '/api/v1/version') return send(res, 200, { version: '1.22.3' });
+		if (req.headers.authorization !== `token ${TOKENS.gitea.apiToken}`) return send(res, 401, { message: 'token is required' });
+		if (url.pathname === '/api/v1/user') return send(res, 200, { login: 'ann', full_name: 'Ann' });
+		if (url.pathname === '/api/v1/user/repos') return send(res, 200, repos);
+		if (url.pathname === '/api/v1/repos/issues/search') {
+			const list = url.searchParams.get('type') === 'pulls' ? pulls : issues;
+			const limit = Number(url.searchParams.get('limit') ?? 10);
+			return send(res, 200, list.slice(0, limit), { 'x-total-count': String(list.length) });
+		}
+		return send(res, 404, { message: 'not found' });
+	}, { port });
+}
+
 // --- Status target --------------------------------------------------------------
 /** Counts HEAD probes per path (other requests, like icon lookups, are not counted); /down/* answers 500. Slow enough to overlap concurrent checks. */
 export function statusTarget(port?: number) {
@@ -252,16 +281,17 @@ export function statusTarget(port?: number) {
 	}, { port }).then((m) => Object.assign(m, { hits }));
 }
 
-export async function startAll(ports: Partial<Record<'jenkins' | 'psitransfer' | 'proxmox' | 'portainer' | 'immich' | 'nextcloud' | 'status', number>> = {}) {
-	const [jenkins, psitransfer, proxmox, portainer, immich, nextcloud, status] = await Promise.all([
+export async function startAll(ports: Partial<Record<'jenkins' | 'psitransfer' | 'proxmox' | 'portainer' | 'immich' | 'nextcloud' | 'gitea' | 'status', number>> = {}) {
+	const [jenkins, psitransfer, proxmox, portainer, immich, nextcloud, gitea, status] = await Promise.all([
 		jenkinsMock(ports.jenkins),
 		psitransferMock(ports.psitransfer),
 		proxmoxMock(ports.proxmox),
 		portainerMock(ports.portainer),
 		immichMock(ports.immich),
 		nextcloudMock(ports.nextcloud),
+		giteaMock(ports.gitea),
 		statusTarget(ports.status)
 	]);
-	const all = { jenkins, psitransfer, proxmox, portainer, immich, nextcloud, status };
+	const all = { jenkins, psitransfer, proxmox, portainer, immich, nextcloud, gitea, status };
 	return { ...all, close: () => Promise.all(Object.values(all).map((m) => m.close())) };
 }

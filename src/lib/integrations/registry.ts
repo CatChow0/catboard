@@ -256,6 +256,21 @@ export const INTEGRATIONS: IntegrationDef[] = [
 		help: 'Use an app password (Personal settings > Security), not your login password. Server info needs an admin account and the Monitoring (serverinfo) app.'
 	},
 	{
+		key: 'gitea',
+		name: 'Gitea / Forgejo',
+		description: 'Recent repositories, open issues and pull requests',
+		icon: 'git',
+		category: 'Development',
+		kind: 'single',
+		fields: [
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'http://gitea:3000' },
+			{ id: 'apiToken', label: 'Access token', type: 'secret', placeholder: 'Settings > Applications > Generate token' },
+			{ id: 'publicUrl', label: 'Public URL', type: 'url', placeholder: 'https://git.example.com', advanced: true, hint: 'Public address for the header link (only when it differs from the URL).' }
+		],
+		requiredField: 'url',
+		help: 'Create a token in Settings > Applications with read access to user, repository and issue. CatBoard only reads.'
+	},
+	{
 		key: 'spoolman',
 		name: 'Spoolman',
 		description: 'Filament spools: available, recently used, running low',

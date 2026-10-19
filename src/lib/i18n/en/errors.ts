@@ -118,4 +118,8 @@ export const errors = {
 	'test.nextcloudOk': 'Nextcloud, signed in as {user}',
 	'test.printerOk': '{model} {serial}',
 	'test.printerSerial': '{model} {serial} (the serial number field says {typed})',
+	'errors.giteaAuth': 'Gitea refused the access token',
+	'errors.giteaScope': 'This token may not read this (needs read access to user, repository and issue)',
+	'errors.enterToken': 'Enter the access token',
+	'test.giteaOk': 'Gitea / Forgejo {version}, signed in as {user}',
 } satisfies Record<string, Entry>;

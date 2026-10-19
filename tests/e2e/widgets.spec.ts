@@ -93,3 +93,13 @@ test('Settings > Integrations: toggle field and Test connection', async ({ page 
 	await page.click('button:has-text("Test connection")');
 	await expect(page.locator('.ip-detail')).toContainText('TLS error');
 });
+
+test('Gitea shows repositories, open issues and pull requests', async ({ page }) => {
+	await setDashboard(page, [tile('gt', 'gitea', 0, 0, 5, 4)]);
+	await page.goto('/');
+	const w = page.locator('.cb-item-gitea');
+	await expect(w.getByText('ann/catboard')).toBeVisible();
+	await expect(w.getByText('3 issues')).toBeVisible();
+	await expect(w.getByText('1 PR')).toBeVisible();
+	await expect(w.locator('a', { hasText: 'Add French' })).toHaveAttribute('href', 'https://git.example.com/ann/catboard/pulls/8');
+});

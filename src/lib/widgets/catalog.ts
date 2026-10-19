@@ -33,6 +33,7 @@ import ProxmoxSettings from '$lib/components/widget-settings/ProxmoxSettings.sve
 import PortainerSettings from '$lib/components/widget-settings/PortainerSettings.svelte';
 import ImmichSettings from '$lib/components/widget-settings/ImmichSettings.svelte';
 import NextcloudSettings from '$lib/components/widget-settings/NextcloudSettings.svelte';
+import GiteaSettings from '$lib/components/widget-settings/GiteaSettings.svelte';
 
 export type WidgetTarget = 'grid' | 'navbar';
 export type WidgetCategory = 'Basics' | 'System' | 'Monitoring' | 'Virtualisation' | 'Media' | 'Downloads' | 'Files' | 'Development' | '3D printing' | 'Network';
@@ -403,6 +404,18 @@ export const WIDGETS: WidgetDef[] = [
 		settings: NextcloudSettings,
 		prepare: (c) => ({ showQuota: c?.showQuota ?? true, showServer: c?.showServer ?? false, files: c?.files ?? 6 }),
 		normalize: (d) => ({ showQuota: d.showQuota ? undefined : false, showServer: d.showServer || undefined, files: clamp(d.files, 0, 20, 6) })
+	},
+	{
+		id: 'gitea',
+		name: 'Gitea / Forgejo',
+		description: 'Recent repositories, open issues and pull requests',
+		icon: 'git',
+		category: 'Development',
+		integrations: ['gitea'],
+		grid: { type: 'gitea', colSpan: 4, rowSpan: 3, minColSpan: 2 },
+		settings: GiteaSettings,
+		prepare: (c) => ({ repos: c?.repos ?? 5, issues: c?.issues ?? 5 }),
+		normalize: (d) => ({ repos: clamp(d.repos, 0, 20, 5), issues: clamp(d.issues, 0, 20, 5) })
 	},
 	{
 		id: 'jenkins',

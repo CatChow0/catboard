@@ -79,6 +79,13 @@ describe('test connection', () => {
 		expect((await test('immich', { url: mocks.immich.url, apiKey: 'bad' })).message).toMatch(/refused the API key/);
 	});
 
+	it('Gitea / Forgejo: checks the version, then the token', async () => {
+		expect(await test('gitea', { url: mocks.gitea.url, ...TOKENS.gitea })).toMatchObject({ ok: true, message: 'Gitea / Forgejo 1.22.3, signed in as Ann', code: 'test.giteaOk' });
+		expect(await test('gitea', { url: mocks.gitea.url, apiToken: 'bad' })).toMatchObject({ ok: false, code: 'errors.giteaAuth' });
+		expect(await test('gitea', { url: mocks.gitea.url })).toMatchObject({ ok: false, code: 'errors.enterToken' });
+		expect(await test('gitea', { url: mocks.nextcloud.url, apiToken: 'x' })).toMatchObject({ ok: false, code: 'errors.notLike' });
+	});
+
 	it('Nextcloud: signs in with an app password', async () => {
 		expect(await test('nextcloud', { url: mocks.nextcloud.url, ...TOKENS.nextcloud })).toMatchObject({ ok: true, message: 'Nextcloud, signed in as Ann' });
 		expect((await test('nextcloud', { url: mocks.nextcloud.url, username: 'ann', appPassword: 'bad' })).message).toMatch(/app password/);

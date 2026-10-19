@@ -33,4 +33,5 @@ export const widget = {
 	'widget.lblQbittorrent': 'qBittorrent widget',
 	'widget.lblRequests': 'requests widget',
 	'widget.lblSpoolman': 'Spoolman widget',
+	'widget.lblGitea': 'Gitea widget',
 } satisfies Record<string, Entry>;

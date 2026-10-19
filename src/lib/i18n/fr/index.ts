@@ -16,6 +16,7 @@ import { disk } from './disk';
 import { docker } from './docker';
 import { errors } from './errors';
 import { exportTab } from './exportTab';
+import { gitea } from './gitea';
 import { group } from './group';
 import { icons } from './icons';
 import { immich } from './immich';
@@ -47,4 +48,4 @@ import { widget } from './widget';
 import { widgetSettings } from './widgetSettings';
 
 /** Typed against the English keys: a missing text fails `npm run check`. */
-export const fr = { ...add, ...adguard, ...admin, ...appearance, ...arr, ...auth, ...backups, ...cache, ...calendar, ...catalog, ...common, ...counts, ...dashboard, ...disk, ...docker, ...errors, ...exportTab, ...group, ...icons, ...immich, ...integrations, ...jellyfin, ...jenkins, ...layoutTab, ...location, ...misc, ...nav, ...navTitle, ...navWidgets, ...nextcloud, ...notes, ...portainer, ...print, ...proxmox, ...psi, ...qbit, ...requests, ...search, ...service, ...settings, ...small, ...spoolman, ...stacker, ...time, ...widget, ...widgetSettings } satisfies Dict;
+export const fr = { ...add, ...adguard, ...admin, ...appearance, ...arr, ...auth, ...backups, ...cache, ...calendar, ...catalog, ...common, ...counts, ...dashboard, ...disk, ...docker, ...errors, ...exportTab, ...gitea, ...group, ...icons, ...immich, ...integrations, ...jellyfin, ...jenkins, ...layoutTab, ...location, ...misc, ...nav, ...navTitle, ...navWidgets, ...nextcloud, ...notes, ...portainer, ...print, ...proxmox, ...psi, ...qbit, ...requests, ...search, ...service, ...settings, ...small, ...spoolman, ...stacker, ...time, ...widget, ...widgetSettings } satisfies Dict;

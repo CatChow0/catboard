@@ -15,7 +15,7 @@ raw('login page signs in and out', async ({ page }) => {
 	await rawExpect(page.locator('.navbar')).toBeVisible();
 });
 
-const ALL = ['calendar', 'clock', 'weather', 'docker', 'uptime-kuma-status-page', 'adguard-home', 'adguard-home-control', 'jellyfin-latest', 'arr-releases', 'stacker', 'jellyfin-now-playing', 'jellyseerr-requests', 'qbittorrent', 'notes', 'spoolman', 'elegoo-print', 'jenkins', 'psitransfer', 'proxmox', 'portainer', 'immich', 'nextcloud'];
+const ALL = ['calendar', 'clock', 'weather', 'docker', 'uptime-kuma-status-page', 'adguard-home', 'adguard-home-control', 'jellyfin-latest', 'arr-releases', 'stacker', 'jellyfin-now-playing', 'jellyseerr-requests', 'qbittorrent', 'notes', 'spoolman', 'elegoo-print', 'jenkins', 'psitransfer', 'proxmox', 'portainer', 'immich', 'nextcloud', 'gitea'];
 
 test('a small dashboard only downloads the code it shows', async ({ page }) => {
 	await setDashboard(page, [tile('c1', 'clock', 0, 0, 2, 1)]);

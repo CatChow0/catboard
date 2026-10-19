@@ -28,7 +28,8 @@ export const GRID_WIDGETS: Partial<Record<string, Loader>> = {
 	proxmox: () => import('$lib/components/Proxmox.svelte'),
 	portainer: () => import('$lib/components/Portainer.svelte'),
 	immich: () => import('$lib/components/Immich.svelte'),
-	nextcloud: () => import('$lib/components/Nextcloud.svelte')
+	nextcloud: () => import('$lib/components/Nextcloud.svelte'),
+	gitea: () => import('$lib/components/Gitea.svelte')
 };
 
 export const NAVBAR_WIDGETS: Partial<Record<string, Loader>> = {
