@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+import { locked } from '$lib/server/locked';
 import { getUsers, setUsers } from '$lib/server/config';
 import { hashPassword } from '$lib/auth/session';
 
@@ -18,7 +19,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	});
 };
 
-export const POST: RequestHandler = async ({ locals, request }) => {
+export const POST: RequestHandler = locked('users', async ({ locals, request }) => {
 	if (!locals.isAuthenticated || locals.role !== 'admin') {
 		return json({ error: 'Forbidden' }, { status: 403 });
 	}
@@ -48,4 +49,4 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 	await setUsers(usersConfig);
 	return json({ success: true, user: { username, role, isMainAdmin: false } }, { status: 201 });
-};
+});

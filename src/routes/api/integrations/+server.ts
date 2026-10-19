@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { locked } from '$lib/server/locked';
 import type { RequestHandler } from './$types';
 import { getIntegrations, setIntegrations } from '$lib/server/config';
 import { isAdmin, maskSecrets, requireAdmin } from '$lib/server/auth';
@@ -11,7 +12,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	return json(isAdmin(locals) ? data : maskSecrets(data));
 };
 
-export const PUT: RequestHandler = async ({ request, locals }) => {
+export const PUT: RequestHandler = locked('integrations', async ({ request, locals }) => {
 	const denied = requireAdmin(locals);
 	if (denied) return denied;
 	const data = await request.json();
@@ -23,4 +24,4 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 	}
 	await setIntegrations(next as IntegrationsConfig);
 	return json({ ok: true });
-};
+});

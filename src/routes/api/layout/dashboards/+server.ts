@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+import { locked } from '$lib/server/locked';
 import { randomUUID } from 'crypto';
 import { getLayout, setLayout, dashboardList, dashboardLayouts, setDashboardLayouts, normalizeDashboards, MAIN_DASHBOARD } from '$lib/server/config';
 import { findNextAvailablePosition } from '$lib/utils/grid';
@@ -59,7 +60,7 @@ const bounded = (v: unknown, min: number, max: number): number | undefined => {
 };
 
 /** POST {action, ...} — manage dashboards, copy / move tiles between them, and per-breakpoint layout settings. */
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = locked('layout', async ({ request, locals }) => {
 	const denied = await requireEditor(locals);
 	if (denied) return denied;
 	const body = await request.json().catch(() => ({}));
@@ -167,4 +168,4 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	normalizeDashboards(data);
 	await setLayout(data);
 	return json({ ok: true, ...result, dashboards: data.dashboards });
-};
+});

@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+import { locked } from '$lib/server/locked';
 import { getLayout, setLayout, dashboardList, dashboardLayouts, setDashboardLayouts, resolveDashboard, normalizeDashboards, MAIN_DASHBOARD } from '$lib/server/config';
 import type { Layout } from '$lib/types';
 import { requireEditor } from '$lib/server/auth';
@@ -16,7 +17,7 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 /** PUT ?dashboard=<id> — saves that dashboard's layouts (and the grid config). */
-export const PUT: RequestHandler = async ({ request, url, locals }) => {
+export const PUT: RequestHandler = locked('layout', async ({ request, url, locals }) => {
 	const denied = await requireEditor(locals);
 	if (denied) return denied;
 	const body = (await request.json()) as Partial<Layout>;
@@ -33,4 +34,4 @@ export const PUT: RequestHandler = async ({ request, url, locals }) => {
 	await setLayout(data);
 	const view: Layout = { grid: data.grid, layouts: dashboardLayouts(data, requested), dashboards: dashboardList(data), dashboard: requested };
 	return json(view);
-};
+});

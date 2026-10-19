@@ -1,7 +1,9 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { mkdir, readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
+import { readJson, withLock, writeJsonAtomic } from './fs-safe';
+import { ensureDailyBackup, latestBackupOf } from './backup';
 import type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, DashboardItem, NavbarItemBase,
@@ -16,6 +18,17 @@ export type {
 
 const CONFIG_DIR = process.env.CONFIG_DIR || join(process.cwd(), 'config');
 
+/** The config folder (backups live in its `backups` subfolder). */
+export const configDir = () => CONFIG_DIR;
+
+/**
+ * Runs a read-modify-write of a config file with no other change to it in
+ * between: `mutate('layout', async () => { const l = await getLayout(); ...; await setLayout(l); })`.
+ */
+export function mutate<T>(name: string, fn: () => Promise<T>): Promise<T> {
+	return withLock(`config:${name}`, fn);
+}
+
 async function ensureDir() {
 	if (!existsSync(CONFIG_DIR)) {
 		await mkdir(CONFIG_DIR, { recursive: true });
@@ -29,6 +42,8 @@ async function ensureSubdir(subdir: string) {
 	}
 }
 
+// A file that cannot be parsed (crash of an older version, manual edit) is
+// moved aside and replaced by its newest backup, or else by the default.
 async function readConfig<T>(filename: string, defaultValue: T): Promise<T> {
 	await ensureDir();
 	const filepath = join(CONFIG_DIR, filename);
@@ -36,14 +51,14 @@ async function readConfig<T>(filename: string, defaultValue: T): Promise<T> {
 		await writeConfig(filename, defaultValue);
 		return defaultValue;
 	}
-	const content = await readFile(filepath, 'utf-8');
-	return JSON.parse(content) as T;
+	return readJson(filepath, defaultValue, () => latestBackupOf<T>(CONFIG_DIR, filename));
 }
 
+/** Atomic write, after today's backup if it was not made yet. */
 async function writeConfig<T>(filename: string, data: T): Promise<void> {
 	await ensureDir();
-	const filepath = join(CONFIG_DIR, filename);
-	await writeFile(filepath, JSON.stringify(data, null, 2), 'utf-8');
+	await ensureDailyBackup(CONFIG_DIR).catch((err) => console.error('[config] daily backup failed:', err));
+	await writeJsonAtomic(join(CONFIG_DIR, filename), data);
 }
 
 // --- Types (server-only) ---
@@ -320,15 +335,14 @@ export async function getSettingsForUser(username: string): Promise<Settings> {
 	if (!existsSync(filepath)) {
 		return { ...defaultSettings };
 	}
-	const content = await readFile(filepath, 'utf-8');
-	const saved = JSON.parse(content) as Settings;
+	const saved = await readJson<Partial<Settings>>(filepath, {}, () => latestBackupOf<Settings>(CONFIG_DIR, `settings/${username}.json`));
 	return { ...defaultSettings, ...saved, layout: { ...defaultSettings.layout, ...saved.layout }, navbar: { ...defaultSettings.navbar, ...saved.navbar } };
 }
 
 export async function setSettingsForUser(username: string, data: Settings): Promise<void> {
 	await ensureSubdir('settings');
-	const filepath = join(CONFIG_DIR, 'settings', `${username}.json`);
-	await writeFile(filepath, JSON.stringify(data, null, 2), 'utf-8');
+	await ensureDailyBackup(CONFIG_DIR).catch((err) => console.error('[config] daily backup failed:', err));
+	await writeJsonAtomic(join(CONFIG_DIR, 'settings', `${username}.json`), data);
 }
 
 // --- Users ---

@@ -3,6 +3,9 @@ import { validateSession, isSecureRequest } from '$lib/auth/session';
 import { isSetupDone, findUserByUsername, migrateAuthToUsers } from '$lib/server/config';
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Health check (Docker HEALTHCHECK, monitoring): no session, works before setup.
+	if (event.url.pathname === '/api/health') return resolve(event);
+
 	// Run migration once
 	await migrateAuthToUsers();
 

@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.4.0-blue)
+![Version](https://img.shields.io/badge/version-3.5.0-blue)
 
 ## Features
 
@@ -235,6 +235,14 @@ Connections to external services are set up in **Settings > Integrations**: a se
 
 Only admins (admin and mini-admin roles) can change or test connections, or use widget actions (approve/decline, pause/resume/stop). Other users see the list read-only and the widgets, and integration secrets are hidden from them.
 
+### Backups and safety of the configuration
+
+- **Automatic backups:** a copy of the configuration (services, layout, integrations, users, access, global and per-user settings; never the sessions or the icon cache) is made in `config/backups/` before the first change of each day (the 14 latest are kept) and before every import or restore (the 10 latest are kept).
+- **Settings > Export > Backups** (admin) lists them, makes one on demand (**Back up now**), downloads one as a single JSON file, and **Restore** puts one back after backing up the current state.
+- **Safe writes:** config files are written to a temporary file then renamed, so a crash or a full disk never leaves a half-written file; saves to the same file run one after the other, so two people editing at the same time no longer lose each other's changes.
+- **Corrupt file:** a config file that cannot be read is moved aside (`<name>.corrupt-<time>`) and replaced by its latest backup.
+- **Health check:** `GET /api/health` (no session needed) answers 200 when the server runs and the config folder is writable, 503 otherwise; the Docker image uses it as its `HEALTHCHECK`.
+
 ### Users and permissions
 
 | | Admin | Mini-admin | User |
@@ -323,6 +331,11 @@ After 5 failed logins on an account within 15 minutes, that account must wait 30
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |
 | `GET` | `/api/version` | Current vs latest Docker image version |
+| `GET` | `/api/health` | Health check, no session (200 ok, 503 when the config folder is not writable) |
+| `GET/POST` | `/api/backups` | List the config backups / make one now (admin) |
+| `GET` | `/api/backups/[id]` | Download a backup as one JSON file (admin) |
+| `POST` | `/api/backups/[id]/restore` | Put a backup back, after backing up the current config (admin) |
+| `GET/PUT` | `/api/access` | Who can edit dashboards: `admins` or `everyone` (admins) |
 | `GET` | `/api/icon` | Service icon, resolved and cached by the server (`icon`, `name`, `url`) |
 | `GET` | `/api/icons/catalog` | selfh.st + homarr icon catalogs (icon picker) |
 | `POST` | `/api/icons/batch` | Several service icons at once (base64), for the browser icon cache |

@@ -1,9 +1,10 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+import { locked } from '$lib/server/locked';
 import { getUsers, setUsers, findUserByUsername } from '$lib/server/config';
 import { hashPassword } from '$lib/auth/session';
 
-export const PUT: RequestHandler = async ({ locals, params, request }) => {
+export const PUT: RequestHandler = locked('users', async ({ locals, params, request }) => {
 	if (!locals.isAuthenticated || !locals.role) {
 		return json({ error: 'Forbidden' }, { status: 403 });
 	}
@@ -54,9 +55,9 @@ export const PUT: RequestHandler = async ({ locals, params, request }) => {
 
 	await setUsers(usersConfig);
 	return json({ success: true, user: { username: user.username, role: user.role, isMainAdmin: user.isMainAdmin } });
-};
+});
 
-export const DELETE: RequestHandler = async ({ locals, params }) => {
+export const DELETE: RequestHandler = locked('users', async ({ locals, params }) => {
 	if (!locals.isAuthenticated || locals.role !== 'admin') {
 		return json({ error: 'Forbidden' }, { status: 403 });
 	}
@@ -80,4 +81,4 @@ export const DELETE: RequestHandler = async ({ locals, params }) => {
 	usersConfig.users = usersConfig.users.filter(u => u.username !== username);
 	await setUsers(usersConfig);
 	return json({ success: true });
-};
+});

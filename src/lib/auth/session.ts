@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
+import { writeJsonAtomic } from '$lib/server/fs-safe';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -41,7 +42,7 @@ async function saveSessions(): Promise<void> {
 		obj[id] = session;
 	}
 	try {
-		await writeFile(SESSION_FILE, JSON.stringify(obj, null, 2), 'utf-8');
+		await writeJsonAtomic(SESSION_FILE, obj);
 	} catch {
 		// Ignore write errors (read-only filesystem, etc.)
 	}

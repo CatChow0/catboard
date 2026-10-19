@@ -11,6 +11,7 @@
 	import type { CustomPalette } from '$lib/stores/dashboard';
 	import AdminPanel from './AdminPanel.svelte';
 	import IntegrationsPanel from './settings/IntegrationsPanel.svelte';
+	import BackupsPanel from './settings/BackupsPanel.svelte';
 
 	let { onclose, initialTab, initialIntegration }: {
 		onclose: () => void;
@@ -906,6 +907,8 @@
 						{/if}
 					</button>
 				</div>
+
+				<BackupsPanel />
 
 				<div class="settings-section">
 					<h3>Import</h3>

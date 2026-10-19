@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+import { locked } from '$lib/server/locked';
 import { getServices, setServices } from '$lib/server/config';
 import { resolveIcon } from '$lib/server/icon-cache';
 import { requireEditor } from '$lib/server/auth';
@@ -11,7 +12,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	return json(service);
 };
 
-export const PUT: RequestHandler = async ({ params, request, locals }) => {
+export const PUT: RequestHandler = locked('services', async ({ params, request, locals }) => {
 	const denied = await requireEditor(locals);
 	if (denied) return denied;
 	const data = await getServices();
@@ -25,9 +26,9 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	const s = data.services[index];
 	void resolveIcon(s.icon || '', s.name || '', s.url || '').catch(() => null);
 	return json(data.services[index]);
-};
+});
 
-export const DELETE: RequestHandler = async ({ params, locals }) => {
+export const DELETE: RequestHandler = locked('services', async ({ params, locals }) => {
 	const denied = await requireEditor(locals);
 	if (denied) return denied;
 	const data = await getServices();
@@ -37,4 +38,4 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	data.services.splice(index, 1);
 	await setServices(data);
 	return json({ success: true });
-};
+});

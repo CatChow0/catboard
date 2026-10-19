@@ -500,6 +500,8 @@ Make sure the config volume is writable by the `app` user (UID 1000 typically).
 
 ## Backup & Restore
 
+CatBoard backs up its own configuration in `config/backups/` (daily, and before every import or restore) and restores it from **Settings > Export > Backups**. Those copies live in the same volume: to survive the loss of the volume or the disk, also copy the whole folder elsewhere:
+
 ### Backup
 
 ```bash
@@ -521,6 +523,10 @@ tar xzf dashboard-backup.tar.gz -C ./config
 ```
 
 ## Troubleshooting
+
+### Container shows "unhealthy"
+
+The image checks `GET /api/health` every 30 s. `unhealthy` means the server stopped answering or the config folder is not writable (read-only mount, full disk): check `docker logs catboard` and `curl http://localhost:3000/api/health` from the host.
 
 ### Container exits immediately
 

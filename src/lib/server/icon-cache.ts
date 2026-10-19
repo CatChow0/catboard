@@ -11,7 +11,8 @@
 //      manifest icons included)
 // Misses are remembered for a day so a missing icon never costs a timeout on
 // every page load; concurrent requests for the same icon share one download.
-import { readFile, writeFile, mkdir, readdir, unlink, stat } from 'fs/promises';
+import { readFile, mkdir, readdir, unlink, stat } from 'fs/promises';
+import { writeFileAtomic, writeJsonAtomic } from './fs-safe';
 import { existsSync } from 'fs';
 import { createHash } from 'crypto';
 import { join } from 'path';
@@ -71,7 +72,7 @@ function saveIndexSoon() {
 	saveTimer = setTimeout(async () => {
 		try {
 			await ensureDir();
-			await writeFile(INDEX_FILE, JSON.stringify(index ?? {}, null, 1));
+			await writeJsonAtomic(INDEX_FILE, index ?? {}, 1);
 		} catch {
 			// next save will retry
 		}
@@ -110,7 +111,7 @@ async function store(key: string, data: Buffer, contentType: string, source: str
 	if (isHit(old) && old.filename !== filename && !old.filename.startsWith('custom-')) {
 		try { await unlink(join(CACHE_DIR, old.filename)); } catch { /* gone */ }
 	}
-	await writeFile(join(CACHE_DIR, filename), data);
+	await writeFileAtomic(join(CACHE_DIR, filename), data);
 	const entry: CacheEntry = { filename, contentType, createdAt: Date.now(), source };
 	idx[key] = entry;
 	saveIndexSoon();
@@ -225,7 +226,7 @@ async function loadCatalog(lib: IconLibrary): Promise<CatalogIcon[]> {
 			const icons = parseCatalog(lib, await res.json());
 			if (!icons.length) throw new Error('empty catalog');
 			await ensureDir();
-			await writeFile(file, JSON.stringify(icons));
+			await writeJsonAtomic(file, icons, undefined);
 			catalogs[lib] = { at: Date.now(), icons };
 			return icons;
 		} catch {
@@ -409,7 +410,7 @@ export async function saveUpload(data: Buffer): Promise<string> {
 	if (data.length > MAX_UPLOAD_BYTES) throw new Error('Image too large (max 1 MB)');
 	await ensureDir();
 	const filename = `custom-${createHash('sha256').update(data).digest('hex').substring(0, 20)}.${extFor(type)}`;
-	await writeFile(join(CACHE_DIR, filename), data);
+	await writeFileAtomic(join(CACHE_DIR, filename), data);
 	return `custom:${filename}`;
 }
 
