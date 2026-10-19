@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import StatusDot from './StatusDot.svelte';
 	import type { Service } from '$lib/stores/dashboard';
 	import { serviceStatuses, isEditing } from '$lib/stores/dashboard';
@@ -95,12 +96,12 @@
 		<StatusDot {status} />
 	</div>
 	{#if $isEditing}
-		<button class="btn-delete" onclick={() => ondelete?.()} title="Remove from dashboard">
+		<button class="btn-delete" onclick={() => ondelete?.()} title={$t('dashboard.removeTile')}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>
 		</button>
-		<button class="btn-edit" onclick={() => onedit?.()} title="Edit service">
+		<button class="btn-edit" onclick={() => onedit?.()} title={$t('dashboard.editService')}>
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />

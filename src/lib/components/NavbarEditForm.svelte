@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Edit a navbar widget: its catalog settings form (the same one the Add
 	// popup shows), then icon / text size and width.
+	import { t, locale } from '$lib/i18n';
+	import { localWidget } from '$lib/i18n/catalog';
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import type { NavbarItem } from '$lib/types';
@@ -17,7 +19,7 @@
 
 	const type = untrack(() => item.type);
 	const def = widgetForType(type);
-	const names: Partial<Record<NavbarItem['type'], string>> = { 'navbar-title': 'Title', 'navbar-adguard-home': 'AdGuard Home' };
+	const names: Partial<Record<NavbarItem['type'], string>> = { 'navbar-title': $t('widget.titleName'), 'navbar-adguard-home': 'AdGuard Home' };
 
 	// The search box keeps its placeholder on the item, the others in config.
 	const source = untrack(() => (item.type === 'navbar-search' ? { placeholder: item.placeholder } : 'config' in item ? item.config : undefined));
@@ -31,7 +33,7 @@
 	let textScale = $state(untrack(() => item.textScale ?? 100));
 	let colSpan = $state(untrack(() => item.colSpan));
 	const hasIcon = type !== 'navbar-title' && type !== 'navbar-clock';
-	const iconLabel = ['navbar-cpu', 'navbar-ram', 'navbar-disk'].includes(type) ? 'Bar size' : 'Icon size';
+	const iconLabel = ['navbar-cpu', 'navbar-ram', 'navbar-disk'].includes(type) ? $t('widget.barSize') : $t('widget.iconSize');
 
 	$effect(() => {
 		onpreview?.(iconScale, textScale);
@@ -63,11 +65,11 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-<div class="modal-overlay" class:closing role="dialog" aria-modal="true" aria-label="Edit navbar widget" tabindex="-1" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
+<div class="modal-overlay" class:closing role="dialog" aria-modal="true" aria-label={$t('widget.editNavbar')} tabindex="-1" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
 	<div class="modal" role="presentation" onclick={(e) => e.stopPropagation()}>
 		<div class="modal-header">
-			<h2>Edit {def?.name ?? names[type] ?? 'navbar'} widget</h2>
-			<button class="btn-close" onclick={close} aria-label="Close">
+			<h2>{$t('widget.editNavbarNamed', { name: (def && localWidget($locale, def).name) ?? names[type] ?? $t('widget.navbarFallback') })}</h2>
+			<button class="btn-close" onclick={close} aria-label={$t('common.close')}>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M18 6L6 18M6 6l12 12" />
 				</svg>
@@ -78,13 +80,13 @@
 			{#if def?.settings}
 				<def.settings bind:config={draft} target="navbar" {...def.settingsProps} />
 			{:else if type === 'navbar-title'}
-				<p class="hint">Shows the dashboard title from Settings, with the dashboard switcher.</p>
+				<p class="hint">{$t('widget.titleHint')}</p>
 			{:else if type === 'navbar-ram'}
-				<p class="hint">Shows RAM and swap usage of the CatBoard host.</p>
+				<p class="hint">{$t('widget.ramHint')}</p>
 			{/if}
 			{#if missing}<p class="hint missing">{missing}</p>{/if}
 
-			<p class="group-title">Size</p>
+			<p class="group-title">{$t('widget.size')}</p>
 			{#if hasIcon}
 				<div class="size-row">
 					<label for="nb-icon-scale">{iconLabel}</label>
@@ -93,23 +95,23 @@
 				</div>
 			{/if}
 			<div class="size-row">
-				<label for="nb-text-scale">Text size</label>
+				<label for="nb-text-scale">{$t('widget.textSize')}</label>
 				<input id="nb-text-scale" type="range" min="50" max="250" step="10" bind:value={textScale} />
 				<span class="size-value">{textScale}%</span>
 			</div>
 			{#if iconScale !== 100 || textScale !== 100}
-				<button type="button" class="btn-reset" onclick={() => { iconScale = 100; textScale = 100; }}>Reset to 100%</button>
+				<button type="button" class="btn-reset" onclick={() => { iconScale = 100; textScale = 100; }}>{$t('widget.resetSize')}</button>
 			{/if}
 
 			<label class="field width">
-				<span>Width (columns)</span>
+				<span>{$t('widget.width')}</span>
 				<input type="number" bind:value={colSpan} min="1" max={$activeGrid.navbar.columns} />
 			</label>
 		</div>
 
 		<div class="modal-actions">
-			<button class="btn-cancel" onclick={close}>Cancel</button>
-			<button class="btn-save" onclick={handleSave} disabled={!!missing}>Save</button>
+			<button class="btn-cancel" onclick={close}>{$t('common.cancel')}</button>
+			<button class="btn-save" onclick={handleSave} disabled={!!missing}>{$t('common.save')}</button>
 		</div>
 	</div>
 </div>

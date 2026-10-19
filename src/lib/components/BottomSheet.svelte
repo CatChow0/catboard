@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Phone bottom sheet: slides up from the bottom edge, closes on backdrop tap,
 	// Escape, or a downward swipe on the handle. Used for menus and popovers on phones.
+	import { t } from '$lib/i18n';
 	import type { Snippet } from 'svelte';
 
 	let { label, title, onclose, children }: {
@@ -51,7 +52,7 @@
 <!-- Presses must not reach the dashboard below (tile drags, swipes). -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="bs-overlay" onpointerdown={(e) => e.stopPropagation()}>
-	<button type="button" class="bs-backdrop" aria-label="Close" tabindex="-1" onclick={backdropClick}></button>
+	<button type="button" class="bs-backdrop" aria-label={$t('common.close')} tabindex="-1" onclick={backdropClick}></button>
 	<div
 		bind:this={sheet}
 		class="bs-sheet"

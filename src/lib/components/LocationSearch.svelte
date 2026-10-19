@@ -1,6 +1,7 @@
 <script lang="ts">
 	// City search through /api/geocode, with the current choice and a Clear
 	// button. Used by the navbar Weather widget's add and edit forms.
+	import { t } from '$lib/i18n';
 	import type { WeatherLocation } from '$lib/types';
 
 	let { location = $bindable(null) }: { location?: WeatherLocation | null } = $props();
@@ -36,9 +37,9 @@
 
 <div class="location-search">
 	<div class="search-row">
-		<input type="text" bind:value={query} placeholder="Search city..." aria-label="Search city" onkeydown={(e) => e.key === 'Enter' && search()} />
+		<input type="text" bind:value={query} placeholder={$t('location.placeholder')} aria-label={$t('location.label')} onkeydown={(e) => e.key === 'Enter' && search()} />
 		<button type="button" class="btn-search" onclick={search} disabled={loading || query.trim().length < 2}>
-			{loading ? '...' : 'Search'}
+			{loading ? '...' : $t('location.search')}
 		</button>
 	</div>
 	{#if results.length > 0}
@@ -51,12 +52,12 @@
 			{/each}
 		</div>
 	{:else if searched && !loading}
-		<p class="no-results">No city found for “{query}”.</p>
+		<p class="no-results">{$t('location.noResult', { query })}</p>
 	{/if}
 	{#if location}
 		<div class="current-location">
 			<span class="location-label">{location.name}{location.zipcode ? ` ${location.zipcode}` : ''}{location.country ? `, ${location.country}` : ''}</span>
-			<button type="button" class="btn-clear" onclick={() => (location = null)}>Clear</button>
+			<button type="button" class="btn-clear" onclick={() => (location = null)}>{$t('common.clear')}</button>
 		</div>
 	{/if}
 </div>

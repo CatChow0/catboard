@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, errorText } from '$lib/i18n';
 	import { onMount } from 'svelte';
 
 	let { config = $bindable() }: { config: { retention: string; askOptions: boolean; history: number } } = $props();
@@ -11,7 +12,7 @@
 		try {
 			const res = await fetch('/api/integrations/psitransfer/config');
 			const body = await res.json();
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			retentions = body.retentions;
 			defaultRetention = body.defaultRetention;
 		} catch (e) {
@@ -21,22 +22,22 @@
 </script>
 
 <label class="field">
-	<span>Keep files for (default)</span>
+	<span>{$t('ws.keepFilesForDefault')}</span>
 	{#if retentions}
 		<select bind:value={config.retention}>
-			<option value="">PsiTransfer default ({retentions[defaultRetention] ?? defaultRetention})</option>
+			<option value="">{$t('ws.psiDefault', { value: retentions[defaultRetention] ?? defaultRetention })}</option>
 			{#each Object.entries(retentions) as [key, label] (key)}<option value={key}>{label}</option>{/each}
 		</select>
 	{:else}
-		<span class="hint">{error || 'Loading PsiTransfer settings…'}</span>
+		<span class="hint">{error || $t('ws.loadingPsi')}</span>
 	{/if}
 </label>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.askOptions} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Ask for retention and password before sending <small>(off: files are sent as soon as they are dropped)</small></span>
+	<span class="toggle-label">{$t('ws.askForRetentionAndPasswordBefore')} <small>{$t('ws.offFilesAreSentAsSoon')}</small></span>
 </label>
 <label class="field">
-	<span>Recent links shown (0 to 10, kept by this browser)</span>
+	<span>{$t('ws.recentLinksShown0To10')}</span>
 	<input type="number" min="0" max="10" bind:value={config.history} />
 </label>

@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import { t } from '$lib/i18n';
 	export interface MenuItem {
 		label: string;
 		/** Small grey text on the right (e.g. "current"). */
@@ -150,12 +151,12 @@
 {/snippet}
 
 {#if $isPhone}
-	<BottomSheet label={title || 'Menu'} title={sheetParent ? sheetParent.label : title} {onclose}>
+	<BottomSheet label={title || $t('nav.menu')} title={sheetParent ? sheetParent.label : title} {onclose}>
 		<div class="cm-sheet" role="menu">
 			{#if sheetLevel > 0}
 				<button type="button" class="cm-sheet-item back" onclick={sheetBack}>
 					<span class="cm-arrow" aria-hidden="true">‹</span>
-					<span class="cm-label">Back</span>
+					<span class="cm-label">{$t('common.back')}</span>
 				</button>
 			{/if}
 			{#each sheetList as item, i (i)}

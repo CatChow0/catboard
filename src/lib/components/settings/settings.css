@@ -1115,3 +1115,13 @@
 		flex: 1;
 	}
 }
+
+.cb-settings .language-select {
+	padding: 8px 12px;
+	min-width: 240px;
+	background: var(--bg-primary);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	outline: none;
+	margin-bottom: 6px;
+}

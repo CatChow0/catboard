@@ -3,13 +3,14 @@ import { json } from '@sveltejs/kit';
 import { getIntegrations } from '$lib/server/config';
 import { requireAdmin } from '$lib/server/auth';
 import { pausedInstances, basicAuth, setAdGuardProtection } from '$lib/server/adguard-home';
+import { apiError, errorBody } from '$lib/server/api-error';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	const denied = requireAdmin(locals);
 	if (denied) return denied;
 	const integrations = await getIntegrations();
 	if (!integrations.adguardHome?.url) {
-		return json({ error: 'Not configured' }, { status: 404 });
+		return apiError(404, 'errors.notConfigured');
 	}
 
 	const body = await request.json().catch(() => ({}));
@@ -31,6 +32,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		return json({ success: true, enabled, pausedUntil: pausedInstances.get(instanceId) || null });
 	} catch (err: any) {
-		return json({ error: err?.message || 'Failed to toggle protection' }, { status: 502 });
+		return err?.message ? json(errorBody(err), { status: 502 }) : apiError(502, 'errors.toggleFailed');
 	}
 };

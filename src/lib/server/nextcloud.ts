@@ -4,6 +4,7 @@
 import { getIntegrations } from '$lib/server/config';
 import { normalizeUrl } from '$lib/server/arr';
 import type { NextcloudData, NextcloudFile } from '$lib/types';
+import { AppError } from '$lib/server/api-error';
 
 const TIMEOUT_MS = 10_000;
 
@@ -35,8 +36,8 @@ type OcsUser = { displayname?: string; quota?: { used?: number; total?: number; 
 
 export async function ocsUser(conn: NextcloudConn): Promise<OcsUser> {
 	const res = await nc(conn, `/ocs/v2.php/cloud/users/${encodeURIComponent(conn.user)}?format=json`);
-	if (res.status === 401) throw new Error('Nextcloud refused the username or app password');
-	if (!res.ok) throw new Error(`Nextcloud answered HTTP ${res.status}`);
+	if (res.status === 401) throw new AppError('errors.nextcloudAuth');
+	if (!res.ok) throw new AppError('errors.answeredHttp', { name: 'Nextcloud', status: res.status });
 	return ((await res.json()) as { ocs: { data: OcsUser } }).ocs.data;
 }
 
@@ -75,7 +76,7 @@ async function recentFiles(conn: NextcloudConn, limit: number): Promise<Nextclou
  </d:basicsearch>
 </d:searchrequest>`;
 	const res = await nc(conn, '/remote.php/dav/', { method: 'SEARCH', headers: { 'Content-Type': 'text/xml', Accept: 'application/xml' }, body });
-	if (!res.ok) throw new Error(`Nextcloud search answered HTTP ${res.status}`);
+	if (!res.ok) throw new AppError('errors.answeredHttp', { name: 'Nextcloud', status: res.status });
 	return parseSearch(await res.text(), conn, limit);
 }
 

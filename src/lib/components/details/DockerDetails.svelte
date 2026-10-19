@@ -3,6 +3,7 @@
 	// Docker widget and the navbar Docker popover so both show the same thing.
 	// With showCpu / showRam, running containers also show their usage (the
 	// server only collects it when a widget of the environment asks for it).
+	import { t } from '$lib/i18n';
 	import type { DockerContainerInfo, DockerEnvironmentData } from '$lib/types';
 	import DockerLogo from '../icons/DockerLogo.svelte';
 	import { bytes } from '../stacker/format';
@@ -32,7 +33,7 @@
 
 	const cpu = (v: number | undefined) => (v == null ? '…' : `${v < 10 ? v.toFixed(1) : Math.round(v)}%`);
 	const memTitle = (c: DockerContainerInfo) =>
-		c.memUsage != null && c.memLimit ? `${bytes(c.memUsage)} of ${bytes(c.memLimit)} (${((c.memUsage / c.memLimit) * 100).toFixed(1)}%)` : undefined;
+		c.memUsage != null && c.memLimit ? $t('docker.memOf', { used: bytes(c.memUsage), limit: bytes(c.memLimit), pct: ((c.memUsage / c.memLimit) * 100).toFixed(1) }) : undefined;
 </script>
 
 <div class="docker-content">
@@ -41,12 +42,12 @@
 		<span class="docker-name">{data.name}</span>
 	</div>
 	<div class="docker-summary">
-		<span class="docker-badge active">{data.runningCount} running</span>
-		<span class="docker-badge inactive">{data.stoppedCount} stopped</span>
+		<span class="docker-badge active">{$t('count.running', { n: data.runningCount })}</span>
+		<span class="docker-badge inactive">{$t('count.stopped', { n: data.stoppedCount })}</span>
 		{#if hasStats && data.stats}
 			<span class="docker-totals">
-				{#if showCpu}<span title="CPU of all running containers (100% = one core)">CPU {cpu(data.stats.cpuPercent)}</span>{/if}
-				{#if showRam}<span title="Memory of all running containers">RAM {bytes(data.stats.memUsage)}</span>{/if}
+				{#if showCpu}<span title={$t('docker.cpuAll')}>CPU {cpu(data.stats.cpuPercent)}</span>{/if}
+				{#if showRam}<span title={$t('docker.ramAll')}>RAM {bytes(data.stats.memUsage)}</span>{/if}
 			</span>
 		{/if}
 	</div>
@@ -57,7 +58,7 @@
 					<span class="docker-container-dot" style="background: {statusColor(container.status)};"></span>
 					<span class="docker-container-name" title={container.image}>{container.name}</span>
 					{#if hasStats && container.status === 'running'}
-						{#if showCpu}<span class="docker-stat cpu" title="CPU (100% = one core)">{cpu(container.cpuPercent)}</span>{/if}
+						{#if showCpu}<span class="docker-stat cpu" title={$t('docker.cpuOne')}>{cpu(container.cpuPercent)}</span>{/if}
 						{#if showRam}<span class="docker-stat ram" title={memTitle(container)}>{container.memUsage != null ? bytes(container.memUsage) : '…'}</span>{/if}
 					{:else}
 						<span class="docker-container-status" style="color: {statusColor(container.status)}">{statusLabel(container.status)}</span>

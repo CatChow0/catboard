@@ -1,0 +1,25 @@
+import type { Dict } from '..';
+
+export const admin = {
+	'admin.fetchFailed': 'Impossible de charger les utilisateurs',
+	'admin.required': 'Nom d\'utilisateur et mot de passe (6 caractères min.) requis',
+	'admin.createFailed': 'Impossible de créer l\'utilisateur',
+	'admin.deleteFailed': 'Impossible de supprimer l\'utilisateur',
+	'admin.updateFailed': 'Impossible de modifier l\'utilisateur',
+	'admin.confirmDelete': 'Supprimer l\'utilisateur « {name} » ?',
+	'admin.editors': 'Qui peut modifier les dashboards',
+	'admin.adminsOnly': 'Admins uniquement',
+	'admin.everyone': 'Tous les utilisateurs',
+	'admin.editorsHint1': 'Les services, tuiles, widgets et dashboards sont partagés. Avec',
+	'admin.editorsHint2': ', les autres utilisateurs les voient en lecture seule (leurs réglages d\'apparence restent les leurs).',
+	'admin.loadingUsers': 'Chargement des utilisateurs...',
+	'admin.main': 'Principal',
+	'admin.roleAdmin': 'Admin',
+	'admin.roleMini': 'Mini-admin',
+	'admin.roleUser': 'Utilisateur',
+	'admin.newPassword': 'Nouveau mot de passe',
+	'admin.createUser': 'Créer un utilisateur',
+	'admin.username': 'Nom d\'utilisateur',
+	'admin.passwordMin': 'Mot de passe (6 min.)',
+	'admin.create': 'Créer',
+} satisfies Partial<Dict>;

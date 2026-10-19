@@ -2,10 +2,11 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getSettingsForUser, setSettingsForUser } from '$lib/server/config';
 import { MAX_CUSTOM_CSS } from '$lib/themes';
+import { apiError } from '$lib/server/api-error';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.isAuthenticated || !locals.username) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
+		return apiError(401, 'errors.unauthorized');
 	}
 
 	const data = await getSettingsForUser(locals.username);
@@ -14,7 +15,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 export const PUT: RequestHandler = async ({ locals, request }) => {
 	if (!locals.isAuthenticated || !locals.username) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
+		return apiError(401, 'errors.unauthorized');
 	}
 
 	const body = await request.json();

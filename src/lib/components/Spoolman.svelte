@@ -2,6 +2,7 @@
 	// Spoolman: the list of available spools (scrollable), plus optional
 	// "Recently used" and "Running low / empty" sections. "Show only" hides the
 	// list and keeps just the enabled sections. A one-row tile shows a summary.
+	import { t } from '$lib/i18n';
 	import { pollJson } from '$lib/utils/pollJson.svelte';
 	import type { SpoolInfo, SpoolmanConfig, SpoolmanData } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
@@ -52,12 +53,12 @@
 {#snippet row(s: SpoolInfo, kind: 'list' | 'recent' | 'low')}
 	{@const lv = level(s)}
 	<li class="sp-row">
-		<span class="sp-swatch" style={swatch(s)} title={s.colors.join(', ') || 'No colour'}></span>
+		<span class="sp-swatch" style={swatch(s)} title={s.colors.join(', ') || $t('spoolman.noColour')}></span>
 		<div class="sp-main">
 			<div class="sp-line">
 				<span class="sp-name" title={s.name}>{s.name}</span>
 				{#if kind === 'low' || lv !== 'ok'}
-					<span class="sp-badge {lv}">{lv === 'empty' ? 'Empty' : 'Low'}</span>
+					<span class="sp-badge {lv}">{lv === 'empty' ? $t('spoolman.empty') : $t('spoolman.low')}</span>
 				{/if}
 			</div>
 			<div class="sp-bar"><div class="sp-fill {lv}" style:width="{s.percent ?? 0}%"></div></div>
@@ -80,9 +81,9 @@
 			{/if}
 			{#if data}
 				<span class="sp-counts">
-					{#if data.empty.length}<span class="empty">{data.empty.length} empty</span>{/if}
-					{#if data.low.length}<span class="low">{data.low.length} low</span>{/if}
-					<span>{data.available.length} available</span>
+					{#if data.empty.length}<span class="empty">{$t('count.empty', { n: data.empty.length })}</span>{/if}
+					{#if data.low.length}<span class="low">{$t('count.low', { n: data.low.length })}</span>{/if}
+					<span>{$t('count.available', { n: data.available.length })}</span>
 				</span>
 			{/if}
 		</div>
@@ -90,7 +91,7 @@
 		{#if error && !data}
 			<p class="sp-msg sp-error">{error}</p>
 		{:else if !data}
-			<p class="sp-msg">Loading…</p>
+			<p class="sp-msg">{$t('common.loading')}</p>
 		{:else if compact}
 			{@const first = sections.only && sections.recent ? data.recent[0] : data.available[0]}
 			{#if first}
@@ -106,29 +107,29 @@
 				{#each order as key (key)}
 					{#if key === 'list' && !sections.only}
 						<section>
-							{#if sections.recent || sections.low}<h3>Spools</h3>{/if}
+							{#if sections.recent || sections.low}<h3>{$t('spoolman.spools')}</h3>{/if}
 							{#if data.available.length}
 								<ul class="sp-list">{#each data.available as s (s.id)}{@render row(s, 'list')}{/each}</ul>
 							{:else}
-								<p class="sp-msg">No spool with filament left</p>
+								<p class="sp-msg">{$t('spoolman.noneLeft')}</p>
 							{/if}
 						</section>
 					{:else if key === 'recent' && sections.recent}
 						<section>
-							<h3>Recently used</h3>
+							<h3>{$t('spoolman.recent')}</h3>
 							{#if data.recent.length}
 								<ul class="sp-list">{#each data.recent as s (s.id)}{@render row(s, 'recent')}{/each}</ul>
 							{:else}
-								<p class="sp-msg">No spool used yet</p>
+								<p class="sp-msg">{$t('spoolman.noneUsed')}</p>
 							{/if}
 						</section>
 					{:else if key === 'low' && sections.low}
 						<section>
-							<h3>Running low / empty</h3>
+							<h3>{$t('spoolman.lowEmpty')}</h3>
 							{#if lowAndEmpty.length}
 								<ul class="sp-list">{#each lowAndEmpty as s (s.id)}{@render row(s, 'low')}{/each}</ul>
 							{:else}
-								<p class="sp-msg ok">All spools have enough filament</p>
+								<p class="sp-msg ok">{$t('spoolman.allGood')}</p>
 							{/if}
 						</section>
 					{/if}
@@ -136,7 +137,7 @@
 			</div>
 		{/if}
 	</div>
-	<EditButtons label="Spoolman widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblSpoolman')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

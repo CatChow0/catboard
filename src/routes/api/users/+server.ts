@@ -3,10 +3,11 @@ import { json } from '@sveltejs/kit';
 import { locked } from '$lib/server/locked';
 import { getUsers, setUsers } from '$lib/server/config';
 import { hashPassword } from '$lib/auth/session';
+import { apiError } from '$lib/server/api-error';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.isAuthenticated || !locals.role || (locals.role !== 'admin' && locals.role !== 'mini-admin')) {
-		return json({ error: 'Forbidden' }, { status: 403 });
+		return apiError(403, 'errors.forbidden');
 	}
 
 	const usersConfig = await getUsers();
@@ -21,22 +22,22 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 export const POST: RequestHandler = locked('users', async ({ locals, request }) => {
 	if (!locals.isAuthenticated || locals.role !== 'admin') {
-		return json({ error: 'Forbidden' }, { status: 403 });
+		return apiError(403, 'errors.forbidden');
 	}
 
 	const { username, password, role } = await request.json();
 	if (!username || !password || password.length < 6) {
-		return json({ error: 'Username and password (min 6 chars) required' }, { status: 400 });
+		return apiError(400, 'errors.credentialsMin');
 	}
 
 	const validRoles = ['admin', 'mini-admin', 'user'];
 	if (!role || !validRoles.includes(role)) {
-		return json({ error: 'Invalid role' }, { status: 400 });
+		return apiError(400, 'errors.invalidRole');
 	}
 
 	const usersConfig = await getUsers();
 	if (usersConfig.users.find(u => u.username === username)) {
-		return json({ error: 'Username already exists' }, { status: 409 });
+		return apiError(409, 'errors.userExists');
 	}
 
 	const passwordHash = hashPassword(password);

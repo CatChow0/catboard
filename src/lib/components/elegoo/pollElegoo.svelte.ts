@@ -1,6 +1,7 @@
 // Polls the print status of a CC2 printer while the tab is visible. Call it
 // during component init: the effect stops with the component.
 import type { ElegooStatus } from '$lib/types';
+import { errorText } from '$lib/i18n';
 
 export function pollElegoo(printerId: () => string, intervalMs = 3000) {
 	const s = $state<{ status: ElegooStatus | null; error: string; reload: number }>({ status: null, error: '', reload: 0 });
@@ -18,7 +19,7 @@ export function pollElegoo(printerId: () => string, intervalMs = 3000) {
 					const res = await fetch(`/api/integrations/elegoo/status?printer=${encodeURIComponent(id)}`);
 					const body = await res.json();
 					if (stopped) return;
-					if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+					if (!res.ok) throw new Error(errorText(body, res.status));
 					s.status = body;
 					s.error = '';
 				} catch (e) {

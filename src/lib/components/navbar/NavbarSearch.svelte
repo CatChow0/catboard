@@ -3,12 +3,13 @@
 	// onsearch) and lists matches from EVERY dashboard under the field, grouped by
 	// dashboard. ↑ ↓ pick a result, Enter opens it (switching dashboard if needed);
 	// with no match anywhere, Enter searches the web (onsearch with isEnter).
+	import { t, tr } from '$lib/i18n';
 	import { services, activeDashboardId, searchQuery as searchStore, fetchSearchIndex, revealItem } from '$lib/stores/dashboard';
 	import { searchDashboards, type SearchHit } from '$lib/utils/search';
 	import type { DashboardItem } from '$lib/types';
 
 	let {
-		placeholder = 'Search services...',
+		placeholder = tr('ws.searchServices'),
 		onsearch
 	}: {
 		placeholder?: string;
@@ -99,12 +100,12 @@
 	{#if open}
 		<div class="results" id="nb-search-results" role="listbox">
 			{#if groups.length === 0}
-				<p class="empty">No tile found. Press Enter to search the web.</p>
+				<p class="empty">{$t('search.noHit')}</p>
 			{:else}
 				{#each groups as g (g.dashboardId)}
 					<div class="group">
 						<div class="group-name">
-							{g.dashboardName}{#if g.dashboardId === $activeDashboardId}<span class="here">this dashboard</span>{/if}
+							{g.dashboardName}{#if g.dashboardId === $activeDashboardId}<span class="here">{$t('search.here')}</span>{/if}
 						</div>
 						{#each g.hits.slice(0, PER_GROUP) as hit (hit.itemId)}
 							{@const i = flat.indexOf(hit)}
@@ -119,10 +120,10 @@
 								onclick={() => pick(hit)}
 							>
 								<span class="hit-label">{hit.label}</span>
-								{#if hit.group}<span class="hit-group">in {hit.group}</span>{/if}
+								{#if hit.group}<span class="hit-group">{$t('search.inGroup', { group: hit.group })}</span>{/if}
 							</button>
 						{/each}
-						{#if g.hits.length > PER_GROUP}<div class="more">+{g.hits.length - PER_GROUP} more</div>{/if}
+						{#if g.hits.length > PER_GROUP}<div class="more">{$t('search.more', { n: g.hits.length - PER_GROUP })}</div>{/if}
 					</div>
 				{/each}
 			{/if}

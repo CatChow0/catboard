@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.6.0-blue)
+![Version](https://img.shields.io/badge/version-3.7.0-blue)
 
 ## Features
 
@@ -35,6 +35,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings, a choice of who may edit the shared dashboards, and a limit on failed login attempts
 - **Theme system** -- 22 presets (Dark, Light, Nord, Dracula, Solarized, Catppuccin Mocha / Latte / Frappé, Gruvbox, One Dark, Tokyo Night, Rosé Pine, Everforest, Kanagawa, GitHub Dark / Light, Monokai, OLED Black, and TMOG in cyan/green/amber with a self-hosted Michroma display font), an **Auto** theme that follows the device's light/dark mode, custom palettes, style presets (default, sharp, pill) or a corner radius, animation options
+- **English and French** -- The whole interface, widgets and server messages, in the browser's language or the one chosen for each account
 - **Customization** -- Font (Google Fonts) and text size, accent color, see-through and blurred cards, **custom CSS** (per user, applied live) and theme files to export and import a whole look
 - **Fast loading** -- Each widget's code is downloaded only when a dashboard shows it; popups load when first opened; live streams and refreshes pause while the tab is hidden; service status checks are shared between viewers
 - **Cross-platform** -- Works on Linux and Windows; disk paths and temperature sensors adapt to the host OS
@@ -263,6 +264,7 @@ After 5 failed logins on an account within 15 minutes, that account must wait 30
 
 **Settings > Appearance** changes the look for your account only; every change shows at once, and closing without saving puts the previous look back.
 
+- **Language**: **Auto** (the browser's language: French for a French browser, English otherwise), **English** or **Français**. Error messages from the server follow the same choice.
 - **Color theme**: 22 presets, **Auto** (pick one dark and one light preset: CatBoard follows the device's light/dark mode, live) or **Custom** (your own palette).
 - **Style**: Rounded, Sharp or Pill, or any **corner radius** from 0 to 24 px.
 - **Text**: system font or a Google Font (Inter, Roboto, Nunito, Poppins, Fira Sans, JetBrains Mono, or any family name), text size 90–120%.

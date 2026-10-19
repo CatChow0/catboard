@@ -123,6 +123,8 @@ volumes:
 
 ## Configuration
 
+The interface is in English or French: the browser's language by default, or the one chosen per account in **Settings > Appearance > Language**.
+
 ### Environment Variables
 
 | Variable | Required | Default | Description |

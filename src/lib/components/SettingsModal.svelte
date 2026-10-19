@@ -3,6 +3,7 @@
 	// Layout edit drafts that are previewed live and saved together by Save;
 	// Cancel puts the previous look and layout back. Integrations, Admin and
 	// Export act on their own. Styles of the modal and every tab: settings.css.
+	import { t } from '$lib/i18n';
 	import { untrack } from 'svelte';
 	import { settings, layout, saveSettings, currentUser, refreshActiveDashboard } from '$lib/stores/dashboard';
 	import AdminPanel from './AdminPanel.svelte';
@@ -39,11 +40,11 @@
 
 	const showAdmin = $derived($currentUser?.role === 'admin' || $currentUser?.role === 'mini-admin');
 	const tabs = $derived<[Tab, string][]>([
-		['appearance', 'Appearance'],
-		['layout', 'Layout'],
-		['integrations', 'Integrations'],
-		['cache', 'Cache'],
-		...(showAdmin ? ([['admin', 'Admin'], ['export', 'Export']] as [Tab, string][]) : [])
+		['appearance', $t('settings.tabAppearance')],
+		['layout', $t('settings.tabLayout')],
+		['integrations', $t('settings.tabIntegrations')],
+		['cache', $t('settings.tabCache')],
+		...(showAdmin ? ([['admin', $t('settings.tabAdmin')], ['export', $t('settings.tabExport')]] as [Tab, string][]) : [])
 	]);
 
 	async function saveAll() {
@@ -69,8 +70,8 @@
 <div class="modal-overlay cb-settings" class:closing>
 	<div class="modal sheet-full" class:closing>
 		<div class="modal-header">
-			<h2>Settings</h2>
-			<button class="btn-close" onclick={close} title="Close">
+			<h2>{$t('settings.title')}</h2>
+			<button class="btn-close" onclick={close} title={$t('common.close')}>
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 					<path d="M18 6L6 18M6 6l12 12" />
 				</svg>
@@ -109,8 +110,8 @@
 		<!-- Export and Integrations act on their own (each connection has its Save button). -->
 		{#if activeTab !== 'export' && activeTab !== 'integrations'}
 			<div class="modal-footer">
-				<button class="btn-cancel" onclick={close}>Cancel</button>
-				<button class="btn-save" onclick={saveAll}>Save</button>
+				<button class="btn-cancel" onclick={close}>{$t('common.cancel')}</button>
+				<button class="btn-save" onclick={saveAll}>{$t('common.save')}</button>
 			</div>
 		{/if}
 	</div>

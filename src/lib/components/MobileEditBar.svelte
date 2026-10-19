@@ -1,13 +1,14 @@
 <script lang="ts">
 	// Phone edit mode: layout being edited, Add and Done, within thumb reach.
+	import { t } from '$lib/i18n';
 	import { layout, activeBreakpointId, manualBreakpointId, getBreakpointLabel, toggleEditMode } from '$lib/stores/dashboard';
 
 	let { onadd }: { onadd: () => void } = $props();
 </script>
 
-<div class="meb" role="toolbar" aria-label="Edit dashboard">
+<div class="meb" role="toolbar" aria-label={$t('nav.editDashboard')}>
 	<label class="meb-layout">
-		<span class="meb-hint">Layout</span>
+		<span class="meb-hint">{$t('nav.layout')}</span>
 		<select onchange={(e) => manualBreakpointId.set(e.currentTarget.value)} value={$manualBreakpointId || $activeBreakpointId}>
 			{#each $layout?.grid?.breakpoints || [] as bp (bp.id)}
 				<option value={bp.id}>{getBreakpointLabel($layout.grid.breakpoints, bp.id)}</option>
@@ -18,13 +19,13 @@
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
 			<path d="M12 5v14M5 12h14" />
 		</svg>
-		Add
+		{$t('nav.add')}
 	</button>
 	<button class="meb-btn done" onclick={toggleEditMode}>
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
 			<path d="M20 6L9 17l-5-5" />
 		</svg>
-		Done
+		{$t('nav.done')}
 	</button>
 </div>
 

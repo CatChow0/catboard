@@ -2,6 +2,7 @@
 	// Navbar Jenkins: one job's last build (dot, number, progress while running),
 	// or for every job the number running and the projects whose last build
 	// failed; click for the latest builds (and the Run button for admins).
+	import { t, tx } from '$lib/i18n';
 	import type { JenkinsConfig } from '$lib/types';
 	import { isEditing } from '$lib/stores/dashboard';
 	import Glyph from '$lib/widgets/Glyph.svelte';
@@ -20,7 +21,7 @@
 	const failing = $derived(data?.failing ?? []);
 	const name = $derived(job ? (job.split('/').pop() ?? job) : 'Jenkins');
 	const lastState = $derived(!last ? 'none' : last.building ? 'running' : (last.result ?? 'NOT_BUILT').toLowerCase());
-	const label = $derived(job ? `${name}: ${last ? (last.building ? 'running' : (last.result ?? 'not built').toLowerCase()) : 'no build'}` : `Jenkins: ${running} running, ${failing.length ? `${failing.length} failing` : 'all passing'}`);
+	const label = $derived(job ? `${name}: ${last ? (last.building ? $t('jenkins.running') : $tx(`jenkins.result.${(last.result ?? 'NOT_BUILT').toLowerCase()}`, (last.result ?? 'not built').toLowerCase())) : $t('jenkins.noBuild')}` : $t('jenkins.summary', { running, state: failing.length ? $t('jenkins.failingCount', { count: failing.length }) : $t('jenkins.allPassing') }));
 
 	let button = $state<HTMLButtonElement>();
 	let open = $state(false);
@@ -37,21 +38,21 @@
 </script>
 
 <div class="nb-wrap">
-	<button bind:this={button} class="jk-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label="{label}, show the latest builds">
+	<button bind:this={button} class="jk-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label={$t('navw.builds', { label })}>
 		<span class="nb-logo"><Glyph name="jenkins" size={15} /></span>
 		{#if !data}
-			<span class="muted">{poll.error ? 'Error' : '…'}</span>
+			<span class="muted">{poll.error ? $t('jenkins.error') : '…'}</span>
 		{:else if job}
 			<span class="dot {lastState}"></span>
 			<span class="name">{name}</span>
 			{#if last}<span class="muted">#{last.number}</span>{/if}
 		{:else}
-			{#if running}<span class="dot running"></span><span class="name">{running} running</span>{/if}
+			{#if running}<span class="dot running"></span><span class="name">{$t('jenkins.nRunning', { n: running })}</span>{/if}
 			{#if failing.length}
 				<span class="dot failure"></span>
-				<span class="muted fail" title="Failing: {failing.map((f) => `${f.job} #${f.number}`).join(', ')}">{failing[0].job.split('/').pop()}{failing.length > 1 ? ` +${failing.length - 1}` : ''}</span>
+				<span class="muted fail" title={$t('jenkins.failingTitle', { list: failing.map((f) => `${f.job} #${f.number}`).join(', ') })}>{failing[0].job.split('/').pop()}{failing.length > 1 ? ` +${failing.length - 1}` : ''}</span>
 			{:else if !running}
-				<span class="dot success"></span><span class="muted">All good</span>
+				<span class="dot success"></span><span class="muted">{$t('jenkins.allGood')}</span>
 			{/if}
 		{/if}
 	</button>

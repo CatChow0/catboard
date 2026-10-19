@@ -6,6 +6,7 @@
 	//   "url:<https://…>"  custom image URL (downloaded once by the server)
 	//   "custom:<file>"    uploaded image
 	// The chosen icon is served (and cached) by CatBoard through /api/icon.
+	import { t, errorText } from '$lib/i18n';
 	import { iconSrc, describeIcon } from '$lib/utils/icons';
 
 	let { value = '', onchange, name = '', url = '' }: {
@@ -50,9 +51,9 @@
 			const res = await fetch('/api/icons/catalog');
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			catalog = await res.json();
-			if (!catalog.length) error = 'Icon libraries unreachable (no Internet access from CatBoard?)';
+			if (!catalog.length) error = $t('icons.unreachable');
 		} catch {
-			error = 'Failed to load the icon libraries';
+			error = $t('icons.loadFailed');
 		} finally {
 			loading = false;
 		}
@@ -88,7 +89,7 @@
 	function useUrl() {
 		const u = customUrl.trim();
 		if (!/^https?:\/\//i.test(u)) {
-			error = 'Enter an http(s) image URL';
+			error = $t('icons.badUrl');
 			return;
 		}
 		error = '';
@@ -99,7 +100,7 @@
 		const file = (e.currentTarget as HTMLInputElement).files?.[0];
 		if (!file) return;
 		if (file.size > 1024 * 1024) {
-			error = 'Image too large (max 1 MB)';
+			error = $t('icons.tooLarge');
 			return;
 		}
 		uploading = true;
@@ -107,10 +108,10 @@
 		try {
 			const res = await fetch('/api/icons/upload', { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream' } });
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			pick(body.icon);
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Upload failed';
+			error = err instanceof Error ? err.message : $t('icons.uploadFailed');
 		} finally {
 			uploading = false;
 		}
@@ -144,10 +145,10 @@
 			}}
 		>
 			<div class="tabs" role="tablist">
-				<button type="button" class="tab" class:active={tab === 'library'} role="tab" aria-selected={tab === 'library'} onclick={() => (tab = 'library')}>Libraries</button>
-				<button type="button" class="tab" class:active={tab === 'url'} role="tab" aria-selected={tab === 'url'} onclick={() => (tab = 'url')}>URL</button>
-				<button type="button" class="tab" class:active={tab === 'upload'} role="tab" aria-selected={tab === 'upload'} onclick={() => (tab = 'upload')}>Upload</button>
-				<button type="button" class="tab auto" class:active={!value} onclick={() => pick('')} title="Find the icon by the service name, else use its favicon">Auto</button>
+				<button type="button" class="tab" class:active={tab === 'library'} role="tab" aria-selected={tab === 'library'} onclick={() => (tab = 'library')}>{$t('icons.libraries')}</button>
+				<button type="button" class="tab" class:active={tab === 'url'} role="tab" aria-selected={tab === 'url'} onclick={() => (tab = 'url')}>{$t('icons.url')}</button>
+				<button type="button" class="tab" class:active={tab === 'upload'} role="tab" aria-selected={tab === 'upload'} onclick={() => (tab = 'upload')}>{$t('icons.upload')}</button>
+				<button type="button" class="tab auto" class:active={!value} onclick={() => pick('')} title={$t('icons.autoTitle')}>{$t('icons.auto')}</button>
 			</div>
 
 			{#if tab === 'library'}
@@ -157,16 +158,16 @@
 						<path d="M21 21l-4.35-4.35" />
 					</svg>
 					<!-- svelte-ignore a11y_autofocus -->
-					<input type="text" placeholder="Search icons, tags, categories…" bind:value={search} oninput={() => (showCount = PAGE)} autofocus />
-					<select bind:value={source} onchange={() => (showCount = PAGE)} aria-label="Library">
-						<option value="all">All</option>
+					<input type="text" placeholder={$t('icons.searchPlaceholder')} bind:value={search} oninput={() => (showCount = PAGE)} autofocus />
+					<select bind:value={source} onchange={() => (showCount = PAGE)} aria-label={$t('icons.library')}>
+						<option value="all">{$t('common.all')}</option>
 						<option value="selfhst">selfh.st</option>
 						<option value="homarr">homarr</option>
 					</select>
 					{#if catalog.length}<span class="count">{filtered.length}</span>{/if}
 				</div>
 				{#if loading}
-					<div class="loading-state"><div class="spinner"></div><span>Loading icon libraries…</span></div>
+					<div class="loading-state"><div class="spinner"></div><span>{$t('icons.loading')}</span></div>
 				{:else if error && !catalog.length}
 					<div class="error-state">{error}</div>
 				{:else if visible.length}
@@ -181,28 +182,28 @@
 						{/each}
 					</div>
 					{#if filtered.length > showCount}
-						<button type="button" class="load-more" onclick={() => (showCount += PAGE)}>Show more ({filtered.length - showCount} remaining)</button>
+						<button type="button" class="load-more" onclick={() => (showCount += PAGE)}>{$t('icons.showMore', { count: filtered.length - showCount })}</button>
 					{/if}
 				{:else}
-					<p class="no-results">No icons found</p>
+					<p class="no-results">{$t('icons.noResults')}</p>
 				{/if}
 			{:else if tab === 'url'}
 				<div class="pane">
-					<label for="icon-url">Image URL (PNG, SVG, WebP, JPEG, ICO)</label>
+					<label for="icon-url">{$t('icons.imageUrl')}</label>
 					<div class="url-row">
 						<input id="icon-url" type="url" placeholder="https://example.com/logo.png" bind:value={customUrl} onkeydown={(e) => e.key === 'Enter' && useUrl()} />
-						<button type="button" class="btn-use" onclick={useUrl}>Use</button>
+						<button type="button" class="btn-use" onclick={useUrl}>{$t('icons.use')}</button>
 					</div>
-					<p class="hint">CatBoard downloads it once and serves it from its cache.</p>
+					<p class="hint">{$t('icons.urlHint')}</p>
 				</div>
 			{:else}
 				<div class="pane">
 					<label class="upload" class:busy={uploading}>
 						<input type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg,image/gif,image/x-icon,.ico" onchange={upload} disabled={uploading} />
 						<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></svg>
-						<span>{uploading ? 'Uploading…' : 'Choose an image (max 1 MB)'}</span>
+						<span>{uploading ? $t('icons.uploading') : $t('icons.choose')}</span>
 					</label>
-					<p class="hint">Stored in CatBoard's config folder (config/icons).</p>
+					<p class="hint">{$t('icons.uploadHint')}</p>
 				</div>
 			{/if}
 			{#if error && catalog.length}<p class="error-inline">{error}</p>{/if}

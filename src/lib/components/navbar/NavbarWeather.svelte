@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { whileVisible } from '$lib/utils/poll';
 	// Navbar weather: icon, temperature and (when wide enough) the city.
 	// Polls /api/weather like the standard Weather widget (server caches 10 min).
@@ -42,9 +43,9 @@
 	});
 </script>
 
-<div class="nb-weather" title={location ? location.name : 'No location set'}>
+<div class="nb-weather" title={location ? location.name : $t('weather.noLocation')}>
 	{#if !location}
-		<span class="nb-muted">Set location</span>
+		<span class="nb-muted">{$t('weather.setLocation')}</span>
 	{:else}
 		<span class="nb-icon"><WeatherIcon code={weatherCode} /></span>
 		<span class="nb-temp">{temperature != null ? `${Math.round(temperature)}°` : '--'}</span>

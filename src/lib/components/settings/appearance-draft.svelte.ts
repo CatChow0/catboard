@@ -3,29 +3,17 @@
 // Appearance tab edits it.
 import type { CustomPalette, Settings } from '$lib/types';
 import { themePresets, customPaletteDefaults, themeDefaults, FONTS, isFontName, THEME_KEYS, cleanThemeFile, MAX_CUSTOM_CSS } from '$lib/themes';
+import { tr, type Key } from '$lib/i18n';
 
 const LIGHT = ['light', 'solarized-light', 'catppuccin-latte', 'github-light'];
 
 export const darkPresets = themePresets.filter((t) => !LIGHT.includes(t.name));
 export const lightPresets = themePresets.filter((t) => LIGHT.includes(t.name));
 
-export const paletteLabels: Record<keyof CustomPalette, string> = {
-	bgPrimary: 'Background',
-	bgSecondary: 'Secondary BG',
-	bgCard: 'Card BG',
-	bgCardHover: 'Card Hover',
-	bgModal: 'Modal BG',
-	textPrimary: 'Text Primary',
-	textSecondary: 'Text Secondary',
-	textMuted: 'Text Muted',
-	accent: 'Accent',
-	accentHover: 'Accent Hover',
-	danger: 'Danger',
-	success: 'Success',
-	warning: 'Warning',
-	border: 'Border',
-	borderLight: 'Border Light'
-};
+/** Translation key of each palette colour. */
+export const paletteLabels = Object.fromEntries(
+	(['bgPrimary', 'bgSecondary', 'bgCard', 'bgCardHover', 'bgModal', 'textPrimary', 'textSecondary', 'textMuted', 'accent', 'accentHover', 'danger', 'success', 'warning', 'border', 'borderLight'] as const).map((k) => [k, `palette.${k}` as Key])
+) as Record<keyof CustomPalette, Key>;
 
 export class AppearanceDraft {
 	theme = $state('dark');
@@ -45,6 +33,7 @@ export class AppearanceDraft {
 	cardOpacity = $state(100);
 	cardBlur = $state(0);
 	customCss = $state('');
+	language = $state<'auto' | 'en' | 'fr'>('auto');
 	message = $state<{ ok: boolean; text: string } | null>(null);
 
 	/** The font to load: a known one, or a valid custom Google Fonts name. */
@@ -67,6 +56,7 @@ export class AppearanceDraft {
 		this.cardOpacity = s.cardOpacity ?? 100;
 		this.cardBlur = s.cardBlur ?? 0;
 		this.customCss = s.customCss ?? '';
+		this.language = s.language ?? 'auto';
 	}
 
 	private setFont(font?: string) {
@@ -91,7 +81,8 @@ export class AppearanceDraft {
 			fontScale: this.fontScale !== 100 ? this.fontScale : undefined,
 			cardOpacity: this.cardOpacity < 100 ? this.cardOpacity : undefined,
 			cardBlur: this.cardBlur > 0 ? this.cardBlur : undefined,
-			customCss: this.customCss.trim() ? this.customCss.slice(0, MAX_CUSTOM_CSS) : undefined
+			customCss: this.customCss.trim() ? this.customCss.slice(0, MAX_CUSTOM_CSS) : undefined,
+			language: this.language === 'auto' ? undefined : this.language
 		};
 	}
 
@@ -153,9 +144,10 @@ export class AppearanceDraft {
 			this.cardOpacity = t.cardOpacity ?? 100;
 			this.cardBlur = t.cardBlur ?? 0;
 			this.customCss = t.customCss ?? '';
-			this.message = { ok: true, text: `Theme "${file.name}" applied: Save to keep it.` };
+			this.message = { ok: true, text: tr('appearance.imported', { file: file.name }) };
 		} catch (err) {
-			this.message = { ok: false, text: err instanceof Error && !(err instanceof SyntaxError) ? err.message : 'This file is not valid JSON' };
+			const known: Record<string, Key> = { 'Not a theme file': 'appearance.notTheme', 'No theme settings found in this file': 'appearance.noThemeSettings' };
+			this.message = { ok: false, text: err instanceof SyntaxError || !(err instanceof Error) ? tr('appearance.invalidJson') : known[err.message] ? tr(known[err.message]) : err.message };
 		}
 	}
 }

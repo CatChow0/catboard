@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { DockerWidgetConfig } from '$lib/types';
 	import { integrations } from '$lib/stores/integrations';
 
@@ -7,27 +8,27 @@
 </script>
 
 <label class="field">
-	<span>Environment</span>
+	<span>{$t('ws.environment')}</span>
 	{#if environments.length}
 		<select bind:value={config.environmentId}>
-			<option value="">Select environment</option>
+			<option value="">{$t('ws.selectEnvironment')}</option>
 			{#each environments as env (env.id)}
 				<option value={env.id}>{env.name || env.url}</option>
 			{/each}
 		</select>
 	{:else}
-		<span class="hint">No Docker environment yet: add one in Settings &gt; Integrations &gt; Docker.</span>
+		<span class="hint">{$t('ws.noDockerEnvironmentYetAddOne')}</span>
 	{/if}
 </label>
-<p class="group-title">Per-container usage</p>
+<p class="group-title">{$t('ws.perContainerUsage')}</p>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.showCpu} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Show CPU{#if target === 'navbar'} <small>(total in the bar, per container in the details)</small>{/if}</span>
+	<span class="toggle-label">{$t('ws.showCpu')}{#if target === 'navbar'} <small>{$t('ws.totalInTheBarPerContainer')}</small>{/if}</span>
 </label>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.showRam} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Show RAM{#if target === 'navbar'} <small>(total in the bar, per container in the details)</small>{/if}</span>
+	<span class="toggle-label">{$t('ws.showRam')}{#if target === 'navbar'} <small>{$t('ws.totalInTheBarPerContainer')}</small>{/if}</span>
 </label>
-<p class="hint">Refreshed every 10 seconds. CPU is averaged between two readings (100% = one core).</p>
+<p class="hint">{$t('ws.refreshedEvery10SecondsCpuIs')}</p>

@@ -2,6 +2,8 @@
 	// Add > Widgets: the catalog (search, categories); a card opens the widget's
 	// settings form, then adds it to the dashboard or the navbar. Widgets that
 	// need a connection link to Settings > Integrations. Styles: add.css.
+	import { t, intlLocale, locale } from '$lib/i18n';
+	import { categoryLabel, localIntegration, localWidget } from '$lib/i18n/catalog';
 	import { addWidgetToDashboard, addNavbarItem, activeGrid, openSettings } from '$lib/stores/dashboard';
 	import { integrations } from '$lib/stores/integrations';
 	import { integrationDef } from '$lib/integrations/registry';
@@ -20,19 +22,24 @@
 	let colSpan = $state(2);
 	let rowSpan = $state(1);
 
+	const widgets = $derived(WIDGETS.map((w) => localWidget($locale, w)));
+	const integName = (k: string) => {
+		const d = integrationDef(k as never);
+		return d ? localIntegration($locale, d).name : k;
+	};
 	const catalog = $derived.by(() => {
 		const q = widgetQuery.trim().toLowerCase();
-		return WIDGETS.filter(
+		return widgets.filter(
 			(w) =>
 				(category === 'all' || w.category === category) &&
-				(!q || `${w.name} ${w.description} ${w.category} ${(w.integrations ?? []).map((k) => integrationDef(k)?.name).join(' ')}`.toLowerCase().includes(q))
+				(!q || `${w.name} ${w.description} ${categoryLabel($locale, w.category)} ${(w.integrations ?? []).map(integName).join(' ')}`.toLowerCase().includes(q))
 		);
 	});
-	const categories = $derived(WIDGET_CATEGORIES.filter((c) => WIDGETS.some((w) => w.category === c)));
+	const categories = $derived(WIDGET_CATEGORIES.filter((c) => widgets.some((w) => w.category === c)));
 
-	const placeLabel = (w: WidgetDef) => (w.grid && w.navbar ? 'Dashboard + navbar' : w.navbar ? 'Navbar' : '');
+	const placeLabel = (w: WidgetDef) => (w.grid && w.navbar ? $t('add.both') : w.navbar ? $t('add.navbar') : '');
 	const needsLabel = (missing: string[]) =>
-		missing.length > 1 ? `Needs ${missing.map((k) => integrationDef(k as never)?.name).join(', ').replace(/, ([^,]*)$/, ' or $1')}` : `Needs ${integrationDef(missing[0] as never)?.name ?? 'a connection'}`;
+		$t('add.needs', { list: missing.length > 1 ? new Intl.ListFormat(intlLocale() ?? 'en', { type: 'disjunction' }).format(missing.map(integName)) : missing[0] ? integName(missing[0]) : $t('add.aConnection') });
 
 	function sizeFor(def: WidgetDef, t: WidgetTarget) {
 		if (t === 'navbar') return { cols: def.navbar!.colSpan, rows: 1 };
@@ -74,7 +81,7 @@
 		if (target === 'navbar') {
 			await addNavbarItem(def.navbar!.type, cols, config);
 		} else if (def.group) {
-			await addWidgetToDashboard(def.grid!.type, String(d.title ?? '').trim() || 'New Group', cols, rows, gridCols, d.compact ? { compact: true } : undefined);
+			await addWidgetToDashboard(def.grid!.type, String(d.title ?? '').trim() || $t('add.newGroup'), cols, rows, gridCols, d.compact ? { compact: true } : undefined);
 		} else {
 			await addWidgetToDashboard(def.grid!.type, '', cols, rows, gridCols, config);
 		}
@@ -84,7 +91,7 @@
 {#if picked}
 	<div class="tab-content cb-form configure">
 		<div class="cfg-head">
-			<button class="btn-back" onclick={() => (picked = null)} aria-label="Back to the widgets">
+			<button class="btn-back" onclick={() => (picked = null)} aria-label={$t('add.backToWidgets')}>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" /></svg>
 			</button>
 			<span class="cfg-icon"><Glyph name={picked.icon} size={24} /></span>
@@ -96,10 +103,10 @@
 
 		{#if picked.grid && picked.navbar}
 			<div class="field">
-				<span>Place in</span>
+				<span>{$t('add.placeIn')}</span>
 				<div class="seg">
-					<button type="button" class:active={target === 'grid'} onclick={() => setTarget('grid')}>Dashboard</button>
-					<button type="button" class:active={target === 'navbar'} onclick={() => setTarget('navbar')}>Navbar</button>
+					<button type="button" class:active={target === 'grid'} onclick={() => setTarget('grid')}>{$t('add.dashboard')}</button>
+					<button type="button" class:active={target === 'navbar'} onclick={() => setTarget('navbar')}>{$t('add.navbar')}</button>
 				</div>
 			</div>
 		{/if}
@@ -108,25 +115,25 @@
 			<picked.settings bind:config={draft} {target} {...picked.settingsProps} />
 		{/if}
 
-		<p class="group-title">Size</p>
+		<p class="group-title">{$t('widget.size')}</p>
 		<div class="field-row">
 			<label class="field">
-				<span>Width (columns)</span>
+				<span>{$t('widget.width')}</span>
 				<input type="number" bind:value={colSpan} min={minCols} max={maxCols} />
 			</label>
 			{#if target === 'grid'}
 				<label class="field">
-					<span>Height (rows)</span>
+					<span>{$t('widget.height')}</span>
 					<input type="number" bind:value={rowSpan} min="1" max="12" />
 				</label>
 			{/if}
 		</div>
-		<p class="hint">You can resize it later on the dashboard, in edit mode.</p>
+		<p class="hint">{$t('add.resizeHint')}</p>
 
 		<div class="cfg-actions">
 			{#if missing}<span class="missing">{missing}</span>{/if}
-			<button class="btn-cancel" onclick={() => (picked = null)}>Back</button>
-			<button class="btn-save" onclick={addPicked} disabled={!!missing}>{target === 'navbar' ? 'Add to navbar' : 'Add to dashboard'}</button>
+			<button class="btn-cancel" onclick={() => (picked = null)}>{$t('common.back')}</button>
+			<button class="btn-save" onclick={addPicked} disabled={!!missing}>{target === 'navbar' ? $t('add.toNavbar') : $t('add.title')}</button>
 		</div>
 	</div>
 {:else}
@@ -134,18 +141,18 @@
 		<div class="toolbar">
 			<div class="search">
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-				<input type="search" bind:value={widgetQuery} placeholder="Search widgets" aria-label="Search widgets" />
+				<input type="search" bind:value={widgetQuery} placeholder={$t('add.searchWidgets')} aria-label={$t('add.searchWidgets')} />
 			</div>
 		</div>
-		<div class="chips-row" role="tablist" aria-label="Categories">
-			<button class="cat" class:active={category === 'all'} role="tab" aria-selected={category === 'all'} onclick={() => (category = 'all')}>All</button>
+		<div class="chips-row" role="tablist" aria-label={$t('add.categories')}>
+			<button class="cat" class:active={category === 'all'} role="tab" aria-selected={category === 'all'} onclick={() => (category = 'all')}>{$t('common.all')}</button>
 			{#each categories as c (c)}
-				<button class="cat" class:active={category === c} role="tab" aria-selected={category === c} onclick={() => (category = c)}>{c}</button>
+				<button class="cat" class:active={category === c} role="tab" aria-selected={category === c} onclick={() => (category = c)}>{categoryLabel($locale, c)}</button>
 			{/each}
 		</div>
 
 		{#if catalog.length === 0}
-			<p class="empty">No widget matches “{widgetQuery}”.</p>
+			<p class="empty">{$t('add.noWidget', { query: widgetQuery })}</p>
 		{:else}
 			<div class="catalog">
 				{#each catalog as w (w.id)}
@@ -162,7 +169,7 @@
 						{#if miss.length}
 							<div class="wcard-setup">
 								<span>{needsLabel(miss)}</span>
-								<button onclick={() => setUp(w)}>Set up</button>
+								<button onclick={() => setUp(w)}>{$t('add.setUp')}</button>
 							</div>
 						{/if}
 					</div>

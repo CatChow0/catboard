@@ -1,0 +1,25 @@
+import type { Dict } from '..';
+
+export const icons = {
+	'icons.unreachable': 'Bibliothèques d\'icônes injoignables (CatBoard n\'a pas accès à Internet ?)',
+	'icons.loadFailed': 'Impossible de charger les bibliothèques d\'icônes',
+	'icons.uploadFailed': 'L\'envoi a échoué',
+	'icons.libraries': 'Bibliothèques',
+	'icons.url': 'URL',
+	'icons.upload': 'Envoyer',
+	'icons.auto': 'Auto',
+	'icons.autoTitle': 'Trouver l\'icône d\'après le nom du service, sinon utiliser son favicon',
+	'icons.searchPlaceholder': 'Rechercher des icônes, tags, catégories…',
+	'icons.library': 'Bibliothèque',
+	'icons.loading': 'Chargement des bibliothèques d\'icônes…',
+	'icons.showMore': 'Afficher plus ({count} restantes)',
+	'icons.noResults': 'Aucune icône trouvée',
+	'icons.imageUrl': 'URL de l\'image (PNG, SVG, WebP, JPEG, ICO)',
+	'icons.use': 'Utiliser',
+	'icons.urlHint': 'CatBoard la télécharge une fois et la sert depuis son cache.',
+	'icons.uploading': 'Envoi…',
+	'icons.choose': 'Choisir une image (1 Mo max)',
+	'icons.uploadHint': 'Enregistrée dans le dossier de config de CatBoard (config/icons).',
+	'icons.autoName': 'Auto (par nom, puis favicon)',
+	'icons.uploaded': 'Image envoyée',
+} satisfies Partial<Dict>;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { ElegooPrintConfig } from '$lib/types';
 	import { integrations } from '$lib/stores/integrations';
 
@@ -7,25 +8,25 @@
 </script>
 
 <label class="field">
-	<span>Printer</span>
+	<span>{$t('ws.printer')}</span>
 	{#if printers.length}
 		<select bind:value={config.printerId}>
-			<option value="">Select printer</option>
+			<option value="">{$t('ws.selectPrinter')}</option>
 			{#each printers as p (p.id)}
 				<option value={p.id}>{p.name || p.host}</option>
 			{/each}
 		</select>
 	{:else}
-		<span class="hint">No printer yet: add one in Settings &gt; Integrations &gt; Elegoo printers.</span>
+		<span class="hint">{$t('ws.noPrinterYetAddOneIn')}</span>
 	{/if}
 </label>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.showThumbnail} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Show the model preview{target === 'navbar' ? ' in the details' : ''}</span>
+	<span class="toggle-label">{$t('ws.showTheModelPreview')}{target === 'navbar' ? $t('ws.inDetails') : ''}</span>
 </label>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.showTemps} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Show temperatures and speed{target === 'navbar' ? ' in the details' : ''}</span>
+	<span class="toggle-label">{$t('ws.showTemperaturesAndSpeed')}{target === 'navbar' ? $t('ws.inDetails') : ''}</span>
 </label>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	// Phone menu (☰): edit mode, add, breakpoint being edited, settings, logout.
+	import { t } from '$lib/i18n';
 	import { isEditing, layout, activeBreakpointId, manualBreakpointId, getBreakpointLabel, toggleEditMode, currentUser } from '$lib/stores/dashboard';
 	import BottomSheet from '../BottomSheet.svelte';
 
@@ -25,7 +26,7 @@
 	}
 </script>
 
-<BottomSheet label="Menu" {onclose}>
+<BottomSheet label={$t('nav.menu')} {onclose}>
 	<div class="mm">
 		{#if $currentUser?.canEdit}
 			<button class="mm-item" class:active={$isEditing} onclick={() => run(toggleEditMode)}>
@@ -37,7 +38,7 @@
 						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
 					{/if}
 				</svg>
-				{$isEditing ? 'Done editing' : 'Edit dashboard'}
+				{$isEditing ? $t('nav.doneEditing') : $t('nav.editDashboard')}
 			</button>
 		{/if}
 
@@ -46,14 +47,14 @@
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M12 5v14M5 12h14" />
 				</svg>
-				Add service or widget
+				{$t('nav.addTitle')}
 			</button>
 			<label class="mm-item mm-select">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<rect x="2" y="4" width="20" height="14" rx="2" />
 					<path d="M8 21h8" />
 				</svg>
-				<span>Layout</span>
+				<span>{$t('nav.layout')}</span>
 				<select onchange={(e) => manualBreakpointId.set(e.currentTarget.value)} value={$manualBreakpointId || $activeBreakpointId}>
 					{#each $layout?.grid?.breakpoints || [] as bp (bp.id)}
 						<option value={bp.id}>{getBreakpointLabel($layout.grid.breakpoints, bp.id)}</option>
@@ -69,7 +70,7 @@
 				<circle cx="12" cy="12" r="3" />
 				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
 			</svg>
-			Settings
+			{$t('nav.settings')}
 		</button>
 		<button class="mm-item danger" onclick={() => run(onlogout)}>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -77,12 +78,12 @@
 				<polyline points="16 17 21 12 16 7" />
 				<line x1="21" y1="12" x2="9" y2="12" />
 			</svg>
-			Logout
+			{$t('nav.logout')}
 		</button>
 
 		<p class="mm-version">
 			v{versionInfo?.current || '…'}
-			{#if versionInfo?.hasUpdate}<span>· update available: {versionInfo.latest}</span>{/if}
+			{#if versionInfo?.hasUpdate}<span>· {$t('nav.updateAvailable', { version: versionInfo.latest })}</span>{/if}
 		</p>
 	</div>
 </BottomSheet>

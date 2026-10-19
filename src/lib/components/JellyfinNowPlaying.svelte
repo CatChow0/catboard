@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Streams currently playing on Jellyfin: who watches what, progress, and
 	// whether it is played directly or transcoded.
+	import { t } from '$lib/i18n';
 	import { pollJson } from '$lib/utils/pollJson.svelte';
 	import type { JellyfinSession } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
@@ -24,23 +25,23 @@
 		return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
 	}
 
-	const methodLabel = (s: JellyfinSession) => (s.playMethod === 'Transcode' ? 'Transcode' : s.playMethod === 'DirectStream' ? 'Direct stream' : 'Direct play');
+	const methodLabel = (s: JellyfinSession) => $t(s.playMethod === 'Transcode' ? 'jellyfin.transcode' : s.playMethod === 'DirectStream' ? 'jellyfin.directStream' : 'jellyfin.directPlay');
 </script>
 
 <div class="np-tile">
 	<div class="np-inner">
 		<div class="np-head" class:hidden={compact && sessions.length > 0}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-			<span>Now playing</span>
+			<span>{$t('jellyfin.nowPlaying')}</span>
 			{#if sessions.length}<span class="np-count">{sessions.length}</span>{/if}
 		</div>
 
 		{#if loading}
-			<p class="np-msg">Loading…</p>
+			<p class="np-msg">{$t('common.loading')}</p>
 		{:else if error}
 			<p class="np-msg np-error">{error}</p>
 		{:else if sessions.length === 0}
-			<p class="np-msg">Nothing playing right now</p>
+			<p class="np-msg">{$t('jellyfin.nothing')}</p>
 		{:else if compact}
 			<ul class="np-lines">
 				{#each sessions as s (s.id)}
@@ -60,7 +61,7 @@
 						<div class="np-body">
 							<div class="np-top">
 								<span class="np-badge" class:transcode={s.playMethod === 'Transcode'} title={s.transcodeInfo || methodLabel(s)}>{methodLabel(s)}</span>
-								{#if s.paused}<span class="np-paused">Paused</span>{/if}
+								{#if s.paused}<span class="np-paused">{$t('jellyfin.paused')}</span>{/if}
 							</div>
 							<div class="np-title">{s.title}</div>
 							{#if s.subtitle}<div class="np-sub">{s.subtitle}</div>{/if}
@@ -79,7 +80,7 @@
 			</ul>
 		{/if}
 	</div>
-	<EditButtons label="Now playing widget" {ondelete} />
+	<EditButtons label={$t('widget.lblNowPlaying')} {ondelete} />
 </div>
 
 <style>

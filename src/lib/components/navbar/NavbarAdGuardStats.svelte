@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { AdGuardHomeConfig } from '$lib/types';
 	import { adguardHomeData } from '$lib/stores/dashboard';
 
@@ -12,11 +13,11 @@
 	const pct = $derived(total > 0 ? Math.round((blocked / total) * 100) : 0);
 </script>
 
-<div class="navbar-adguard-stats" title="{blocked.toLocaleString()} blocked / {total.toLocaleString()} queries">
+<div class="navbar-adguard-stats" title={$t('adguard.navTitle', { blocked: blocked.toLocaleString(), total: total.toLocaleString() })}>
 	{#if data}
 		<div class="bar-track">
 			<div class="bar-fill" style:width="{pct}%"></div>
-			<span class="bar-text">{pct}% blocked</span>
+			<span class="bar-text">{$t('adguard.pctBlocked', { pct })}</span>
 		</div>
 	{:else}
 		<span class="no-data">AdGuard</span>

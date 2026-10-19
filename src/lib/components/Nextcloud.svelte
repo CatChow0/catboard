@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Nextcloud: the user's quota, server info (Nextcloud admins) and the
 	// latest modified files, linking to Nextcloud. Every 2 min.
+	import { t } from '$lib/i18n';
 	import type { NextcloudConfig, NextcloudData } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -39,13 +40,13 @@
 			{/if}
 		</div>
 		{#if !data}
-			<p class="nc-status" class:err={!!poll.error}>{poll.error || 'Loading…'}</p>
+			<p class="nc-status" class:err={!!poll.error}>{poll.error || $t('common.loading')}</p>
 		{:else}
 			{#if showQuota}
-				<div class="nc-quota" title={data.user.total ? `${bytes(data.user.used)} of ${bytes(data.user.total)}` : `${bytes(data.user.used)} used, no quota`}>
+				<div class="nc-quota" title={data.user.total ? $t('nextcloud.quotaTitle', { used: bytes(data.user.used), total: bytes(data.user.total) }) : $t('nextcloud.usedNoQuota', { used: bytes(data.user.used) })}>
 					<div class="nc-quota-text">
-						<span>{bytes(data.user.used)} used</span>
-						<span class="muted">{data.user.total ? `of ${bytes(data.user.total)}` : 'no quota'}</span>
+						<span>{$t('nextcloud.used', { value: bytes(data.user.used) })}</span>
+						<span class="muted">{data.user.total ? $t('nextcloud.ofTotal', { total: bytes(data.user.total) }) : $t('nextcloud.noQuota')}</span>
 					</div>
 					{#if quotaPct !== null}
 						<span class="bar" class:warn={quotaPct >= 90}><span style="width: {quotaPct}%"></span></span>
@@ -55,12 +56,12 @@
 			{#if showServer && data.server}
 				<div class="nc-server">
 					{#if data.server.version}<span>v{data.server.version}</span>{/if}
-					{#if data.server.activeUsers !== null}<span>{data.server.activeUsers} active today</span>{/if}
-					{#if data.server.files !== null}<span>{data.server.files.toLocaleString()} files</span>{/if}
-					{#if data.server.freeSpace !== null}<span>{bytes(data.server.freeSpace)} free</span>{/if}
+					{#if data.server.activeUsers !== null}<span>{$t('nextcloud.activeToday', { n: data.server.activeUsers })}</span>{/if}
+					{#if data.server.files !== null}<span>{$t('nextcloud.files', { n: data.server.files.toLocaleString() })}</span>{/if}
+					{#if data.server.freeSpace !== null}<span>{$t('nextcloud.free', { value: bytes(data.server.freeSpace) })}</span>{/if}
 				</div>
 			{:else if showServer}
-				<p class="nc-status small">Server info needs a Nextcloud admin and the Monitoring app.</p>
+				<p class="nc-status small">{$t('nextcloud.serverInfo')}</p>
 			{/if}
 			{#if files > 0}
 				<ul class="nc-files">
@@ -72,14 +73,14 @@
 							</a>
 						</li>
 					{:else}
-						<li class="nc-none">No file yet</li>
+						<li class="nc-none">{$t('nextcloud.noFile')}</li>
 					{/each}
 				</ul>
 			{/if}
 			{#if poll.error}<p class="nc-status err small">{poll.error}</p>{/if}
 		{/if}
 	</div>
-	<EditButtons label="Nextcloud widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblNextcloud')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

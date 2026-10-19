@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, errorText } from '$lib/i18n';
 	import { currentUser } from '$lib/stores/dashboard';
 
 	let users = $state<{ username: string; role: string; isMainAdmin: boolean }[]>([]);
@@ -16,7 +17,7 @@
 		error = '';
 		try {
 			const res = await fetch('/api/users');
-			if (!res.ok) throw new Error('Failed to fetch users');
+			if (!res.ok) throw new Error($t('admin.fetchFailed'));
 			const data = await res.json();
 			users = data.users;
 		} catch (e: any) {
@@ -27,7 +28,7 @@
 
 	async function createUser() {
 		if (!newUsername || !newPassword || newPassword.length < 6) {
-			error = 'Username and password (min 6 chars) required';
+			error = $t('admin.required');
 			return;
 		}
 		try {
@@ -38,7 +39,7 @@
 			});
 			if (!res.ok) {
 				const data = await res.json();
-				throw new Error(data.error || 'Failed to create user');
+				throw new Error(data.error ? errorText(data) : $t('admin.createFailed'));
 			}
 			newUsername = '';
 			newPassword = '';
@@ -50,12 +51,12 @@
 	}
 
 	async function deleteUser(username: string) {
-		if (!confirm(`Delete user "${username}"?`)) return;
+		if (!confirm($t('admin.confirmDelete', { name: username }))) return;
 		try {
 			const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
 			if (!res.ok) {
 				const data = await res.json();
-				throw new Error(data.error || 'Failed to delete user');
+				throw new Error(data.error ? errorText(data) : $t('admin.deleteFailed'));
 			}
 			await fetchUsers();
 		} catch (e: any) {
@@ -75,7 +76,7 @@
 			});
 			if (!res.ok) {
 				const data = await res.json();
-				throw new Error(data.error || 'Failed to update user');
+				throw new Error(data.error ? errorText(data) : $t('admin.updateFailed'));
 			}
 			editingUser = null;
 			editRole = '';
@@ -110,8 +111,8 @@
 		const res = await fetch('/api/access', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dashboardEditors: value }) }).catch(() => null);
 		if (!res?.ok) {
 			editors = previous;
-			accessMessage = 'Not saved';
-		} else accessMessage = 'Saved';
+			accessMessage = $t('common.notSaved');
+		} else accessMessage = $t('common.saved');
 	}
 
 	import { onMount } from 'svelte';
@@ -124,13 +125,13 @@
 <div class="admin-panel">
 	{#if editors}
 		<div class="access cb-form">
-			<h4>Who can edit dashboards</h4>
+			<h4>{$t('admin.editors')}</h4>
 			<div class="seg">
-				<button type="button" class:active={editors === 'admins'} onclick={() => setEditors('admins')}>Admins only</button>
-				<button type="button" class:active={editors === 'everyone'} onclick={() => setEditors('everyone')}>Every user</button>
+				<button type="button" class:active={editors === 'admins'} onclick={() => setEditors('admins')}>{$t('admin.adminsOnly')}</button>
+				<button type="button" class:active={editors === 'everyone'} onclick={() => setEditors('everyone')}>{$t('admin.everyone')}</button>
 			</div>
 			<p class="hint">
-				Services, tiles, widgets and dashboards are shared. With <b>Admins only</b>, other users see them read-only (their own appearance settings stay theirs).
+				{$t('admin.editorsHint1')} <b>{$t('admin.adminsOnly')}</b>{$t('admin.editorsHint2')}
 				{#if accessMessage}<span class="access-msg">{accessMessage}</span>{/if}
 			</p>
 		</div>
@@ -141,16 +142,16 @@
 	{/if}
 
 	{#if loading}
-		<p>Loading users...</p>
+		<p>{$t('admin.loadingUsers')}</p>
 	{:else}
 		<div class="user-list">
 			{#each users as user}
 				<div class="user-row">
 					<div class="user-info">
 						<span class="username">{user.username}</span>
-						<span class="role-badge" class:admin={user.role === 'admin'} class:mini-admin={user.role === 'mini-admin'}>{user.role}</span>
+						<span class="role-badge" class:admin={user.role === 'admin'} class:mini-admin={user.role === 'mini-admin'}>{$t(user.role === 'admin' ? 'admin.roleAdmin' : user.role === 'mini-admin' ? 'admin.roleMini' : 'admin.roleUser')}</span>
 						{#if user.isMainAdmin}
-							<span class="main-badge">Main</span>
+							<span class="main-badge">{$t('admin.main')}</span>
 						{/if}
 					</div>
 					<div class="user-actions">
@@ -159,19 +160,19 @@
 								<div class="edit-form">
 									{#if isAdmin}
 										<select bind:value={editRole}>
-											<option value="admin">Admin</option>
-											<option value="mini-admin">Mini-Admin</option>
-											<option value="user">User</option>
+											<option value="admin">{$t('admin.roleAdmin')}</option>
+											<option value="mini-admin">{$t('admin.roleMini')}</option>
+											<option value="user">{$t('admin.roleUser')}</option>
 										</select>
 									{/if}
-									<input type="password" bind:value={editPassword} placeholder="New password" />
-									<button class="btn-sm btn-save" onclick={() => saveUserEdit(user.username)}>Save</button>
-									<button class="btn-sm btn-cancel" onclick={() => (editingUser = null)}>Cancel</button>
+									<input type="password" bind:value={editPassword} placeholder={$t('admin.newPassword')} />
+									<button class="btn-sm btn-save" onclick={() => saveUserEdit(user.username)}>{$t('common.save')}</button>
+									<button class="btn-sm btn-cancel" onclick={() => (editingUser = null)}>{$t('common.cancel')}</button>
 								</div>
 							{:else}
-								<button class="btn-sm" onclick={() => startEdit(user)}>Edit</button>
+								<button class="btn-sm" onclick={() => startEdit(user)}>{$t('common.edit')}</button>
 								{#if isAdmin}
-									<button class="btn-sm btn-danger" onclick={() => deleteUser(user.username)}>Delete</button>
+									<button class="btn-sm btn-danger" onclick={() => deleteUser(user.username)}>{$t('common.delete')}</button>
 								{/if}
 							{/if}
 						{/if}
@@ -182,16 +183,16 @@
 
 		{#if isAdmin}
 			<div class="create-user">
-				<h4>Create User</h4>
+				<h4>{$t('admin.createUser')}</h4>
 				<div class="create-form">
-					<input type="text" bind:value={newUsername} placeholder="Username" />
-					<input type="password" bind:value={newPassword} placeholder="Password (min 6)" />
+					<input type="text" bind:value={newUsername} placeholder={$t('admin.username')} />
+					<input type="password" bind:value={newPassword} placeholder={$t('admin.passwordMin')} />
 					<select bind:value={newRole}>
-						<option value="user">User</option>
-						<option value="mini-admin">Mini-Admin</option>
-						<option value="admin">Admin</option>
+						<option value="user">{$t('admin.roleUser')}</option>
+						<option value="mini-admin">{$t('admin.roleMini')}</option>
+						<option value="admin">{$t('admin.roleAdmin')}</option>
 					</select>
-					<button class="btn-create" onclick={createUser}>Create</button>
+					<button class="btn-create" onclick={createUser}>{$t('admin.create')}</button>
 				</div>
 			</div>
 		{/if}

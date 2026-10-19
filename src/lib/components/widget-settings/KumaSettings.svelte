@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { UptimeKumaStatusPageConfig } from '$lib/types';
 	import { integrations } from '$lib/stores/integrations';
 
@@ -7,7 +8,7 @@
 </script>
 
 <label class="field">
-	<span>Status page slug</span>
-	<input type="text" bind:value={config.slug} placeholder="e.g. default" />
-	<span class="hint">The end of the status page address{base ? `: ${base}/status/` : ': /status/'}<b>{config.slug || 'slug'}</b></span>
+	<span>{$t('ws.statusPageSlug')}</span>
+	<input type="text" bind:value={config.slug} placeholder={$t('ws.eGDefault')} />
+	<span class="hint">{$t('ws.slugHint')}{base ? `: ${base}/status/` : ': /status/'}<b>{config.slug || 'slug'}</b></span>
 </label>

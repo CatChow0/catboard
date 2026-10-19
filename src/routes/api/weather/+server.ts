@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { apiError } from '$lib/server/api-error';
 
 const cache = new Map<string, { data: WeatherData; expires: number }>();
 const CACHE_TTL = 600_000; // 10 minutes
@@ -30,7 +31,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const lon = url.searchParams.get('lon');
 
 	if (!lat || !lon) {
-		return json({ error: 'Missing lat/lon parameters' }, { status: 400 });
+		return apiError(400, 'errors.missingLatLon');
 	}
 
 	const cacheKey = `${lat},${lon}`;
@@ -46,7 +47,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		);
 
 		if (!res.ok) {
-			return json({ error: 'Weather API failed' }, { status: 502 });
+			return apiError(502, 'errors.weatherFailed');
 		}
 
 		const data = await res.json();
@@ -62,6 +63,6 @@ export const GET: RequestHandler = async ({ url }) => {
 		cache.set(cacheKey, { data: result, expires: Date.now() + CACHE_TTL });
 		return json(result);
 	} catch {
-		return json({ error: 'Weather API unavailable' }, { status: 503 });
+		return apiError(503, 'errors.weatherUnavailable');
 	}
 };

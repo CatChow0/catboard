@@ -1,3 +1,4 @@
+import { errorText } from '$lib/i18n';
 // Polls a JSON endpoint while the page is visible, and again as soon as it
 // becomes visible. Call it during component init: the effect stops with the
 // component and restarts when url() changes (null pauses polling).
@@ -18,7 +19,7 @@ export function pollJson<T>(url: () => string | null, every: number | ((data: T 
 					const res = await fetch(u!);
 					const body = await res.json().catch(() => null);
 					if (stopped) return;
-					if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+					if (!res.ok) throw new Error(errorText(body, res.status));
 					s.data = body;
 					s.error = '';
 				} catch (e) {

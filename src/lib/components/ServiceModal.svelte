@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { Service } from '$lib/stores/dashboard';
 	import IconPicker from './IconPicker.svelte';
 
@@ -43,32 +44,32 @@
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 <div class="modal-overlay" class:closing role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.target === e.currentTarget && close()} onkeydown={(e) => e.key === 'Escape' && close()}>
 	<form class="modal" class:closing onsubmit={handleSubmit}>
-		<h2>{service ? 'Edit Service' : 'Add Service'}</h2>
+		<h2>{service ? $t('service.editTitle') : $t('service.addTitle')}</h2>
 		<div class="form-group">
-			<label for="name">Name</label>
+			<label for="name">{$t('service.name')}</label>
 			<input id="name" type="text" bind:value={name} required placeholder="Proxmox" />
 		</div>
 		<div class="form-group">
-			<label for="url">URL</label>
+			<label for="url">{$t('service.url')}</label>
 			<input id="url" type="url" bind:value={url} required placeholder="https://proxmox.home.local" />
 		</div>
 		<div class="form-group">
-			<span class="form-label">Icon</span>
+			<span class="form-label">{$t('service.icon')}</span>
 			<IconPicker value={icon} onchange={(v) => (icon = v)} {name} {url} />
 		</div>
 		<div class="form-group">
-			<label for="description">Description</label>
-			<input id="description" type="text" bind:value={description} placeholder="Hypervisor" />
+			<label for="description">{$t('service.description')}</label>
+			<input id="description" type="text" bind:value={description} placeholder={$t('service.placeholderDesc')} />
 		</div>
 		<div class="form-group checkbox">
 			<label>
 				<input type="checkbox" bind:checked={statusCheckEnabled} />
-				Enable status check
+				{$t('service.statusCheck')}
 			</label>
 		</div>
 		<div class="form-actions">
-			<button type="button" class="btn-cancel" onclick={close}>Cancel</button>
-			<button type="submit" class="btn-save">{service ? 'Save' : 'Add'}</button>
+			<button type="button" class="btn-cancel" onclick={close}>{$t('common.cancel')}</button>
+			<button type="submit" class="btn-save">{service ? $t('common.save') : $t('common.add')}</button>
 		</div>
 	</form>
 </div>

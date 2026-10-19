@@ -3,6 +3,7 @@
 import { getIntegrations } from '$lib/server/config';
 import { normalizeUrl } from '$lib/server/arr';
 import type { SpoolInfo, SpoolmanData } from '$lib/types';
+import { AppError } from '$lib/server/api-error';
 
 const CACHE_MS = 30_000;
 let cache: { key: string; at: number; spools: SpoolInfo[] } | null = null;
@@ -45,9 +46,9 @@ async function allSpools(base: string, includeArchived: boolean): Promise<SpoolI
 	const key = `${base}|${includeArchived}`;
 	if (cache && cache.key === key && Date.now() - cache.at < CACHE_MS) return cache.spools;
 	const res = await fetch(`${base}/api/v1/spool?allow_archived=${includeArchived}`, { signal: AbortSignal.timeout(8000) });
-	if (!res.ok) throw new Error(`Spoolman answered HTTP ${res.status}`);
+	if (!res.ok) throw new AppError('errors.answeredHttp', { name: 'Spoolman', status: res.status });
 	const ct = res.headers.get('content-type') || '';
-	if (!ct.includes('json')) throw new Error('Not a Spoolman API (check the URL)');
+	if (!ct.includes('json')) throw new AppError('errors.notSpoolman');
 	const spools = ((await res.json()) as Record<string, any>[]).map(toSpool);
 	cache = { key, at: Date.now(), spools };
 	return spools;

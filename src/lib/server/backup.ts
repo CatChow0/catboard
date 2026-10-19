@@ -7,6 +7,7 @@ import { copyFile, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { writeFileAtomic } from './fs-safe';
+import { AppError } from '$lib/server/api-error';
 
 export type BackupReason = 'daily' | 'before-import' | 'before-restore' | 'manual';
 export interface BackupInfo {
@@ -98,7 +99,7 @@ export async function pruneBackups(configDir: string): Promise<void> {
 
 async function findBackup(configDir: string, id: string): Promise<BackupInfo> {
 	const b = parseId(id) ? (await listBackups(configDir)).find((x) => x.id === id) : undefined;
-	if (!b) throw new Error('Unknown backup');
+	if (!b) throw new AppError('errors.unknownBackup');
 	return b;
 }
 

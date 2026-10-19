@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Settings > Cache: icon cache stats for everyone, rebuild / clear for
 	// admins. Styles: settings.css.
+	import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { currentUser } from '$lib/stores/dashboard';
 	import { clearBrowserIconCache } from '$lib/stores/icons';
@@ -58,38 +59,38 @@
 </script>
 
 <div class="settings-section">
-	<h3>Icon Cache</h3>
-	<p class="cache-desc">Service icons (selfh.st and homarr libraries, custom URLs, favicons) are downloaded once by CatBoard and served from its cache. Icons that could not be found are retried after a day. Clearing keeps uploaded images; rebuilding clears and fetches the icons of every service again.</p>
+	<h3>{$t('cache.title')}</h3>
+	<p class="cache-desc">{$t('cache.desc')}</p>
 	<div class="cache-stats">
 		<div class="cache-stat">
-			<span class="cache-stat-label">Cached icons</span>
+			<span class="cache-stat-label">{$t('cache.cached')}</span>
 			<span class="cache-stat-value">{stats.count}</span>
 		</div>
 		<div class="cache-stat">
-			<span class="cache-stat-label">Uploaded</span>
+			<span class="cache-stat-label">{$t('cache.uploaded')}</span>
 			<span class="cache-stat-value">{stats.uploads}</span>
 		</div>
 		<div class="cache-stat">
-			<span class="cache-stat-label">Not found (retried tomorrow)</span>
+			<span class="cache-stat-label">{$t('cache.misses')}</span>
 			<span class="cache-stat-value">{stats.misses}</span>
 		</div>
 		<div class="cache-stat">
-			<span class="cache-stat-label">Total size</span>
+			<span class="cache-stat-label">{$t('cache.size')}</span>
 			<span class="cache-stat-value">{formatBytes(stats.size)}</span>
 		</div>
 	</div>
 	{#if rebuildResult}
 		<div class="cache-result">
-			Rebuilt {rebuildResult.rebuilt} icon{rebuildResult.rebuilt !== 1 ? 's' : ''}
+			{$t('cache.rebuilt', { count: rebuildResult.rebuilt })}
 			{#if rebuildResult.errors.length > 0}
-				<span class="cache-errors"> — {rebuildResult.errors.length} failed: {rebuildResult.errors.join(', ')}</span>
+				<span class="cache-errors"> — {$t('cache.failedList', { count: rebuildResult.errors.length, list: rebuildResult.errors.join(', ') })}</span>
 			{/if}
 		</div>
 	{/if}
 	{#if isAdmin}
 		<div class="cache-actions">
-			<button class="btn-rebuild-cache" onclick={rebuildCache} disabled={rebuilding}>{rebuilding ? 'Rebuilding...' : 'Rebuild Icon Cache'}</button>
-			<button class="btn-clear-cache" onclick={clearCache} disabled={clearing || stats.count === 0}>{clearing ? 'Clearing...' : 'Clear Icon Cache'}</button>
+			<button class="btn-rebuild-cache" onclick={rebuildCache} disabled={rebuilding}>{rebuilding ? $t('cache.rebuilding') : $t('cache.rebuild')}</button>
+			<button class="btn-clear-cache" onclick={clearCache} disabled={clearing || stats.count === 0}>{clearing ? $t('cache.clearing') : $t('cache.clear')}</button>
 		</div>
 	{/if}
 </div>

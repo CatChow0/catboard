@@ -3,22 +3,23 @@ import { json } from '@sveltejs/kit';
 import { locked } from '$lib/server/locked';
 import { getUsers, setUsers, findUserByUsername } from '$lib/server/config';
 import { hashPassword } from '$lib/auth/session';
+import { apiError } from '$lib/server/api-error';
 
 export const PUT: RequestHandler = locked('users', async ({ locals, params, request }) => {
 	if (!locals.isAuthenticated || !locals.role) {
-		return json({ error: 'Forbidden' }, { status: 403 });
+		return apiError(403, 'errors.forbidden');
 	}
 
 	const { username } = params;
 	const target = await findUserByUsername(username);
 	if (!target) {
-		return json({ error: 'User not found' }, { status: 404 });
+		return apiError(404, 'errors.userNotFound');
 	}
 
 	// Only admin can modify admin/mini-admin accounts
 	if (target.role === 'admin' || target.role === 'mini-admin') {
 		if (locals.role !== 'admin') {
-			return json({ error: 'Forbidden' }, { status: 403 });
+			return apiError(403, 'errors.forbidden');
 		}
 	}
 
@@ -26,25 +27,25 @@ export const PUT: RequestHandler = locked('users', async ({ locals, params, requ
 	if (target.isMainAdmin) {
 		const body = await request.json();
 		if (body.role && body.role !== target.role) {
-			return json({ error: 'Cannot change main admin role' }, { status: 403 });
+			return apiError(403, 'errors.mainAdminRole');
 		}
 	}
 
 	// mini-admin can only modify regular users
 	if (locals.role === 'mini-admin' && target.role !== 'user') {
-		return json({ error: 'Forbidden' }, { status: 403 });
+		return apiError(403, 'errors.forbidden');
 	}
 
 	const body = await request.json();
 	const usersConfig = await getUsers();
 	const user = usersConfig.users.find(u => u.username === username);
 	if (!user) {
-		return json({ error: 'User not found' }, { status: 404 });
+		return apiError(404, 'errors.userNotFound');
 	}
 
 	if (body.role && ['admin', 'mini-admin', 'user'].includes(body.role)) {
 		if (user.isMainAdmin && body.role !== user.role) {
-			return json({ error: 'Cannot change main admin role' }, { status: 403 });
+			return apiError(403, 'errors.mainAdminRole');
 		}
 		user.role = body.role;
 	}
@@ -59,7 +60,7 @@ export const PUT: RequestHandler = locked('users', async ({ locals, params, requ
 
 export const DELETE: RequestHandler = locked('users', async ({ locals, params }) => {
 	if (!locals.isAuthenticated || locals.role !== 'admin') {
-		return json({ error: 'Forbidden' }, { status: 403 });
+		return apiError(403, 'errors.forbidden');
 	}
 
 	const { username } = params;
@@ -67,15 +68,15 @@ export const DELETE: RequestHandler = locked('users', async ({ locals, params })
 	const user = usersConfig.users.find(u => u.username === username);
 
 	if (!user) {
-		return json({ error: 'User not found' }, { status: 404 });
+		return apiError(404, 'errors.userNotFound');
 	}
 
 	if (user.isMainAdmin) {
-		return json({ error: 'Cannot delete main admin account' }, { status: 403 });
+		return apiError(403, 'errors.mainAdminDelete');
 	}
 
 	if (username === locals.username) {
-		return json({ error: 'Cannot delete your own account' }, { status: 403 });
+		return apiError(403, 'errors.ownAccount');
 	}
 
 	usersConfig.users = usersConfig.users.filter(u => u.username !== username);

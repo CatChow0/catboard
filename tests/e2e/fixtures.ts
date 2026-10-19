@@ -32,7 +32,7 @@ export async function setDashboard(page: Page, items: Item[], navbar: Item[] = [
 
 export async function resetSettings(page: Page, extra: Record<string, unknown> = {}) {
 	const s = await (await page.request.get('/api/settings')).json();
-	for (const k of ['customCss', 'radius', 'accent', 'font', 'fontScale', 'cardOpacity', 'cardBlur', 'autoDark', 'autoLight', 'customPalette']) delete s[k];
+	for (const k of ['language', 'customCss', 'radius', 'accent', 'font', 'fontScale', 'cardOpacity', 'cardBlur', 'autoDark', 'autoLight', 'customPalette']) delete s[k];
 	await page.request.put('/api/settings', { data: { ...s, theme: 'dark', ...extra } });
 }
 

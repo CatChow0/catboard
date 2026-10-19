@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 
 	let { config = $bindable() }: { config: { disks: string[]; pageIndicatorSide?: 'left' | 'right' } } = $props();
@@ -29,25 +30,25 @@
 </script>
 
 <div class="field">
-	<span>Disks to monitor</span>
+	<span>{$t('ws.disksToMonitor')}</span>
 	{#if loading && !all.length}
-		<span class="hint">Detecting disks…</span>
+		<span class="hint">{$t('ws.detectingDisks')}</span>
 	{:else if all.length}
 		<div class="chips">
 			{#each all as path (path)}
 				<label class="chip"><input type="checkbox" checked={config.disks.includes(path)} onchange={() => toggle(path)} />{path}</label>
 			{/each}
 		</div>
-		<span class="hint">With several disks, the widget pages through them.</span>
+		<span class="hint">{$t('ws.withSeveralDisksTheWidgetPages')}</span>
 	{:else}
-		<span class="hint">No disk found.</span>
-		<button type="button" class="btn-ghost" onclick={detect}>Detect again</button>
+		<span class="hint">{$t('ws.noDiskFound')}</span>
+		<button type="button" class="btn-ghost" onclick={detect}>{$t('ws.detectAgain')}</button>
 	{/if}
 </div>
 <div class="field">
-	<span>Page indicator side</span>
+	<span>{$t('ws.pageIndicatorSide')}</span>
 	<div class="seg">
-		<button type="button" class:active={config.pageIndicatorSide !== 'right'} onclick={() => (config.pageIndicatorSide = 'left')}>Left</button>
-		<button type="button" class:active={config.pageIndicatorSide === 'right'} onclick={() => (config.pageIndicatorSide = 'right')}>Right</button>
+		<button type="button" class:active={config.pageIndicatorSide !== 'right'} onclick={() => (config.pageIndicatorSide = 'left')}>{$t('ws.left')}</button>
+		<button type="button" class:active={config.pageIndicatorSide === 'right'} onclick={() => (config.pageIndicatorSide = 'right')}>{$t('ws.right')}</button>
 	</div>
 </div>

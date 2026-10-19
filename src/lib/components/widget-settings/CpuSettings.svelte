@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 
 	let { config = $bindable() }: { config: { tempSensor?: string } } = $props();
@@ -22,18 +23,18 @@
 </script>
 
 <div class="field">
-	<span>Temperature sensor</span>
+	<span>{$t('ws.temperatureSensor')}</span>
 	{#if loading}
-		<span class="hint">Detecting sensors…</span>
+		<span class="hint">{$t('ws.detectingSensors')}</span>
 	{:else if sensors && sensors.length}
 		<select bind:value={config.tempSensor}>
-			<option value="">Auto (main)</option>
+			<option value="">{$t('ws.autoMain')}</option>
 			{#each sensors as sensor (sensor)}
 				<option value={sensor}>{sensor}</option>
 			{/each}
 		</select>
 	{:else if sensors}
-		<span class="hint">No temperature sensor found on this system.</span>
-		<button type="button" class="btn-ghost" onclick={detect}>Detect again</button>
+		<span class="hint">{$t('ws.noTemperatureSensorFoundOnThis')}</span>
+		<button type="button" class="btn-ghost" onclick={detect}>{$t('ws.detectAgain')}</button>
 	{/if}
 </div>

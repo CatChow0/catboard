@@ -4,11 +4,12 @@ import { locked } from '$lib/server/locked';
 import { getServices, setServices } from '$lib/server/config';
 import { resolveIcon } from '$lib/server/icon-cache';
 import { requireEditor } from '$lib/server/auth';
+import { apiError } from '$lib/server/api-error';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const data = await getServices();
 	const service = data.services.find((s) => s.id === params.id);
-	if (!service) return json({ error: 'Not found' }, { status: 404 });
+	if (!service) return apiError(404, 'errors.notFound');
 	return json(service);
 };
 
@@ -17,7 +18,7 @@ export const PUT: RequestHandler = locked('services', async ({ params, request, 
 	if (denied) return denied;
 	const data = await getServices();
 	const index = data.services.findIndex((s) => s.id === params.id);
-	if (index === -1) return json({ error: 'Not found' }, { status: 404 });
+	if (index === -1) return apiError(404, 'errors.notFound');
 
 	const body = await request.json();
 	data.services[index] = { ...data.services[index], ...body };
@@ -33,7 +34,7 @@ export const DELETE: RequestHandler = locked('services', async ({ params, locals
 	if (denied) return denied;
 	const data = await getServices();
 	const index = data.services.findIndex((s) => s.id === params.id);
-	if (index === -1) return json({ error: 'Not found' }, { status: 404 });
+	if (index === -1) return apiError(404, 'errors.notFound');
 
 	data.services.splice(index, 1);
 	await setServices(data);

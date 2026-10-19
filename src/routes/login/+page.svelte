@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { errorText, t } from '$lib/i18n';
 
 	let isSetup = $state(false);
 	let loading = $state(true);
@@ -31,7 +32,7 @@
 
 		const data = await res.json();
 		if (!res.ok) {
-			error = data.error || 'Something went wrong';
+			error = errorText(data, res.status);
 			return;
 		}
 
@@ -45,25 +46,25 @@
 
 <div class="login-page">
 	<div class="login-card">
-		<h1>{isSetup ? 'Create Admin Account' : 'Login'}</h1>
-		<p class="subtitle">{isSetup ? 'Set up your dashboard credentials' : 'Sign in to your dashboard'}</p>
+		<h1>{isSetup ? $t('auth.createAdmin') : $t('auth.login')}</h1>
+		<p class="subtitle">{isSetup ? $t('auth.setupSubtitle') : $t('auth.loginSubtitle')}</p>
 		{#if error}
 			<div class="error">{error}</div>
 		{/if}
 		<form onsubmit={handleSubmit}>
 			<div class="field">
-				<label for="username">Username</label>
+				<label for="username">{$t('auth.username')}</label>
 				<input id="username" type="text" bind:value={username} required autocomplete="username" />
 			</div>
 			<div class="field">
-				<label for="password">Password</label>
+				<label for="password">{$t('auth.password')}</label>
 				<input id="password" type="password" bind:value={password} required autocomplete={isSetup ? 'new-password' : 'current-password'} />
 			</div>
 			{#if isSetup}
-				<p class="hint">Minimum 6 characters</p>
+				<p class="hint">{$t('auth.minLength')}</p>
 			{/if}
 			<button type="submit" class="btn-login" disabled={loading}>
-				{isSetup ? 'Create Account' : 'Sign In'}
+				{isSetup ? $t('auth.createAccount') : $t('auth.signIn')}
 			</button>
 		</form>
 	</div>

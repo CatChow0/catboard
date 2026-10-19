@@ -1,0 +1,28 @@
+import type { Entry } from '..';
+
+export const qbit = {
+	'qbit.downloading': 'Downloading',
+	'qbit.seeding': 'Seeding',
+	'qbit.paused': 'Paused',
+	'qbit.queued': 'Queued',
+	'qbit.checking': 'Checking',
+	'qbit.stalled': 'Stalled',
+	'qbit.error': 'Error',
+	'qbit.completed': 'Completed',
+	'qbit.download': 'Download',
+	'qbit.upload': 'Upload',
+	'qbit.resumeAll': 'Resume all',
+	'qbit.pauseAll': 'Pause all',
+	'qbit.resumeAllLabel': 'Resume all torrents',
+	'qbit.pauseAllLabel': 'Pause all torrents',
+	'qbit.graph': 'Download (solid) and upload (dashed) speed',
+	'qbit.nDownloading': 'downloading',
+	'qbit.nSeeding': 'seeding',
+	'qbit.nPaused': 'paused',
+	'qbit.nErrors': 'errors',
+	'qbit.nothingActive': 'Nothing active right now',
+	'qbit.none': 'No torrents',
+	'qbit.resume': 'Resume',
+	'qbit.pause': 'Pause',
+	'qbit.ofSize': '{pct}% of {size}',
+} satisfies Record<string, Entry>;

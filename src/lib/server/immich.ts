@@ -4,6 +4,7 @@
 import { getIntegrations } from '$lib/server/config';
 import { normalizeUrl } from '$lib/server/arr';
 import type { ImmichData } from '$lib/types';
+import { AppError } from '$lib/server/api-error';
 
 const TIMEOUT_MS = 10_000;
 
@@ -25,8 +26,8 @@ export function immich(conn: ImmichConn, path: string, init: RequestInit = {}): 
 
 async function immichJson<T>(conn: ImmichConn, path: string, init?: RequestInit): Promise<T> {
 	const res = await immich(conn, path, init);
-	if (res.status === 401) throw new Error('Immich refused the API key');
-	if (!res.ok) throw new Error(`Immich answered HTTP ${res.status}`);
+	if (res.status === 401) throw new AppError('errors.immichKey');
+	if (!res.ok) throw new AppError('errors.answeredHttp', { name: 'Immich', status: res.status });
 	return res.json() as Promise<T>;
 }
 

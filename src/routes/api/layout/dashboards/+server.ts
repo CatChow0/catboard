@@ -6,6 +6,7 @@ import { getLayout, setLayout, dashboardList, dashboardLayouts, setDashboardLayo
 import { findNextAvailablePosition } from '$lib/utils/grid';
 import type { DashboardItem, DashboardMeta, Layout, PerBreakpointLayout } from '$lib/types';
 import { requireEditor } from '$lib/server/auth';
+import { apiError } from '$lib/server/api-error';
 
 const clean = (s: unknown) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
 
@@ -82,8 +83,8 @@ export const POST: RequestHandler = locked('layout', async ({ request, locals })
 		case 'rename': {
 			const i = index(body.id);
 			const name = clean(body.name);
-			if (i < 0) return json({ error: 'Unknown dashboard' }, { status: 404 });
-			if (!name) return json({ error: 'Enter a name' }, { status: 400 });
+			if (i < 0) return apiError(404, 'errors.unknownDashboard');
+			if (!name) return apiError(400, 'errors.enterName');
 			list[i] = { ...list[i], name: uniqueName(list, name, body.id) };
 			result = { name: list[i].name };
 			break;
@@ -91,15 +92,15 @@ export const POST: RequestHandler = locked('layout', async ({ request, locals })
 		case 'move': {
 			const i = index(body.id);
 			const j = i + (body.dir === -1 ? -1 : 1);
-			if (i < 0) return json({ error: 'Unknown dashboard' }, { status: 404 });
+			if (i < 0) return apiError(404, 'errors.unknownDashboard');
 			if (j < 0 || j >= list.length) return json({ ok: true, dashboards: list });
 			[list[i], list[j]] = [list[j], list[i]];
 			break;
 		}
 		case 'delete': {
 			const i = index(body.id);
-			if (i < 0) return json({ error: 'Unknown dashboard' }, { status: 404 });
-			if (list.length <= 1) return json({ error: 'The last dashboard cannot be deleted' }, { status: 400 });
+			if (i < 0) return apiError(404, 'errors.unknownDashboard');
+			if (list.length <= 1) return apiError(400, 'errors.lastDashboard');
 			if (body.id === MAIN_DASHBOARD) {
 				// "main" owns `layouts`: the next dashboard takes its place and its id.
 				const heir = list[i + 1] ?? list[i - 1];
@@ -120,11 +121,11 @@ export const POST: RequestHandler = locked('layout', async ({ request, locals })
 			const fromBp = String(body.fromBreakpoint || ''), toBp = String(body.toBreakpoint || fromBp);
 			const copy = body.copy === true;
 			const ids = new Set<string>(Array.isArray(body.itemIds) ? body.itemIds.map(String) : []);
-			if (index(from) < 0 || index(to) < 0) return json({ error: 'Unknown dashboard' }, { status: 404 });
-			if (!copy && from === to && fromBp === toBp) return json({ error: 'Already there' }, { status: 400 });
+			if (index(from) < 0 || index(to) < 0) return apiError(404, 'errors.unknownDashboard');
+			if (!copy && from === to && fromBp === toBp) return apiError(400, 'errors.alreadyThere');
 			const src = dashboardLayouts(data, from)[fromBp];
 			const dst = dashboardLayouts(data, to)[toBp];
-			if (!src || !dst || ids.size === 0) return json({ error: 'Nothing to transfer' }, { status: 400 });
+			if (!src || !dst || ids.size === 0) return apiError(400, 'errors.nothingToTransfer');
 			let picked: DashboardItem[] = [];
 			if (copy) collect(src.items, ids, picked);
 			else src.items = extract(src.items, ids, picked);
@@ -141,10 +142,10 @@ export const POST: RequestHandler = locked('layout', async ({ request, locals })
 		case 'layoutSettings': {
 			// Grid and navbar settings of one dashboard, at one breakpoint or all of them.
 			const i = index(body.id);
-			if (i < 0) return json({ error: 'Unknown dashboard' }, { status: 404 });
+			if (i < 0) return apiError(404, 'errors.unknownDashboard');
 			const layouts = dashboardLayouts(data, body.id);
 			const targets = body.allBreakpoints ? Object.keys(layouts) : [String(body.breakpoint || '')];
-			if (!targets.every((bp) => layouts[bp])) return json({ error: 'Unknown breakpoint' }, { status: 400 });
+			if (!targets.every((bp) => layouts[bp])) return apiError(400, 'errors.unknownBreakpoint');
 			const g = body.grid || {}, n = body.navbar || {};
 			for (const bp of targets) {
 				const l = layouts[bp];
@@ -161,7 +162,7 @@ export const POST: RequestHandler = locked('layout', async ({ request, locals })
 			break;
 		}
 		default:
-			return json({ error: 'Unknown action' }, { status: 400 });
+			return apiError(400, 'errors.unknownAction');
 	}
 
 	data.dashboards = list;

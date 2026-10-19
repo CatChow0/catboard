@@ -2,6 +2,7 @@
 	// Markdown notepad. Edit in place (no need for dashboard edit mode);
 	// checklist boxes can be ticked directly in the rendered note. The note is
 	// part of the dashboard: users who may not change it get it read-only.
+	import { t } from '$lib/i18n';
 	import type { NotesConfig } from '$lib/types';
 	import { updateDashboardItem, currentUser } from '$lib/stores/dashboard';
 	import { renderMarkdown, toggleTask } from '$lib/utils/markdown';
@@ -68,10 +69,10 @@
 		<div class="nt-head">
 			{#if config?.title}<span class="nt-title">{config.title}</span>{/if}
 			{#if editing}
-				<span class="nt-hint">Markdown · Ctrl+Enter to save · Esc to cancel</span>
-				<button class="nt-btn primary" onclick={finishEdit} onpointerdown={(e) => e.stopPropagation()}>Save</button>
+				<span class="nt-hint">{$t('notes.hint')}</span>
+				<button class="nt-btn primary" onclick={finishEdit} onpointerdown={(e) => e.stopPropagation()}>{$t('common.save')}</button>
 			{:else if canEdit}
-				<button class="nt-btn" onclick={startEdit} onpointerdown={(e) => e.stopPropagation()} aria-label="Edit note">Edit</button>
+				<button class="nt-btn" onclick={startEdit} onpointerdown={(e) => e.stopPropagation()} aria-label={$t('notes.edit')}>{$t('common.edit')}</button>
 			{/if}
 		</div>
 		{#if editing}
@@ -89,12 +90,12 @@
 				{@html html}
 			</div>
 		{:else if canEdit}
-			<button class="nt-empty" onclick={startEdit} onpointerdown={(e) => e.stopPropagation()}>Empty note. Click to write something.</button>
+			<button class="nt-empty" onclick={startEdit} onpointerdown={(e) => e.stopPropagation()}>{$t('notes.empty')}</button>
 		{:else}
-			<p class="nt-readonly">Empty note.</p>
+			<p class="nt-readonly">{$t('notes.emptyReadonly')}</p>
 		{/if}
 	</div>
-	<EditButtons label="note" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblNote')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

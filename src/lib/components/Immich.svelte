@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Immich: photo / video counts and storage, and a strip of the latest
 	// photos (thumbnails proxied by CatBoard) linking to Immich. Every 5 min.
+	import { t } from '$lib/i18n';
 	import type { ImmichConfig, ImmichData } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -31,19 +32,19 @@
 			<span class="im-icon"><Glyph name="photos" size={16} /></span>
 			{#if data}
 				<a class="im-title" href={data.url} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()}>Immich</a>
-				{#if data.stats.scope === 'user'}<span class="im-sub">my library</span>{/if}
+				{#if data.stats.scope === 'user'}<span class="im-sub">{$t('immich.mine')}</span>{/if}
 			{:else}
 				<span class="im-title">Immich</span>
 			{/if}
 		</div>
 		{#if !data}
-			<p class="im-status" class:err={!!poll.error}>{poll.error || 'Loading…'}</p>
+			<p class="im-status" class:err={!!poll.error}>{poll.error || $t('common.loading')}</p>
 		{:else}
 			{#if showStats}
 				<div class="im-stats">
-					<div><b>{n(data.stats.photos)}</b><span>photos</span></div>
-					<div><b>{n(data.stats.videos)}</b><span>videos</span></div>
-					{#if data.stats.usage !== null}<div><b>{bytes(data.stats.usage)}</b><span>storage</span></div>{/if}
+					<div><b>{n(data.stats.photos)}</b><span>{$t('immich.photos')}</span></div>
+					<div><b>{n(data.stats.videos)}</b><span>{$t('immich.videos')}</span></div>
+					{#if data.stats.usage !== null}<div><b>{bytes(data.stats.usage)}</b><span>{$t('immich.storage')}</span></div>{/if}
 				</div>
 			{/if}
 			{#if photos > 0}
@@ -53,14 +54,14 @@
 							<img src="/api/integrations/immich/thumb/{p.id}" alt="" loading="lazy" draggable="false" />
 						</a>
 					{:else}
-						<p class="im-status">No photo yet</p>
+						<p class="im-status">{$t('immich.noPhoto')}</p>
 					{/each}
 				</div>
 			{/if}
 			{#if poll.error}<p class="im-status err small">{poll.error}</p>{/if}
 		{/if}
 	</div>
-	<EditButtons label="Immich widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblImmich')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

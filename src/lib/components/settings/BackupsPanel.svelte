@@ -2,16 +2,17 @@
 	// Settings > Export > Backups (admin): the automatic config backups
 	// (daily, before an import or a restore) and manual ones; download one, or
 	// put it back (the current config is backed up first).
+	import { t, errorText, intlLocale, type Key } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { currentUser, refreshActiveDashboard } from '$lib/stores/dashboard';
 
 	type Backup = { id: string; reason: 'daily' | 'before-import' | 'before-restore' | 'manual'; date: string; files: string[]; size: number };
 
-	const REASONS: Record<Backup['reason'], string> = {
-		daily: 'Daily',
-		'before-import': 'Before import',
-		'before-restore': 'Before restore',
-		manual: 'Manual'
+	const REASONS: Record<Backup['reason'], Key> = {
+		daily: 'backups.daily',
+		'before-import': 'backups.beforeImport',
+		'before-restore': 'backups.beforeRestore',
+		manual: 'backups.manual'
 	};
 
 	let backups = $state<Backup[] | null>(null);
@@ -26,7 +27,7 @@
 		try {
 			const res = await fetch('/api/backups');
 			const body = await res.json();
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			backups = body.backups;
 			error = '';
 		} catch (e) {
@@ -39,7 +40,7 @@
 		message = '';
 		const res = await fetch('/api/backups', { method: 'POST' }).catch(() => null);
 		busy = false;
-		message = res?.ok ? 'Backup made' : 'Backup failed';
+		message = res?.ok ? $t('backups.made') : $t('backups.failed');
 		await load();
 	}
 
@@ -51,13 +52,13 @@
 		const body = await res?.json().catch(() => null);
 		busy = false;
 		if (res?.ok) {
-			message = `Restored ${body.restored.length} files. The previous config was backed up.`;
+			message = $t('backups.restored', { count: body.restored.length });
 			await refreshActiveDashboard().catch(() => {});
-		} else message = body?.error || 'Restore failed';
+		} else message = body ? errorText(body, res?.status) : $t('backups.restoreFailed');
 		await load();
 	}
 
-	const when = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+	const when = (iso: string) => new Date(iso).toLocaleString(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' });
 	const kb = (n: number) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB`);
 
 	onMount(() => {
@@ -68,30 +69,30 @@
 {#if isAdmin}
 	<div class="settings-section backups">
 		<div class="section-header">
-			<h3>Backups</h3>
-			<button class="btn-reset" onclick={backupNow} disabled={busy}>Back up now</button>
+			<h3>{$t('backups.title')}</h3>
+			<button class="btn-reset" onclick={backupNow} disabled={busy}>{$t('backups.now')}</button>
 		</div>
-		<p class="section-hint">A copy of the configuration (services, layout, integrations, users, settings) is made each day before the first change, and before every import or restore. The 14 latest daily backups are kept.</p>
+		<p class="section-hint">{$t('backups.hint')}</p>
 		{#if message}<p class="bk-msg">{message}</p>{/if}
 		{#if error}
 			<p class="bk-msg err">{error}</p>
 		{:else if !backups}
-			<p class="section-hint">Loading…</p>
+			<p class="section-hint">{$t('common.loading')}</p>
 		{:else if backups.length === 0}
-			<p class="section-hint">No backup yet: the first one is made at the next change.</p>
+			<p class="section-hint">{$t('backups.none')}</p>
 		{:else}
 			<ul class="bk-list">
 				{#each backups as b (b.id)}
 					<li>
 						<span class="bk-date">{when(b.date)}</span>
-						<span class="bk-tag" class:auto={b.reason === 'daily'}>{REASONS[b.reason]}</span>
-						<span class="bk-size" title={b.files.join(', ')}>{b.files.length} file{b.files.length === 1 ? '' : 's'} · {kb(b.size)}</span>
-						<a class="btn-reset" href="/api/backups/{encodeURIComponent(b.id)}" download>Download</a>
+						<span class="bk-tag" class:auto={b.reason === 'daily'}>{$t(REASONS[b.reason])}</span>
+						<span class="bk-size" title={b.files.join(', ')}>{$t('backups.files', { count: b.files.length })} · {kb(b.size)}</span>
+						<a class="btn-reset" href="/api/backups/{encodeURIComponent(b.id)}" download>{$t('backups.download')}</a>
 						{#if confirming === b.id}
-							<button class="btn-reset danger" onclick={() => restore(b.id)} disabled={busy}>Confirm restore</button>
-							<button class="btn-reset" onclick={() => (confirming = null)}>Cancel</button>
+							<button class="btn-reset danger" onclick={() => restore(b.id)} disabled={busy}>{$t('backups.confirm')}</button>
+							<button class="btn-reset" onclick={() => (confirming = null)}>{$t('common.cancel')}</button>
 						{:else}
-							<button class="btn-reset" onclick={() => (confirming = b.id)} disabled={busy}>Restore</button>
+							<button class="btn-reset" onclick={() => (confirming = b.id)} disabled={busy}>{$t('backups.restore')}</button>
 						{/if}
 					</li>
 				{/each}

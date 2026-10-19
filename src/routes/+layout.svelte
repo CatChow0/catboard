@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { settings } from '$lib/stores/dashboard';
 	import { effectiveTheme, appearanceStyle, fontHref, isFontName, MAX_CUSTOM_CSS } from '$lib/themes';
+	import { locale, resolveLocale, setLocale } from '$lib/i18n';
 	import '$lib/components/theme.css';
 
 	let { children } = $props();
@@ -16,6 +17,14 @@
 	});
 
 	let theme = $derived(effectiveTheme($settings, prefersDark));
+
+	// Interface language: the user's choice, else the browser's.
+	$effect(() => {
+		setLocale(resolveLocale($settings.language));
+	});
+	$effect(() => {
+		document.documentElement.lang = $locale;
+	});
 
 	let bgStyle = $derived(
 		$settings.background?.type === 'image' && $settings.background.value

@@ -4,6 +4,7 @@ import { locked } from '$lib/server/locked';
 import { getLayout, setLayout, dashboardList, dashboardLayouts, setDashboardLayouts, resolveDashboard, normalizeDashboards, MAIN_DASHBOARD } from '$lib/server/config';
 import type { Layout } from '$lib/types';
 import { requireEditor } from '$lib/server/auth';
+import { apiError } from '$lib/server/api-error';
 
 /**
  * GET ?dashboard=<id> — the grid config, the dashboard list and the requested
@@ -21,13 +22,13 @@ export const PUT: RequestHandler = locked('layout', async ({ request, url, local
 	const denied = await requireEditor(locals);
 	if (denied) return denied;
 	const body = (await request.json()) as Partial<Layout>;
-	if (!body || typeof body.layouts !== 'object' || !body.layouts) return json({ error: 'layouts missing' }, { status: 400 });
+	if (!body || typeof body.layouts !== 'object' || !body.layouts) return apiError(400, 'errors.layoutsMissing');
 	const data = await getLayout();
 	// The body comes from a GET of one dashboard and carries its id: trust it over
 	// the URL, so a save that finishes after the user switched still lands right.
 	const requested = (typeof body.dashboard === 'string' && body.dashboard) || url.searchParams.get('dashboard') || MAIN_DASHBOARD;
 	// Never write into another dashboard: a stale tab may still show a deleted one.
-	if (!dashboardList(data).some((d) => d.id === requested)) return json({ error: 'This dashboard no longer exists' }, { status: 409 });
+	if (!dashboardList(data).some((d) => d.id === requested)) return apiError(409, 'errors.dashboardGone');
 	if (body.grid) data.grid = body.grid;
 	setDashboardLayouts(data, requested, body.layouts);
 	normalizeDashboards(data);

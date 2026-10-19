@@ -4,6 +4,7 @@ import { getIntegrations } from '$lib/server/config';
 import { normalizeUrl } from '$lib/server/arr';
 import { httpFetch, isOn } from '$lib/server/http';
 import type { ProxmoxCluster, ProxmoxData, ProxmoxGuest, ProxmoxNode } from '$lib/types';
+import { AppError } from '$lib/server/api-error';
 
 const TIMEOUT_MS = 10_000;
 
@@ -26,9 +27,9 @@ export async function pve<T>(conn: PveConn, path: string, init: RequestInit = {}
 		headers: { Accept: 'application/json', Authorization: conn.auth, ...(init.headers as Record<string, string>) },
 		signal: AbortSignal.timeout(TIMEOUT_MS)
 	});
-	if (res.status === 401) throw new Error('Proxmox refused the API token');
-	if (res.status === 403) throw new Error('This API token lacks the permission (see Settings > Integrations > Proxmox)');
-	if (!res.ok) throw new Error(`Proxmox answered HTTP ${res.status}: ${res.statusText}`);
+	if (res.status === 401) throw new AppError('errors.proxmoxAuth');
+	if (res.status === 403) throw new AppError('errors.proxmoxPerm');
+	if (!res.ok) throw new AppError('errors.answeredHttp', { name: 'Proxmox', status: res.status });
 	return ((await res.json()) as { data: T }).data;
 }
 

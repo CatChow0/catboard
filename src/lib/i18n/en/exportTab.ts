@@ -1,0 +1,25 @@
+import type { Entry } from '..';
+
+export const exportTab = {
+	'export.title': 'Export',
+	'export.desc': 'Download a complete backup of your dashboard configuration, including services, layout, settings, and integrations.',
+	'export.exporting': 'Exporting...',
+	'export.button': 'Export Dashboard',
+	'export.import': 'Import',
+	'export.select': 'Select export file',
+	'export.from': 'Export from {date}',
+	'export.loaded': 'Export file loaded',
+	'export.services': 'Services',
+	'export.servicesCount': { one: '{count} service', other: '{count} services' },
+	'export.layout': 'Layout',
+	'export.layoutSummary': '{dashboards}, {items}',
+	'export.dashboards': { one: '{count} dashboard', other: '{count} dashboards' },
+	'export.items': { one: '{count} item', other: '{count} items' },
+	'export.settings': 'Settings',
+	'export.settingsDesc': 'Theme & preferences',
+	'export.integrations': 'Integrations',
+	'export.integrationsDesc': 'External connections',
+	'export.warning': 'Importing replaces the selected sections. The current configuration is backed up first (see Backups above).',
+	'export.importing': 'Importing...',
+	'export.importSelected': 'Import Selected',
+} satisfies Record<string, Entry>;

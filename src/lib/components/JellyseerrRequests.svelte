@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Jellyseerr / Overseerr media requests. Admins can approve or decline
 	// pending requests from the tile.
+	import { t, errorText, type Key } from '$lib/i18n';
 	import type { JellyseerrData, JellyseerrRequest, JellyseerrRequestsConfig } from '$lib/types';
 	import { currentUser } from '$lib/stores/dashboard';
 	import EditButtons from './widget/EditButtons.svelte';
@@ -36,7 +37,7 @@
 				const res = await fetch(`/api/integrations/jellyseerr/requests?${q}`);
 				const body = await res.json();
 				if (stopped) return;
-				if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+				if (!res.ok) throw new Error(errorText(body, res.status));
 				data = body;
 				error = '';
 			} catch (e) {
@@ -60,7 +61,7 @@
 				body: JSON.stringify({ action })
 			});
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			reload++;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -71,15 +72,15 @@
 		}
 	}
 
-	const statusLabel: Record<string, string> = {
-		pending: 'Pending', approved: 'Approved', declined: 'Declined', processing: 'Processing', available: 'Available', failed: 'Failed'
+	const statusLabel: Record<string, Key> = {
+		pending: 'requests.pending', approved: 'requests.approved', declined: 'requests.declined', processing: 'requests.processing', available: 'requests.available', failed: 'requests.failed'
 	};
 
 	function ago(iso: string): string {
 		const d = (Date.now() - new Date(iso).getTime()) / 1000;
-		if (d < 3600) return `${Math.max(1, Math.round(d / 60))} min ago`;
-		if (d < 86400) return `${Math.round(d / 3600)} h ago`;
-		return `${Math.round(d / 86400)} d ago`;
+		if (d < 3600) return $t('time.minAgo', { n: Math.max(1, Math.round(d / 60)) });
+		if (d < 86400) return $t('time.hAgo', { n: Math.round(d / 3600) });
+		return $t('time.dAgo', { n: Math.round(d / 86400) });
 	}
 
 	let showEdit = $state(false);
@@ -91,9 +92,9 @@
 			<span class="js-title">{filter === 'pending' ? 'Pending requests' : 'Requests'}</span>
 			{#if data}
 				<span class="js-counts">
-					<span class="c pending" title="Pending">{data.counts.pending}</span>
-					<span class="c processing" title="Processing">{data.counts.processing}</span>
-					<span class="c available" title="Available">{data.counts.available}</span>
+					<span class="c pending" title={$t('requests.pending')}>{data.counts.pending}</span>
+					<span class="c processing" title={$t('requests.processing')}>{data.counts.processing}</span>
+					<span class="c available" title={$t('requests.available')}>{data.counts.available}</span>
 				</span>
 			{/if}
 		</div>
@@ -101,7 +102,7 @@
 		{#if error && !data}
 			<p class="js-msg js-error">{error}</p>
 		{:else if !data}
-			<p class="js-msg">Loading…</p>
+			<p class="js-msg">{$t('common.loading')}</p>
 		{:else if data.requests.length === 0}
 			<p class="js-msg">{filter === 'pending' ? 'No pending requests' : 'No requests yet'}</p>
 		{:else if !compact}
@@ -123,22 +124,22 @@
 						</div>
 						{#if r.status === 'pending' && isAdmin}
 							<div class="js-actions">
-								<button class="js-btn approve" disabled={busy.has(r.id)} onclick={() => act(r, 'approve')} title="Approve" aria-label="Approve {r.title}">
+								<button class="js-btn approve" disabled={busy.has(r.id)} onclick={() => act(r, 'approve')} title={$t('requests.approve')} aria-label={$t('requests.approveNamed', { title: r.title })}>
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" /></svg>
 								</button>
-								<button class="js-btn decline" disabled={busy.has(r.id)} onclick={() => act(r, 'decline')} title="Decline" aria-label="Decline {r.title}">
+								<button class="js-btn decline" disabled={busy.has(r.id)} onclick={() => act(r, 'decline')} title={$t('requests.decline')} aria-label={$t('requests.declineNamed', { title: r.title })}>
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
 								</button>
 							</div>
 						{:else}
-							<span class="js-status {r.status}">{statusLabel[r.status]}</span>
+							<span class="js-status {r.status}">{statusLabel[r.status] ? $t(statusLabel[r.status]) : r.status}</span>
 						{/if}
 					</li>
 				{/each}
 			</ul>
 		{/if}
 	</div>
-	<EditButtons label="requests widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblRequests')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

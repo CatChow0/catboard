@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, errorText, intlLocale, type Key } from '$lib/i18n';
 	import { whileVisible } from '$lib/utils/poll';
 	import type { ArrReleasesConfig, ArrCalendarEntry } from '$lib/types';
 	import { isEditing, settings } from '$lib/stores/dashboard';
@@ -47,7 +48,7 @@
 			const res = await fetch(`/api/integrations/arr/releases?${params}`);
 			if (!res.ok) {
 				const err = await res.json().catch(() => ({}));
-				error = err.error || `HTTP ${res.status}`;
+				error = errorText(err, res.status);
 				return;
 			}
 			const data = await res.json();
@@ -56,7 +57,7 @@
 				? data.errors.map((e: { source: string; message: string }) => `${e.source}: ${e.message}`).join(', ')
 				: null;
 		} catch {
-			error = 'Failed to fetch';
+			error = $t('arr.failed');
 		} finally {
 			loading = false;
 		}
@@ -73,10 +74,10 @@
 
 	onMount(() => whileVisible(fetchData, 60000));
 
-	const SOURCE_META: Record<ArrCalendarEntry['type'], { label: string; color: string }> = {
-		radarr: { label: 'Movie', color: '#FF9800' },
-		sonarr: { label: 'Episode', color: '#2196F3' },
-		lidarr: { label: 'Album', color: '#4CAF50' }
+	const SOURCE_META: Record<ArrCalendarEntry['type'], { label: Key; color: string }> = {
+		radarr: { label: 'arr.movie', color: '#FF9800' },
+		sonarr: { label: 'arr.episode', color: '#2196F3' },
+		lidarr: { label: 'arr.album', color: '#4CAF50' }
 	};
 
 	function relativeDate(date: string): string {
@@ -85,10 +86,10 @@
 		const now = new Date();
 		const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 		const diff = Math.round((todayMidnight.getTime() - then.getTime()) / 86_400_000);
-		if (diff <= 0) return 'Today';
-		if (diff === 1) return 'Yesterday';
-		if (diff < 7) return `${diff} days ago`;
-		return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+		if (diff <= 0) return $t('time.today');
+		if (diff === 1) return $t('time.yesterday');
+		if (diff < 7) return $t('time.daysAgo', { n: diff });
+		return then.toLocaleDateString(intlLocale(), { month: 'short', day: 'numeric' });
 	}
 
 	function truncate(text: string | undefined, maxLen: number): string {
@@ -104,7 +105,7 @@
 				<rect x="2" y="4" width="20" height="16" rx="2" />
 				<path d="M2 8h20M7 4v4M17 4v4" />
 			</svg>
-			<span>No sources selected</span>
+			<span>{$t('arr.noSources')}</span>
 		</div>
 	{:else if loading && entries.length === 0}
 		<div class="releases-placeholder">
@@ -112,7 +113,7 @@
 				<rect x="2" y="4" width="20" height="16" rx="2" />
 				<path d="M2 8h20M7 4v4M17 4v4" />
 			</svg>
-			<span>Loading...</span>
+			<span>{$t('common.loading')}</span>
 		</div>
 	{:else if error && entries.length === 0}
 		<div class="releases-placeholder">
@@ -128,7 +129,7 @@
 				<rect x="2" y="4" width="20" height="16" rx="2" />
 				<path d="M2 8h20M7 4v4M17 4v4" />
 			</svg>
-			<span>No releases in the last {days} days</span>
+			<span>{$t('arr.none', { days })}</span>
 		</div>
 	{:else}
 		<div class="releases-list">
@@ -137,15 +138,15 @@
 					<div class="releases-gradient"></div>
 					<div class="releases-content">
 						<div class="releases-header">
-							<span class="releases-badge" style:background={SOURCE_META[entry.type].color}>{SOURCE_META[entry.type].label}</span>
+							<span class="releases-badge" style:background={SOURCE_META[entry.type].color}>{$t(SOURCE_META[entry.type].label)}</span>
 							<span class="releases-title">{truncate(entry.title, 40)}</span>
-							<span class="releases-status" class:downloaded={entry.hasFile} title={entry.hasFile ? 'Downloaded' : 'Missing'}></span>
+							<span class="releases-status" class:downloaded={entry.hasFile} title={entry.hasFile ? $t('arr.downloaded') : $t('arr.missing')}></span>
 						</div>
 						{#if !isCompact}
 							{#if entry.subtitle}
 								<p class="releases-subtitle">{truncate(entry.subtitle, 80)}</p>
 							{/if}
-							<span class="releases-date">Released {relativeDate(entry.date)} · {entry.hasFile ? 'Downloaded' : 'Missing'}</span>
+							<span class="releases-date">{$t('arr.released', { when: relativeDate(entry.date), state: entry.hasFile ? $t('arr.downloaded') : $t('arr.missing') })}</span>
 						{/if}
 					</div>
 				</div>
@@ -153,12 +154,12 @@
 		</div>
 	{/if}
 	{#if $isEditing}
-		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title="Remove Arr Releases">
+		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title={$t('arr.remove')}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>
 		</button>
-		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title="Edit releases widget">
+		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title={$t('arr.edit')}>
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
 			</svg>

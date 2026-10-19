@@ -1,5 +1,6 @@
 <script lang="ts">
 	// Navbar time and date. Same options and formatting as the standard Clock widget.
+	import { intlLocale } from '$lib/i18n';
 	import type { ClockConfig } from '$lib/types';
 
 	let { colSpan = 2, config }: { colSpan?: number; config?: ClockConfig } = $props();
@@ -31,9 +32,7 @@
 	const date = $derived.by(() => {
 		if (!showDate) return '';
 		if (showFullDate) {
-			const day = now.toLocaleString('default', { weekday: 'short' });
-			const month = now.toLocaleString('default', { month: 'short' });
-			return `${day}, ${month} ${now.getDate()}`;
+			return now.toLocaleDateString(intlLocale(), { weekday: 'short', month: 'short', day: 'numeric' });
 		}
 		const dd = String(now.getDate()).padStart(2, '0');
 		const mo = String(now.getMonth() + 1).padStart(2, '0');
@@ -41,7 +40,7 @@
 	});
 </script>
 
-<div class="nb-clock" class:stacked title={now.toLocaleString()}>
+<div class="nb-clock" class:stacked title={now.toLocaleString(intlLocale())}>
 	<span class="nb-time">{time}</span>
 	{#if date}
 		<span class="nb-date">{date}</span>

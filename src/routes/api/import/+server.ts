@@ -2,10 +2,11 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { setServices, setLayout, setSettingsForUser, setIntegrations, mutate, configDir } from '$lib/server/config';
 import { createBackup, pruneBackups } from '$lib/server/backup';
+import { apiError } from '$lib/server/api-error';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.isAuthenticated || !locals.username || locals.role !== 'admin') {
-		return json({ error: 'Unauthorized' }, { status: 401 });
+		return apiError(401, 'errors.unauthorized');
 	}
 
 	const body = await request.json();

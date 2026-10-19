@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { CollapsibleGroupItem, Service, DashboardItem as DashboardItemType } from '$lib/stores/dashboard';
 	import type { GroupScroll } from '$lib/types';
 	import { updateDashboardItem, isEditing } from '$lib/stores/dashboard';
@@ -49,18 +50,18 @@
 		</svg>
 		<span class="group-title">{item.title}</span>
 		{#if item.config?.scroll && !collapsed}
-			<span class="scroll-hint" title={item.config.scroll === 'vertical' ? 'Scrolls vertically' : 'Scrolls horizontally'}>
+			<span class="scroll-hint" title={item.config.scroll === 'vertical' ? $t('group.scrollsV') : $t('group.scrollsH')}>
 				{item.config.scroll === 'vertical' ? '↕' : '↔'}
 			</span>
 		{/if}
 	</div>
 	{#if $isEditing}
-		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); onremove?.(item.id); }} title="Remove group">
+		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); onremove?.(item.id); }} title={$t('group.remove')}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>
 		</button>
-		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); openEditModal(); }} title="Edit group">
+		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); openEditModal(); }} title={$t('group.edit')}>
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -70,28 +71,28 @@
 	{#if showEditModal}
 		<div class="edit-overlay" role="presentation" onclick={() => (showEditModal = false)} onkeydown={(e) => e.key === 'Escape' && (showEditModal = false)}></div>
 		<div class="edit-modal">
-			<h3>Edit Group</h3>
+			<h3>{$t('group.editTitle')}</h3>
 			<div class="field">
-				<label for="cg-title-{item.id}">Title</label>
-				<input id="cg-title-{item.id}" type="text" bind:value={editTitle} placeholder="Group name" onkeydown={(e) => e.key === 'Enter' && handleSaveEdit()} />
+				<label for="cg-title-{item.id}">{$t('group.title')}</label>
+				<input id="cg-title-{item.id}" type="text" bind:value={editTitle} placeholder={$t('group.namePlaceholder')} onkeydown={(e) => e.key === 'Enter' && handleSaveEdit()} />
 			</div>
 			<div class="field">
-				<label for="cg-scroll-{item.id}">Content</label>
+				<label for="cg-scroll-{item.id}">{$t('group.content')}</label>
 				<select id="cg-scroll-{item.id}" bind:value={editScroll}>
-					<option value="">Fixed size (fits the group)</option>
-					<option value="vertical">Scroll vertically (more rows)</option>
-					<option value="horizontal">Scroll horizontally (more columns)</option>
+					<option value="">{$t('group.fixed')}</option>
+					<option value="vertical">{$t('group.scrollV')}</option>
+					<option value="horizontal">{$t('group.scrollH')}</option>
 				</select>
 				{#if editScroll}
-					<p class="field-hint">Cells keep their size; drop tiles past the edge to extend the group's content. Scroll with the wheel or by swiping.</p>
+					<p class="field-hint">{$t('group.scrollHint')}</p>
 				{/if}
 			</div>
 			<div class="field">
-				<label for="cg-color-{item.id}">Outline color</label>
+				<label for="cg-color-{item.id}">{$t('group.outline')}</label>
 				<div class="color-row">
 					<input id="cg-color-{item.id}" type="color" bind:value={editOutlineColor} />
 					{#if editOutlineColor}
-						<button class="btn-clear-color" onclick={() => (editOutlineColor = '')} title="Clear color" aria-label="Clear color">
+						<button class="btn-clear-color" onclick={() => (editOutlineColor = '')} title={$t('group.clearColor')} aria-label={$t('group.clearColor')}>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<path d="M18 6L6 18M6 6l12 12" />
 							</svg>
@@ -100,8 +101,8 @@
 				</div>
 			</div>
 			<div class="modal-actions">
-				<button class="btn-cancel" onclick={() => (showEditModal = false)}>Cancel</button>
-				<button class="btn-save" onclick={handleSaveEdit}>Save</button>
+				<button class="btn-cancel" onclick={() => (showEditModal = false)}>{$t('common.cancel')}</button>
+				<button class="btn-save" onclick={handleSaveEdit}>{$t('common.save')}</button>
 			</div>
 		</div>
 	{/if}

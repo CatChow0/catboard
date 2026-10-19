@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { CalendarConfig } from '$lib/types';
 	import ArrSources from './ArrSources.svelte';
 
@@ -6,4 +7,4 @@
 </script>
 
 <ArrSources bind:sources={config.integrations} />
-<p class="hint">Upcoming releases from the enabled sources are marked on the calendar days.</p>
+<p class="hint">{$t('ws.upcomingReleasesFromTheEnabledSources')}</p>

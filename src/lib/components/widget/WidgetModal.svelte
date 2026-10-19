@@ -2,9 +2,10 @@
 	// Settings modal shared by widgets: header, body (snippet), Cancel / Save.
 	// The body is a .cb-form: use the shared .field, .hint, .toggle-switch,
 	// .seg and .chips classes (theme.css). On phones it is a bottom sheet.
+	import { t } from '$lib/i18n';
 	import type { Snippet } from 'svelte';
 
-	let { title, onclose, onsave, saveDisabled = false, saveLabel = 'Save', children }: {
+	let { title, onclose, onsave, saveDisabled = false, saveLabel, children }: {
 		title: string;
 		onclose: () => void;
 		onsave: () => void;
@@ -24,14 +25,14 @@
 	<div class="wm modal" role="presentation" onclick={(e) => e.stopPropagation()}>
 		<div class="wm-header">
 			<h2>{title}</h2>
-			<button class="wm-close" onclick={onclose} aria-label="Close">
+			<button class="wm-close" onclick={onclose} aria-label={$t('common.close')}>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
 			</button>
 		</div>
 		<div class="wm-body cb-form">{@render children()}</div>
 		<div class="wm-actions">
-			<button class="wm-cancel" onclick={onclose}>Cancel</button>
-			<button class="wm-save" onclick={onsave} disabled={saveDisabled}>{saveLabel}</button>
+			<button class="wm-cancel" onclick={onclose}>{$t('common.cancel')}</button>
+			<button class="wm-save" onclick={onsave} disabled={saveDisabled}>{saveLabel ?? $t('common.save')}</button>
 		</div>
 	</div>
 </div>

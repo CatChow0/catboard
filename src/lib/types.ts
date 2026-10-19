@@ -308,6 +308,8 @@ export interface Settings {
 	cardBlur?: number;
 	/** The user's own CSS, added after the theme. */
 	customCss?: string;
+	/** Interface language: 'auto' (browser) when unset. */
+	language?: 'auto' | 'en' | 'fr';
 }
 
 // --- Status ---

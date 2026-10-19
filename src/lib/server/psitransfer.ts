@@ -3,6 +3,7 @@
 // password stays here), forwarded with the tus protocol PsiTransfer speaks.
 import { getIntegrations } from '$lib/server/config';
 import { normalizeUrl } from '$lib/server/arr';
+import { AppError } from '$lib/server/api-error';
 
 export type PsiConn = { base: string; publicBase: string; password: string };
 
@@ -33,8 +34,8 @@ let cached: { base: string; at: number; config: PsiConfig } | null = null;
 export async function psiConfig(conn: PsiConn): Promise<PsiConfig> {
 	if (cached && cached.base === conn.base && Date.now() - cached.at < 600_000) return cached.config;
 	const res = await fetch(`${conn.base}/config.json`, { headers: headers(conn), signal: AbortSignal.timeout(TIMEOUT_MS) });
-	if (res.status === 401 || res.status === 403) throw new Error('PsiTransfer wants an upload password: set it in Settings > Integrations');
-	if (!res.ok) throw new Error(`PsiTransfer answered HTTP ${res.status}`);
+	if (res.status === 401 || res.status === 403) throw new AppError('errors.psiNeedsPassword');
+	if (!res.ok) throw new AppError('errors.answeredHttp', { name: 'PsiTransfer', status: res.status });
 	const body = await res.json();
 	const config: PsiConfig = {
 		retentions: body.retentions ?? {},
@@ -82,7 +83,7 @@ export async function createUpload(
 		signal: AbortSignal.timeout(TIMEOUT_MS)
 	});
 	if (res.status === 413) throw new Error((await res.json().catch(() => null))?.message || 'File too large for PsiTransfer');
-	if (res.status === 401 || res.status === 403) throw new Error('PsiTransfer refused the upload password');
+	if (res.status === 401 || res.status === 403) throw new AppError('errors.psiPassword');
 	const location = res.headers.get('location');
 	if (!res.ok || !location) throw new Error(`PsiTransfer answered HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
 	// The location may be absolute (with PsiTransfer's own host) or relative: keep the path after /files/.
@@ -94,7 +95,7 @@ export async function createUpload(
 
 export async function appendChunk(conn: PsiConn, id: string, offset: number, chunk: ArrayBuffer): Promise<number> {
 	const up = uploads.get(id);
-	if (!up) throw new Error('Unknown or expired upload');
+	if (!up) throw new AppError('errors.unknownUpload');
 	up.at = Date.now();
 	const res = await fetch(`${conn.base}/${up.path}`, {
 		method: 'PATCH',

@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Build list shared by the Jenkins widget and the navbar popover: status
 	// dot (or progress while running), project, number, when and how long.
+	import { t, tx } from '$lib/i18n';
 	import type { JenkinsBuild } from '$lib/types';
 	import { duration, timeAgo } from '$lib/utils/duration';
 
@@ -14,7 +15,7 @@
 		return () => clearInterval(t);
 	});
 
-	const LABELS: Record<string, string> = { SUCCESS: 'Success', FAILURE: 'Failed', UNSTABLE: 'Unstable', ABORTED: 'Aborted', NOT_BUILT: 'Not built' };
+	const resultLabel = (r: string | null) => $tx(`jenkins.label.${(r ?? 'NOT_BUILT').toLowerCase()}`, r ?? 'Not built');
 	const statusOf = (b: JenkinsBuild) => (b.building ? 'running' : (b.result ?? 'NOT_BUILT').toLowerCase());
 	const progress = (b: JenkinsBuild) => (b.estimatedDuration > 0 ? Math.min(99, ((now - b.timestamp) / b.estimatedDuration) * 100) : null);
 	const shortName = (job: string) => job.split('/').pop() ?? job;
@@ -24,13 +25,13 @@
 	{#each builds as b (b.job + '#' + b.number)}
 		{@const p = b.building ? progress(b) : null}
 		<li>
-			<a href={b.url} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()} title="{b.job} #{b.number}: {b.building ? 'running' : LABELS[b.result ?? 'NOT_BUILT']}">
+			<a href={b.url} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()} title="{b.job} #{b.number}: {b.building ? $t('jenkins.running') : resultLabel(b.result)}">
 				<span class="dot {statusOf(b)}"></span>
 				<span class="main">
 					<span class="line">
 						{#if showJob}<span class="job" title={b.job}>{shortName(b.job)}</span>{/if}
 						<span class="num">#{b.number}</span>
-						<span class="when">{b.building ? 'running' : timeAgo(new Date(b.timestamp).toISOString())}</span>
+						<span class="when">{b.building ? $t('jenkins.running') : timeAgo(new Date(b.timestamp).toISOString())}</span>
 					</span>
 					{#if b.building}
 						<span class="bar" class:indeterminate={p === null}><span class="fill" style:width="{p ?? 30}%"></span></span>

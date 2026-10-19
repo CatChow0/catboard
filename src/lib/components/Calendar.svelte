@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, intlLocale } from '$lib/i18n';
 	import type { CalendarConfig, ArrCalendarEntry } from '$lib/types';
 	import { isEditing, arrCalendarData } from '$lib/stores/dashboard';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -16,12 +17,12 @@
 	const month = now.getMonth();
 	const today = now.getDate();
 
-	const monthName = now.toLocaleString('default', { month: 'long' });
-	const dayName = now.toLocaleString('default', { weekday: 'long' });
+	const monthName = now.toLocaleString(intlLocale(), { month: 'long' });
+	const dayName = now.toLocaleString(intlLocale(), { weekday: 'long' });
 
 	const daysInMonth = new Date(year, month + 1, 0).getDate();
 	const firstDayOfWeek = new Date(year, month, 1).getDay();
-	const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+	const weekDays = Array.from({ length: 7 }, (_, i) => new Date(2023, 0, 1 + i).toLocaleString(intlLocale(), { weekday: 'short' }).slice(0, 2));
 
 	const calendarDays: (number | null)[] = [];
 	for (let i = 0; i < firstDayOfWeek; i++) calendarDays.push(null);
@@ -135,7 +136,7 @@
 	}
 
 	function formatTooltip(entries: ArrCalendarEntry[]): string {
-		return entries.slice(0, 5).map(e => `${e.title}${e.subtitle ? ` — ${e.subtitle}` : ''}`).join('\n') + (entries.length > 5 ? `\n+${entries.length - 5} more` : '');
+		return entries.slice(0, 5).map(e => `${e.title}${e.subtitle ? ` — ${e.subtitle}` : ''}`).join('\n') + (entries.length > 5 ? `\n${$t('calendar.more', { n: entries.length - 5 })}` : '');
 	}
 </script>
 
@@ -144,9 +145,9 @@
 		<div class="calendar-header">
 			<span class="calendar-month">{monthName} {year}</span>
 			{#if fetchLoading}
-				<span class="calendar-loading" title="Loading releases...">...</span>
+				<span class="calendar-loading" title={$t('calendar.loading')}>...</span>
 			{:else if fetchError}
-				<span class="calendar-error" title="Failed to load releases">!</span>
+				<span class="calendar-error" title={$t('calendar.failed')}>!</span>
 			{/if}
 		</div>
 		<div class="calendar-grid">
@@ -214,12 +215,12 @@
 		</div>
 	{/if}
 	{#if $isEditing}
-		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title="Remove calendar">
+		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title={$t('calendar.remove')}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>
 		</button>
-		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title="Edit calendar sources">
+		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title={$t('calendar.edit')}>
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
 			</svg>
@@ -228,7 +229,7 @@
 </div>
 
 {#if selectedDay !== null}
-	<div class="day-popup" style={popupStyle} role="dialog" aria-label="Releases of the day">
+	<div class="day-popup" style={popupStyle} role="dialog" aria-label={$t('calendar.dayReleases')}>
 		{#each selectedDayEntries as entry}
 			<div class="day-popup-entry">
 				{#if entry.posterUrl}

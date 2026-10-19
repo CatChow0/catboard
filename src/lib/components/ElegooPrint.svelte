@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Elegoo Centauri Carbon 2 print status. One row: a single line (name,
 	// progress, time left); bigger tiles show the full details.
+	import { t, locale } from '$lib/i18n';
+	import { printLabel } from '$lib/i18n/catalog';
 	import type { ElegooPrintConfig } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -30,29 +32,29 @@
 <div class="pr-tile">
 	<div class="pr-inner">
 		{#if !printerId}
-			<div class="pr-msg"><PrinterIcon size={22} /><span>No printer selected</span></div>
+			<div class="pr-msg"><PrinterIcon size={22} /><span>{$t('printer.noneSelected')}</span></div>
 		{:else if !status}
-			<div class="pr-msg">{poll.error || 'Connecting to the printer…'}</div>
+			<div class="pr-msg">{poll.error || $t('printer.connecting')}</div>
 		{:else if line}
-			<div class="pr-line" title={status.online ? `${status.name}: ${status.stateLabel}` : status.error}>
+			<div class="pr-line" title={status.online ? `${status.name}: ${printLabel($locale, status.stateLabel)}` : status.error}>
 				<span class="pr-icon"><PrinterIcon size={16} /></span>
 				{#if !status.online}
-					<span class="pr-text muted">{status.name} · offline</span>
+					<span class="pr-text muted">{$t('printer.nameOffline', { name: status.name })}</span>
 				{:else if printing}
-					<span class="pr-text">{status.filename || status.stateLabel}</span>
+					<span class="pr-text">{status.filename || printLabel($locale, status.stateLabel)}</span>
 					<div class="pr-bar"><div class="pr-fill {status.state}" style:width="{status.progress}%"></div></div>
 					<span class="pr-pct">{Math.floor(status.progress)}%</span>
 					{#if status.remainingSec > 0}<span class="pr-left">{duration(status.remainingSec)}</span>{/if}
 				{:else}
 					<span class="pr-text">{status.name}</span>
-					<span class="pr-state {status.state}">{status.stateLabel}</span>
+					<span class="pr-state {status.state}">{printLabel($locale, status.stateLabel)}</span>
 				{/if}
 			</div>
 		{:else}
 			<ElegooPrintDetails {status} {printerId} {dense} full showThumbnail={config?.showThumbnail ?? true} showTemps={config?.showTemps ?? true} onchanged={poll.refresh} />
 		{/if}
 	</div>
-	<EditButtons label="print status widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblPrint')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

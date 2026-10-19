@@ -17,6 +17,7 @@ import dgram from 'node:dgram';
 import { randomBytes } from 'node:crypto';
 import { getIntegrations } from '$lib/server/config';
 import type { ElegooPrinter, ElegooPrintState, ElegooStatus } from '$lib/types';
+import { AppError } from '$lib/server/api-error';
 
 const IDLE_MS = Number(process.env.ELEGOO_IDLE_MS) || 5 * 60_000;
 const PING_MS = 10_000;
@@ -59,7 +60,7 @@ export function discover(host: string, timeoutMs = 3000): Promise<Cc2Discovery> 
 			if (err) reject(err);
 			else resolve(value!);
 		};
-		const timer = setTimeout(() => done(new Error('No answer to discovery (UDP 52700): is the printer on and in LAN Only mode?')), timeoutMs);
+		const timer = setTimeout(() => done(new AppError('errors.printerDiscovery')), timeoutMs);
 		sock.on('error', (e) => done(e));
 		sock.on('message', (buf) => {
 			try {
@@ -239,7 +240,7 @@ class Cc2Client {
 		if (!client?.connected || !this.registered) return Promise.reject(new Error(this.error || 'Not connected to the printer'));
 		const id = this.nextId++;
 		return new Promise((resolve, reject) => {
-			const timer = setTimeout(() => { this.pending.delete(id); reject(new Error('The printer did not answer in time')); }, REQUEST_TIMEOUT_MS);
+			const timer = setTimeout(() => { this.pending.delete(id); reject(new AppError('errors.printerTimeout')); }, REQUEST_TIMEOUT_MS);
 			this.pending.set(id, { resolve, reject, timer });
 			client.publish(this.topic(`${this.clientId}/api_request`), JSON.stringify({ id, method, params }));
 		});

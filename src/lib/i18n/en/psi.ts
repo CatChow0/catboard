@@ -1,0 +1,25 @@
+import type { Entry } from '..';
+
+export const psi = {
+	'psi.oneTime': 'one-time download',
+	'psi.expiresMin': 'expires in {n} min',
+	'psi.expiresH': 'expires in {n} h',
+	'psi.expiresD': 'expires in {n} d',
+	'psi.files': { one: '{count} file', other: '{count} files' },
+	'psi.cancelled': 'Cancelled',
+	'psi.region': 'PsiTransfer: drop files to share them',
+	'psi.remove': 'Remove {name}',
+	'psi.keepFor': 'Keep for',
+	'psi.password': 'Password',
+	'psi.optional': ' (optional)',
+	'psi.tooBig': 'A file is larger than PsiTransfer accepts ({max}).',
+	'psi.send': 'Send',
+	'psi.sending': 'Sending {what}…',
+	'psi.progress': '{pct}% · {sent} of {total} · {speed}/s',
+	'psi.shared': '✓ Shared',
+	'psi.choose': 'Choose files to share',
+	'psi.connecting': 'Connecting to PsiTransfer…',
+	'psi.leaveEdit': 'Leave edit mode to share files',
+	'psi.drop': 'Drop files here',
+	'psi.orClick': ' or click to choose',
+} satisfies Record<string, Entry>;

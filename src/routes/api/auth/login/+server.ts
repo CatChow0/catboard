@@ -3,11 +3,13 @@ import { json } from '@sveltejs/kit';
 import { getUsers } from '$lib/server/config';
 import { verifyPassword, createSession, getSessionCookieHeader, isSecureRequest } from '$lib/auth/session';
 import { loginLimiter, addressLimiter } from '$lib/server/rate-limit';
+import { apiError } from '$lib/server/api-error';
+import { translate } from '$lib/i18n';
 
 export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
 	const { username, password } = await request.json();
 	if (!username || !password) {
-		return json({ error: 'Username and password required' }, { status: 400 });
+		return apiError(400, 'errors.credentialsRequired');
 	}
 
 	// Repeated failures slow down guessing, per account and per client address.
@@ -21,7 +23,7 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 	const blocked = [loginLimiter.check(userKey), address ? addressLimiter.check(address) : { blocked: false, retryAfter: 0 }].find((c) => c.blocked);
 	if (blocked) {
 		return json(
-			{ error: `Too many attempts, try again in ${blocked.retryAfter} s`, retryAfter: blocked.retryAfter },
+			{ error: translate('en', 'errors.tooManyAttempts', { seconds: blocked.retryAfter }), code: 'errors.tooManyAttempts', params: { seconds: blocked.retryAfter }, retryAfter: blocked.retryAfter },
 			{ status: 429, headers: { 'Retry-After': String(blocked.retryAfter) } }
 		);
 	}
@@ -34,7 +36,7 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 		if (loginLimiter.check(userKey).blocked || (address && addressLimiter.check(address).blocked)) {
 			console.warn(`[auth] login blocked after repeated failures: user "${userKey}", address ${address || 'unknown'}`);
 		}
-		return json({ error: 'Invalid credentials' }, { status: 401 });
+		return apiError(401, 'errors.invalidCredentials');
 	}
 
 	loginLimiter.reset(userKey);

@@ -2,6 +2,7 @@ import { writable, get, derived } from 'svelte/store';
 import { uid } from '$lib/utils/uid';
 import { findNextAvailablePosition, hasCollision } from '$lib/utils/grid';
 import { initIconCache } from './icons';
+import { tr } from '$lib/i18n';
 import type {
 	Service, GridConfig, DashboardItemBase, ServiceItem, CollapsibleGroupItem,
 	StandardGroupItem, CalendarItem, CalendarConfig, ClockConfig, WeatherConfig, DashboardItem, NavbarItemBase,
@@ -943,7 +944,7 @@ export async function addNavbarItem(type: NavbarItem['type'], colSpan: number, c
 
 	const base = { id: uid(), col: findGap(colSpan), colSpan };
 	const item = (type === 'navbar-search'
-		? { ...base, type, placeholder: (config?.placeholder as string) ?? 'Search services...' }
+		? { ...base, type, placeholder: (config?.placeholder as string) ?? tr('ws.searchServices') }
 		: type === 'navbar-title' || type === 'navbar-ram'
 			? { ...base, type }
 			: { ...base, type, config: type === 'navbar-disk' ? { disks: [], ...config } : config }) as NavbarItem;

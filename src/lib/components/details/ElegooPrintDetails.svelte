@@ -5,6 +5,8 @@
 	// `full` (standard widget) always shows the whole layout — preview area,
 	// progress bar, print info, temperature cards and actions — with empty
 	// values ("--") when nothing is printing, so an idle tile is not blank.
+	import { t, errorText, locale } from '$lib/i18n';
+	import { printLabel } from '$lib/i18n/catalog';
 	import type { ElegooStatus, ElegooTemp } from '$lib/types';
 	import { currentUser } from '$lib/stores/dashboard';
 	import { duration, clockIn } from '$lib/utils/duration';
@@ -38,7 +40,7 @@
 	let actionError = $state('');
 
 	async function act(action: 'pause' | 'resume' | 'stop') {
-		if (action === 'stop' && !confirm(`Stop the print "${status.filename}"? It cannot be resumed.`)) return;
+		if (action === 'stop' && !confirm($t('printer.confirmStop', { file: status.filename }))) return;
 		busy = true;
 		actionError = '';
 		try {
@@ -48,7 +50,7 @@
 				body: JSON.stringify({ printer: printerId, action })
 			});
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			onchanged?.();
 		} catch (e) {
 			actionError = e instanceof Error ? e.message : String(e);
@@ -64,14 +66,14 @@
 	const layers = $derived(hasJob ? `${status.currentLayer || NONE} / ${status.totalLayers || NONE}` : `${NONE} / ${NONE}`);
 
 	// Compact (popover) temperature line.
-	const t = (v: ElegooTemp | null) => (v ? `${Math.round(v.current)}${v.target > 0 ? ` / ${Math.round(v.target)}` : ''} °C` : '–');
+	const deg = (v: ElegooTemp | null) => (v ? `${Math.round(v.current)}${v.target > 0 ? ` / ${Math.round(v.target)}` : ''} °C` : '–');
 	// Temperature cards: current value, and the target (or "off").
 	const cur = (v: number | null | undefined) => (v == null ? NONE : String(Math.round(v)));
 	const heating = (v: ElegooTemp | null) => !!v && v.target > 0 && Math.abs(v.current - v.target) > 2;
 </script>
 
 {#snippet tempCard(label: string, kind: 'nozzle' | 'bed' | 'chamber', value: number | null, target: number | null)}
-	<div class="ep-tcard {kind}" class:on={target != null && target > 0} title="{label}: {cur(value)} °C{kind === 'chamber' ? '' : `, target ${target ? `${Math.round(target)} °C` : 'off'}`}">
+	<div class="ep-tcard {kind}" class:on={target != null && target > 0} title={$t('printer.cardTitle', { label, value: cur(value) }) + (kind === 'chamber' ? '' : $t('printer.cardTarget', { target: target ? `${Math.round(target)} °C` : $t('printer.off') }))}>
 		<span class="ep-ticon" aria-hidden="true">
 			{#if kind === 'nozzle'}
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v5H7z" /><path d="M9 8h6v4l-3 3-3-3z" /><path d="M12 15v2" /><path d="M10 20.5c0-1 2-2.5 2-2.5s2 1.5 2 2.5a2 2 0 0 1-4 0z" /></svg>
@@ -85,7 +87,7 @@
 		<span class="ep-tvalue">{cur(value)}<small>°C</small></span>
 		<span class="ep-ttarget">
 			{#if kind === 'chamber'}
-				{dense ? '' : 'ambient'}
+				{dense ? '' : $t('printer.ambient')}
 			{:else if target != null && target > 0}
 				→ {Math.round(target)}°
 			{:else}
@@ -109,24 +111,24 @@
 			{#if showPreview}
 				<div class="ep-preview" class:empty={!hasThumb}>
 					{#if hasThumb}
-						<img src="/api/integrations/elegoo/thumbnail?printer={encodeURIComponent(printerId)}&k={encodeURIComponent(status.thumbKey)}" alt="Preview of {status.filename}" />
+						<img src="/api/integrations/elegoo/thumbnail?printer={encodeURIComponent(printerId)}&k={encodeURIComponent(status.thumbKey)}" alt={$t('printer.preview', { file: status.filename })} />
 					{:else}
-						<PrinterIcon size={dense ? 20 : 26} label="No model preview" />
+						<PrinterIcon size={dense ? 20 : 26} label={$t('printer.noPreview')} />
 					{/if}
 				</div>
 			{/if}
 			<div class="ep-title">
 				<div class="ep-line">
 					<span class="ep-name" title={status.model}>{status.name}</span>
-					<span class="ep-badge {status.state}">{status.stateLabel}</span>
+					<span class="ep-badge {status.state}">{printLabel($locale, status.stateLabel)}</span>
 				</div>
 				{#if hasJob && status.filename}
 					<span class="ep-file" title={status.filename}>{status.filename}</span>
 				{:else if full}
-					<span class="ep-file muted">No print in progress</span>
+					<span class="ep-file muted">{$t('printer.noPrint')}</span>
 				{/if}
 				{#if full}
-					<span class="ep-speed">Speed <b>{active && status.speedMode ? status.speedMode : NONE}</b></span>
+					<span class="ep-speed">{$t('printer.speed')} <b>{active && status.speedMode ? printLabel($locale, status.speedMode) : NONE}</b></span>
 				{/if}
 			</div>
 		</div>
@@ -134,33 +136,33 @@
 		{#if showProgress}
 			<div class="ep-progress">
 				<span class="ep-pct" class:muted={!hasJob}>{hasJob ? Math.floor(status.progress) : NONE}<small>%</small></span>
-				<div class="ep-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={hasJob ? Math.round(status.progress) : 0} aria-label="Print progress">
+				<div class="ep-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={hasJob ? Math.round(status.progress) : 0} aria-label={$t('printer.progress')}>
 					<div class="ep-fill {status.state}" style:width="{hasJob ? status.progress : 0}%"></div>
 				</div>
 			</div>
 			<dl class="ep-stats">
 				{#if full || active}
-					<div><dt>Remaining</dt><dd class:muted={remaining === NONE}>{remaining}</dd></div>
-					<div><dt>Ends at</dt><dd class:muted={endsAt === '--:--'}>{endsAt}</dd></div>
+					<div><dt>{$t('printer.remaining')}</dt><dd class:muted={remaining === NONE}>{remaining}</dd></div>
+					<div><dt>{$t('printer.endsAt')}</dt><dd class:muted={endsAt === '--:--'}>{endsAt}</dd></div>
 				{/if}
-				<div><dt>Elapsed</dt><dd class:muted={elapsed === NONE}>{elapsed}</dd></div>
-				<div><dt>Layer</dt><dd class:muted={!hasJob}>{layers}</dd></div>
+				<div><dt>{$t('printer.elapsed')}</dt><dd class:muted={elapsed === NONE}>{elapsed}</dd></div>
+				<div><dt>{$t('printer.layer')}</dt><dd class:muted={!hasJob}>{layers}</dd></div>
 			</dl>
 		{/if}
 
 		{#if showTemps}
 			{#if full}
 				<div class="ep-tcards">
-					{@render tempCard('Nozzle', 'nozzle', status.nozzle?.current ?? null, status.nozzle?.target ?? null)}
-					{@render tempCard('Bed', 'bed', status.bed?.current ?? null, status.bed?.target ?? null)}
-					{@render tempCard('Chamber', 'chamber', status.chamber, null)}
+					{@render tempCard($t('printer.nozzle'), 'nozzle', status.nozzle?.current ?? null, status.nozzle?.target ?? null)}
+					{@render tempCard($t('printer.bed'), 'bed', status.bed?.current ?? null, status.bed?.target ?? null)}
+					{@render tempCard($t('printer.chamber'), 'chamber', status.chamber, null)}
 				</div>
 			{:else}
 				<div class="ep-temps">
-					<span title="Nozzle (current / target)" class:hot={heating(status.nozzle)}>Nozzle <b>{t(status.nozzle)}</b></span>
-					<span title="Bed (current / target)" class:hot={heating(status.bed)}>Bed <b>{t(status.bed)}</b></span>
-					{#if status.chamber != null}<span title="Chamber">Chamber <b>{Math.round(status.chamber)} °C</b></span>{/if}
-					{#if status.speedMode && active}<span title="Speed mode">Speed <b>{status.speedMode}</b></span>{/if}
+					<span title={$t('printer.nozzleTitle')} class:hot={heating(status.nozzle)}>{$t('printer.nozzle')} <b>{deg(status.nozzle)}</b></span>
+					<span title={$t('printer.bedTitle')} class:hot={heating(status.bed)}>{$t('printer.bed')} <b>{deg(status.bed)}</b></span>
+					{#if status.chamber != null}<span title={$t('printer.chamber')}>{$t('printer.chamber')} <b>{Math.round(status.chamber)} °C</b></span>{/if}
+					{#if status.speedMode && active}<span title={$t('printer.speedMode')}>{$t('printer.speed')} <b>{printLabel($locale, status.speedMode)}</b></span>{/if}
 				</div>
 			{/if}
 		{/if}
@@ -169,15 +171,15 @@
 			<div class="ep-actions">
 				{#if canResume}
 					<button class="ep-btn" disabled={busy} onclick={() => act('resume')}>
-						<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>Resume
+						<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>{$t('printer.resume')}
 					</button>
 				{:else}
-					<button class="ep-btn" disabled={busy || !canPause} onclick={() => act('pause')} title={canPause ? 'Pause the print' : 'Nothing to pause'}>
-						<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>Pause
+					<button class="ep-btn" disabled={busy || !canPause} onclick={() => act('pause')} title={canPause ? $t('printer.pauseTitle') : $t('printer.nothingPause')}>
+						<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>{$t('printer.pause')}
 					</button>
 				{/if}
-				<button class="ep-btn danger" disabled={busy || !active || status.state === 'stopping'} onclick={() => act('stop')} title={active ? 'Stop the print' : 'Nothing to stop'}>
-					<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="1.5" /></svg>Stop
+				<button class="ep-btn danger" disabled={busy || !active || status.state === 'stopping'} onclick={() => act('stop')} title={active ? $t('printer.stopTitle') : $t('printer.nothingStop')}>
+					<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="1.5" /></svg>{$t('printer.stop')}
 				</button>
 			</div>
 		{/if}

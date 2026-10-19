@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Portainer: container counts per environment and the stacks, with start /
 	// stop for admins (stopping asks first). Refreshed every 30 s.
+	import { t, errorText } from '$lib/i18n';
 	import type { PortainerConfig, PortainerData, PortainerStack } from '$lib/types';
 	import { currentUser } from '$lib/stores/dashboard';
 	import EditButtons from './widget/EditButtons.svelte';
@@ -33,7 +34,7 @@
 	async function act(s: PortainerStack, action: 'start' | 'stop') {
 		confirmStop = null;
 		busy = s.id;
-		message = { ok: true, text: `${action === 'start' ? 'Starting' : 'Stopping'} ${s.name}…` };
+		message = { ok: true, text: $t(action === 'start' ? 'portainer.starting' : 'portainer.stopping', { name: s.name }) };
 		try {
 			const res = await fetch('/api/integrations/portainer/stack', {
 				method: 'POST',
@@ -41,8 +42,8 @@
 				body: JSON.stringify({ id: s.id, endpointId: s.endpointId, action })
 			});
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-			message = { ok: true, text: `${s.name} ${action === 'start' ? 'started' : 'stopped'}` };
+			if (!res.ok) throw new Error(errorText(body, res.status));
+			message = { ok: true, text: $t(action === 'start' ? 'portainer.started' : 'portainer.stopped', { name: s.name }) };
 			poll.refresh();
 		} catch (e) {
 			message = { ok: false, text: e instanceof Error ? e.message : String(e) };
@@ -64,7 +65,7 @@
 			{/if}
 		</div>
 		{#if !data}
-			<p class="pt-status" class:err={!!poll.error}>{poll.error || 'Loading…'}</p>
+			<p class="pt-status" class:err={!!poll.error}>{poll.error || $t('common.loading')}</p>
 		{:else}
 			<div class="pt-envs">
 				{#each endpoints as e (e.id)}
@@ -72,11 +73,11 @@
 						<span class="dot" class:on={e.up}></span>
 						<span class="pt-env-name">{e.name}</span>
 						{#if e.up}
-							<span class="pt-n run" title="Running containers">{e.running}</span>
-							<span class="pt-n" title="Stopped containers">{e.stopped}</span>
-							{#if e.unhealthy}<span class="pt-n bad" title="Unhealthy containers">{e.unhealthy}</span>{/if}
+							<span class="pt-n run" title={$t('portainer.running')}>{e.running}</span>
+							<span class="pt-n" title={$t('portainer.stoppedContainers')}>{e.stopped}</span>
+							{#if e.unhealthy}<span class="pt-n bad" title={$t('portainer.unhealthy')}>{e.unhealthy}</span>{/if}
 						{:else}
-							<span class="pt-n bad">down</span>
+							<span class="pt-n bad">{$t('portainer.down')}</span>
 						{/if}
 					</div>
 				{/each}
@@ -91,30 +92,30 @@
 						<span class="pt-state">{s.active ? 'active' : 'inactive'}</span>
 						{#if isAdmin && s.type !== 3}
 							{#if s.active}
-								<button onclick={() => (confirmStop = s)} onpointerdown={(e) => e.stopPropagation()} disabled={busy === s.id} title="Stop {s.name}" aria-label="Stop {s.name}">
+								<button onclick={() => (confirmStop = s)} onpointerdown={(e) => e.stopPropagation()} disabled={busy === s.id} title={$t('portainer.stop', { name: s.name })} aria-label={$t('portainer.stop', { name: s.name })}>
 									<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
 								</button>
 							{:else}
-								<button class="start" onclick={() => act(s, 'start')} onpointerdown={(e) => e.stopPropagation()} disabled={busy === s.id} title="Start {s.name}" aria-label="Start {s.name}">
+								<button class="start" onclick={() => act(s, 'start')} onpointerdown={(e) => e.stopPropagation()} disabled={busy === s.id} title={$t('portainer.start', { name: s.name })} aria-label={$t('portainer.start', { name: s.name })}>
 									<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z" /></svg>
 								</button>
 							{/if}
 						{/if}
 					</li>
 				{:else}
-					<li class="pt-none">No stack</li>
+					<li class="pt-none">{$t('portainer.noStack')}</li>
 				{/each}
 			</ul>
 			{#if poll.error}<p class="pt-status err small">{poll.error}</p>{/if}
 		{/if}
 	</div>
-	<EditButtons label="Portainer widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblPortainer')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if confirmStop}
 	{@const s = confirmStop}
-	<WidgetModal title="Stop {s.name}?" saveLabel="Stop" onclose={() => (confirmStop = null)} onsave={() => act(s, 'stop')}>
-		<p class="hint">Stops every container of the stack {s.name} on {endpointName(s.endpointId)}. Start it again from here or from Portainer.</p>
+	<WidgetModal title={$t('portainer.confirmTitle', { name: s.name })} saveLabel={$t('portainer.stopLabel')} onclose={() => (confirmStop = null)} onsave={() => act(s, 'stop')}>
+		<p class="hint">{$t('portainer.confirmText', { name: s.name, env: endpointName(s.endpointId) })}</p>
 	</WidgetModal>
 {/if}
 

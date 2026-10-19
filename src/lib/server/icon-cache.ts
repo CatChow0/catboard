@@ -16,6 +16,7 @@ import { writeFileAtomic, writeJsonAtomic } from './fs-safe';
 import { existsSync } from 'fs';
 import { createHash } from 'crypto';
 import { join } from 'path';
+import { AppError } from '$lib/server/api-error';
 
 const CONFIG_DIR = process.env.CONFIG_DIR || join(process.cwd(), 'config');
 const CACHE_DIR = join(CONFIG_DIR, 'icons');
@@ -406,8 +407,8 @@ export function resolveIcon(icon: string, name: string, url: string): Promise<Ca
 /** Store an uploaded file; returns the icon value to save on the service ("custom:<file>"). */
 export async function saveUpload(data: Buffer): Promise<string> {
 	const type = sniffImage(data);
-	if (!type) throw new Error('Not a supported image (PNG, SVG, WebP, JPEG, GIF, ICO)');
-	if (data.length > MAX_UPLOAD_BYTES) throw new Error('Image too large (max 1 MB)');
+	if (!type) throw new AppError('errors.imageType');
+	if (data.length > MAX_UPLOAD_BYTES) throw new AppError('errors.imageTooLarge');
 	await ensureDir();
 	const filename = `custom-${createHash('sha256').update(data).digest('hex').substring(0, 20)}.${extFor(type)}`;
 	await writeFileAtomic(join(CACHE_DIR, filename), data);

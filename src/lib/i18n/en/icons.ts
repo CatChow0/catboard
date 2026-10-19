@@ -1,0 +1,25 @@
+import type { Entry } from '..';
+
+export const icons = {
+	'icons.unreachable': 'Icon libraries unreachable (no Internet access from CatBoard?)',
+	'icons.loadFailed': 'Failed to load the icon libraries',
+	'icons.uploadFailed': 'Upload failed',
+	'icons.libraries': 'Libraries',
+	'icons.url': 'URL',
+	'icons.upload': 'Upload',
+	'icons.auto': 'Auto',
+	'icons.autoTitle': 'Find the icon by the service name, else use its favicon',
+	'icons.searchPlaceholder': 'Search icons, tags, categories…',
+	'icons.library': 'Library',
+	'icons.loading': 'Loading icon libraries…',
+	'icons.showMore': 'Show more ({count} remaining)',
+	'icons.noResults': 'No icons found',
+	'icons.imageUrl': 'Image URL (PNG, SVG, WebP, JPEG, ICO)',
+	'icons.use': 'Use',
+	'icons.urlHint': 'CatBoard downloads it once and serves it from its cache.',
+	'icons.uploading': 'Uploading…',
+	'icons.choose': 'Choose an image (max 1 MB)',
+	'icons.uploadHint': 'Stored in CatBoard\'s config folder (config/icons).',
+	'icons.autoName': 'Auto (by name, then favicon)',
+	'icons.uploaded': 'Uploaded image',
+} satisfies Record<string, Entry>;

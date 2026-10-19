@@ -2,6 +2,7 @@
 	// Renders a widget whose code loads on demand (see widgets/loaders.ts):
 	// a skeleton while it downloads, a reload hint if the chunk is gone (the
 	// app was updated since this page was opened).
+	import { t } from '$lib/i18n';
 	import { loadWidget, loadedWidget } from '$lib/widgets/loaders';
 	import type { Component } from 'svelte';
 
@@ -33,8 +34,8 @@
 {#if Comp}
 	<Comp {...props} />
 {:else if failed}
-	<button class="cb-widget-failed" class:inline onclick={() => location.reload()} title="CatBoard was updated: reload the page">
-		{inline ? '↻' : 'Widget failed to load, click to reload'}
+	<button class="cb-widget-failed" class:inline onclick={() => location.reload()} title={$t('widget.reloadTitle')}>
+		{inline ? '↻' : $t('widget.loadFailed')}
 	</button>
 {:else}
 	<div class="cb-skeleton" class:inline aria-busy="true"></div>

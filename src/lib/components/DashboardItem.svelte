@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { DashboardItem as DashboardItemType, Service } from '$lib/stores/dashboard';
 	import { resolveService } from '$lib/stores/dashboard';
 	import type { GroupDragView } from '$lib/utils/grid';
@@ -58,7 +59,7 @@
 	{:else if loader}
 		<LazyWidget {loader} props={widgetProps} />
 	{:else if item.type === 'service' && !service}
-		<div class="missing-service">Service not found</div>
+		<div class="missing-service">{$t('dashboard.missingService')}</div>
 	{/if}
 </div>
 

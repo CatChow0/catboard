@@ -8,6 +8,7 @@ import type { Component } from 'svelte';
 import type { DashboardItem, IntegrationsConfig, NavbarItem, StackerSections } from '$lib/types';
 import type { GlyphName } from './glyphs';
 import { isConfigured, type IntegrationKey } from '$lib/integrations/registry';
+import { tr } from '$lib/i18n';
 import { spoolmanOrder, spoolmanSections, SPOOLMAN_DEFAULT_ORDER } from './spoolman';
 import ClockSettings from '$lib/components/widget-settings/ClockSettings.svelte';
 import WeatherSettings from '$lib/components/widget-settings/WeatherSettings.svelte';
@@ -204,7 +205,7 @@ export const WIDGETS: WidgetDef[] = [
 		settings: KumaSettings,
 		prepare: (c) => ({ slug: c?.slug ?? '' }),
 		normalize: (d) => ({ slug: String(d.slug ?? '').trim() }),
-		missing: (d) => (String(d.slug ?? '').trim() ? null : 'Enter the status page slug')
+		missing: (d) => (String(d.slug ?? '').trim() ? null : tr('widgetDef.needSlug'))
 	},
 	{
 		id: 'docker',
@@ -218,7 +219,7 @@ export const WIDGETS: WidgetDef[] = [
 		settings: DockerSettings,
 		prepare: (c, _t, conn) => ({ environmentId: c?.environmentId ?? (c ? '' : (conn.docker?.environments?.[0]?.id ?? '')), showCpu: c?.showCpu ?? false, showRam: c?.showRam ?? false }),
 		normalize: (d) => ({ environmentId: d.environmentId, showCpu: d.showCpu || undefined, showRam: d.showRam || undefined }),
-		missing: (d) => (d.environmentId ? null : 'Pick an environment')
+		missing: (d) => (d.environmentId ? null : tr('widgetDef.needEnvironment'))
 	},
 	{
 		id: 'stacker',
@@ -231,7 +232,7 @@ export const WIDGETS: WidgetDef[] = [
 		settings: StackerSettings,
 		prepare: (c, _t, conn) => ({ serverId: c?.serverId ?? conn.stacker?.servers?.[0]?.id ?? '', sections: { ...ALL_SECTIONS, ...c?.sections }, graphs: c?.graphs ?? true, totals: c?.totals ?? true }),
 		normalize: (d) => ({ serverId: d.serverId, sections: { ...d.sections }, graphs: !!d.graphs, totals: !!d.totals }),
-		missing: (d) => (d.serverId ? null : 'Pick a server')
+		missing: (d) => (d.serverId ? null : tr('widgetDef.needServer'))
 	},
 
 	// --- Virtualisation ---
@@ -259,7 +260,7 @@ export const WIDGETS: WidgetDef[] = [
 			hideStopped: d.hideStopped || undefined,
 			showNodes: d.showNodes ? undefined : false
 		}),
-		missing: (d) => (d.clusterId ? null : 'Pick a cluster')
+		missing: (d) => (d.clusterId ? null : tr('widgetDef.needCluster'))
 	},
 	{
 		id: 'portainer',
@@ -415,7 +416,7 @@ export const WIDGETS: WidgetDef[] = [
 		settings: JenkinsSettings,
 		prepare: (c) => ({ mode: c?.job ? 'job' : 'all', job: c?.job ?? '', limit: c?.limit ?? 8 }),
 		normalize: (d) => ({ job: d.mode === 'job' ? d.job || undefined : undefined, limit: clamp(d.limit, 1, 50, 8) }),
-		missing: (d) => (d.mode === 'job' && !d.job ? 'Pick a project' : null)
+		missing: (d) => (d.mode === 'job' && !d.job ? tr('widgetDef.needProject') : null)
 	},
 
 	// --- 3D printing ---
@@ -472,7 +473,7 @@ export const WIDGETS: WidgetDef[] = [
 		settings: PrintSettings,
 		prepare: (c, _t, conn) => ({ printerId: c?.printerId ?? conn.elegoo?.printers?.[0]?.id ?? '', showThumbnail: c?.showThumbnail ?? true, showTemps: c?.showTemps ?? true }),
 		normalize: (d) => ({ printerId: d.printerId, showThumbnail: !!d.showThumbnail, showTemps: !!d.showTemps }),
-		missing: (d) => (d.printerId ? null : 'Pick a printer')
+		missing: (d) => (d.printerId ? null : tr('widgetDef.needPrinter'))
 	}
 ];
 

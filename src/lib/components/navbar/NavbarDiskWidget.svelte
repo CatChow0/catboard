@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { systemStats } from '$lib/stores/dashboard';
 
 	let { config, colSpan = 2 }: { config: { disks: string[]; pageIndicatorSide?: 'left' | 'right' }; colSpan?: number } = $props();
@@ -59,7 +60,7 @@
 	}
 </script>
 
-<div class="disk-widget" onclick={cycle} onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), cycle())} role="button" tabindex={totalPages > 1 ? 0 : -1} aria-label={totalPages > 1 ? `Disks, page ${page + 1} of ${totalPages}: next page` : 'Disks'}>
+<div class="disk-widget" onclick={cycle} onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), cycle())} role="button" tabindex={totalPages > 1 ? 0 : -1} aria-label={totalPages > 1 ? $t('disk.pages', { page: page + 1, total: totalPages }) : $t('disk.disks')}>
 	{#if totalPages > 1}
 		<span class="disk-page-indicator" class:left={indicatorSide === 'left'} class:right={indicatorSide === 'right'}>{page + 1}/{totalPages}</span>
 	{/if}
@@ -77,8 +78,8 @@
 			{/each}
 		{:else}
 			<div class="disk-entry">
-				<span class="disk-label">Disk</span>
-				<span class="disk-info">No data</span>
+				<span class="disk-label">{$t('disk.disk')}</span>
+				<span class="disk-info">{$t('disk.noData')}</span>
 			</div>
 		{/if}
 	</div>

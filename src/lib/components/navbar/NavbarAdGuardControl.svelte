@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { AdGuardHomeConfig } from '$lib/types';
 	import { adguardHomeData, currentUser } from '$lib/stores/dashboard';
 
@@ -47,7 +48,7 @@
 		class:paused={isPaused}
 		onclick={toggle}
 		disabled={loading || !isAdmin}
-		title={!isAdmin ? `AdGuard ${isPaused ? 'paused' : isActive ? 'active' : 'off'} (only an admin can change it)` : isPaused ? 'AdGuard Paused' : isActive ? 'AdGuard Active - click to disable' : 'AdGuard Inactive - click to enable'}
+		title={!isAdmin ? $t('adguard.readonly', { state: $t(isPaused ? 'adguard.stPaused' : isActive ? 'adguard.stActive' : 'adguard.stOff') }) : $t(isPaused ? 'adguard.pausedShort' : isActive ? 'adguard.clickDisable' : 'adguard.clickEnable')}
 	>
 	<svg class="shield" style="width: calc(14px * var(--nb-icon, 1)); height: calc(14px * var(--nb-icon, 1))" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 		<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

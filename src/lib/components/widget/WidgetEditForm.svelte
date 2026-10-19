@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Edit modal of a dashboard widget: its catalog settings form (the same one
 	// the Add popup shows) on a draft, saved with updateDashboardItem.
+	import { t, locale } from '$lib/i18n';
+	import { localWidget } from '$lib/i18n/catalog';
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import WidgetModal from './WidgetModal.svelte';
@@ -33,11 +35,11 @@
 	}
 </script>
 
-<WidgetModal title="Edit {def?.name ?? 'widget'}" {onclose} onsave={save} saveDisabled={!!missing}>
+<WidgetModal title={$t('widget.editTitle', { name: def ? localWidget($locale, def).name : $t('widget.genericName') })} {onclose} onsave={save} saveDisabled={!!missing}>
 	{#if def?.settings}
 		<def.settings bind:config={draft} target="grid" {...def.settingsProps} />
 	{:else}
-		<p class="hint">This widget has no settings.</p>
+		<p class="hint">{$t('widget.noSettings')}</p>
 	{/if}
 	{#if missing}<p class="hint missing">{missing}</p>{/if}
 </WidgetModal>

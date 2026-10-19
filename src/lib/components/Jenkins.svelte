@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Jenkins: the latest builds of one job (with a Run button for admins) or of
 	// every job. A one-row tile shows the last build only.
+	import { t } from '$lib/i18n';
 	import type { JenkinsConfig } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -34,18 +35,18 @@
 			{#if data?.jobUrl}
 				<a class="jk-title" href={data.jobUrl} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()} title={job}>{title}</a>
 			{:else}
-				<span class="jk-title" title={job || 'All projects'}>{title}</span>
+				<span class="jk-title" title={job || $t('jenkins.allProjects')}>{title}</span>
 			{/if}
-			{#if !job && !compact}<span class="jk-sub">All projects</span>{/if}
-			{#if data?.inQueue}<span class="jk-tag">queued</span>{:else if running}<span class="jk-tag run">{running} running</span>{/if}
+			{#if !job && !compact}<span class="jk-sub">{$t('jenkins.allProjects')}</span>{/if}
+			{#if data?.inQueue}<span class="jk-tag">{$t('jenkins.queued')}</span>{:else if running}<span class="jk-tag run">{$t('jenkins.nRunning', { n: running })}</span>{/if}
 			{#if job && data?.buildable !== false}
 				<JenkinsRun {job} hasParameters={data?.hasParameters} onqueued={poll.refresh} />
 			{/if}
 		</div>
 		{#if !data}
-			<p class="jk-msg" class:err={!!poll.error}>{poll.error || 'Loading…'}</p>
+			<p class="jk-msg" class:err={!!poll.error}>{poll.error || $t('common.loading')}</p>
 		{:else if data.builds.length === 0}
-			<p class="jk-msg">No build yet</p>
+			<p class="jk-msg">{$t('jenkins.noBuildYet')}</p>
 		{:else}
 			<div class="jk-list">
 				<JenkinsBuilds builds={data.builds} showJob={!job} dense={compact} />
@@ -53,7 +54,7 @@
 			{#if poll.error}<p class="jk-msg err small">{poll.error}</p>{/if}
 		{/if}
 	</div>
-	<EditButtons label="Jenkins widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblJenkins')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

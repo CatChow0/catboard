@@ -1,0 +1,25 @@
+import type { Entry } from '..';
+
+export const admin = {
+	'admin.fetchFailed': 'Failed to fetch users',
+	'admin.required': 'Username and password (min 6 chars) required',
+	'admin.createFailed': 'Failed to create user',
+	'admin.deleteFailed': 'Failed to delete user',
+	'admin.updateFailed': 'Failed to update user',
+	'admin.confirmDelete': 'Delete user "{name}"?',
+	'admin.editors': 'Who can edit dashboards',
+	'admin.adminsOnly': 'Admins only',
+	'admin.everyone': 'Every user',
+	'admin.editorsHint1': 'Services, tiles, widgets and dashboards are shared. With',
+	'admin.editorsHint2': ', other users see them read-only (their own appearance settings stay theirs).',
+	'admin.loadingUsers': 'Loading users...',
+	'admin.main': 'Main',
+	'admin.roleAdmin': 'Admin',
+	'admin.roleMini': 'Mini-Admin',
+	'admin.roleUser': 'User',
+	'admin.newPassword': 'New password',
+	'admin.createUser': 'Create User',
+	'admin.username': 'Username',
+	'admin.passwordMin': 'Password (min 6)',
+	'admin.create': 'Create',
+} satisfies Record<string, Entry>;

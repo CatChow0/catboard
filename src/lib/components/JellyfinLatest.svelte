@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorText, t, tx } from '$lib/i18n';
 	import { whileVisible } from '$lib/utils/poll';
 	import type { JellyfinLatestConfig, JellyfinMediaItem } from '$lib/types';
 	import { isEditing, settings } from '$lib/stores/dashboard';
@@ -28,7 +29,7 @@
 			const res = await fetch(`/api/integrations/jellyfin/latest?instanceId=${encodeURIComponent(instanceId)}&limit=${displayLimit}`);
 			if (!res.ok) {
 				const err = await res.json().catch(() => ({}));
-				error = err.error || `HTTP ${res.status}`;
+				error = errorText(err, res.status);
 				return;
 			}
 			const data = await res.json();
@@ -39,7 +40,7 @@
 				error = null;
 			}
 		} catch (e) {
-			error = 'Failed to fetch';
+			error = $t('arr.failed');
 		} finally {
 			loading = false;
 		}
@@ -77,7 +78,7 @@
 				<circle cx="12" cy="12" r="5" />
 				<path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
 			</svg>
-			<span>Loading...</span>
+			<span>{$t('common.loading')}</span>
 		</div>
 	{:else if error && items.length === 0}
 		<div class="jellyfin-placeholder">
@@ -94,7 +95,7 @@
 				<circle cx="12" cy="12" r="5" />
 				<path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
 			</svg>
-			<span>No recent items</span>
+			<span>{$t('jellyfin.noRecent')}</span>
 		</div>
 	{:else}
 		<div class="jellyfin-list">
@@ -103,12 +104,12 @@
 					<div class="jellyfin-gradient"></div>
 					<div class="jellyfin-content">
 						<div class="jellyfin-header">
-							<span class="jellyfin-badge" style:background={getBadgeColor(item.type)}>{item.type}</span>
+							<span class="jellyfin-badge" style:background={getBadgeColor(item.type)}>{$tx(`jellyfin.type.${item.type.toLowerCase()}`, item.type)}</span>
 							<span class="jellyfin-title">{truncate(item.name, 40)}</span>
 						</div>
 						{#if !isCompact}
 							<p class="jellyfin-desc">{truncate(item.overview, 80)}</p>
-							<span class="jellyfin-date">Added {item.dateCreated}</span>
+							<span class="jellyfin-date">{$t('jellyfin.added', { date: item.dateCreated })}</span>
 						{/if}
 					</div>
 				</div>
@@ -116,7 +117,7 @@
 		</div>
 	{/if}
 	{#if $isEditing}
-		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title="Remove Jellyfin Latest">
+		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title={$t('jellyfin.remove')}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>

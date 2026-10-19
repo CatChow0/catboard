@@ -3,6 +3,7 @@ import { getIntegrations } from '$lib/server/config';
 import { normalizeUrl } from '$lib/server/arr';
 import { jellyfinImagePath, ticksToSeconds } from '$lib/server/jellyfin';
 import type { JellyfinSession } from '$lib/types';
+import { apiError } from '$lib/server/api-error';
 
 type Raw = Record<string, any>;
 
@@ -43,13 +44,13 @@ function transcodeInfo(s: Raw): string {
 /** Streams currently playing on Jellyfin. */
 export const GET: RequestHandler = async () => {
 	const conn = (await getIntegrations()).jellyfin;
-	if (!conn?.url || !conn?.apiKey) return json({ error: 'Jellyfin not configured' }, { status: 404 });
+	if (!conn?.url || !conn?.apiKey) return apiError(404, 'errors.notSetUp', { name: 'Jellyfin' });
 	try {
 		const res = await fetch(`${normalizeUrl(conn.url)}/Sessions?activeWithinSeconds=960`, {
 			headers: { 'X-Emby-Token': conn.apiKey, Accept: 'application/json' },
 			signal: AbortSignal.timeout(10000)
 		});
-		if (!res.ok) return json({ error: `Jellyfin answered HTTP ${res.status}` }, { status: 502 });
+		if (!res.ok) return apiError(502, 'errors.answeredHttp', { name: 'Jellyfin', status: res.status });
 		const raw = (await res.json()) as Raw[];
 		const sessions: JellyfinSession[] = raw
 			.filter((s) => s.NowPlayingItem)
@@ -74,6 +75,6 @@ export const GET: RequestHandler = async () => {
 		return json({ sessions, updatedAt: Date.now() }, { headers: { 'Cache-Control': 'no-store' } });
 	} catch (err) {
 		const timeout = err instanceof Error && err.name === 'TimeoutError';
-		return json({ error: timeout ? 'Jellyfin did not answer in time' : 'Cannot reach Jellyfin' }, { status: 502 });
+		return apiError(502, timeout ? 'errors.noAnswerInTime' : 'errors.cannotReach', { name: 'Jellyfin' });
 	}
 };

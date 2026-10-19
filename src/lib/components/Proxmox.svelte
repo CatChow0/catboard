@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Proxmox VE: node load and the VMs / containers of a cluster, refreshed
 	// every 15 s while the page is visible.
+	import { t } from '$lib/i18n';
 	import type { ProxmoxConfig, ProxmoxData } from '$lib/types';
 	import EditButtons from './widget/EditButtons.svelte';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -34,13 +35,13 @@
 			<span class="px-icon"><Glyph name="server" size={16} /></span>
 			{#if data}
 				<a class="px-title" href={data.url} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()}>{name}</a>
-				<span class="px-count" title="{running} of {data.guests.length} guests running">{running}/{data.guests.length} running</span>
+				<span class="px-count" title={$t('proxmox.runningTitle', { running, total: data.guests.length })}>{$t('proxmox.runningShort', { running, total: data.guests.length })}</span>
 			{:else}
 				<span class="px-title">{name}</span>
 			{/if}
 		</div>
 		{#if !data}
-			<p class="px-status" class:err={!!poll.error}>{poll.error || 'Loading…'}</p>
+			<p class="px-status" class:err={!!poll.error}>{poll.error || $t('common.loading')}</p>
 		{:else}
 			<div class="px-body">
 				<ProxmoxView {data} {clusterId} {config} onchanged={poll.refresh} dense={rowSpan <= 2} />
@@ -48,7 +49,7 @@
 			{#if poll.error}<p class="px-status err small">{poll.error}</p>{/if}
 		{/if}
 	</div>
-	<EditButtons label="Proxmox widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblProxmox')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

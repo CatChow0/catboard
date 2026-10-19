@@ -2,6 +2,7 @@
 	// Proxmox nodes (CPU / RAM bars) and guests (state, usage), shared by the
 	// grid and navbar widgets. Admins get start / shut down / reboot buttons;
 	// shutting down or rebooting asks first.
+	import { t, tx, errorText } from '$lib/i18n';
 	import type { ProxmoxData, ProxmoxGuest, ProxmoxConfig } from '$lib/types';
 	import { currentUser } from '$lib/stores/dashboard';
 	import { bytes } from '../stacker/format';
@@ -48,8 +49,8 @@
 				body: JSON.stringify({ cluster: clusterId, node: g.node, type: g.type, vmid: g.vmid, action })
 			});
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-			flash(true, `${g.name}: ${action} sent`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
+			flash(true, $t('proxmox.sent', { name: g.name, action: $t(`proxmox.act.${action}`) }));
 			// The state changes within seconds: look again shortly.
 			setTimeout(() => onchanged?.(), 2500);
 		} catch (e) {
@@ -63,15 +64,15 @@
 {#if config?.showNodes !== false && nodes.length}
 	<div class="px-nodes">
 		{#each nodes as n (n.node)}
-			<div class="px-node" class:offline={n.status !== 'online'} title="{n.node}: {n.status}, up {duration(n.uptime)}">
+			<div class="px-node" class:offline={n.status !== 'online'} title={$t('proxmox.nodeTitle', { node: n.node, status: $tx(`proxmox.st.${n.status}`, n.status), uptime: duration(n.uptime) })}>
 				<span class="px-node-name"><span class="dot {n.status === 'online' ? 'running' : 'stopped'}"></span>{n.node}</span>
 				{#if n.status === 'online'}
-					<span class="bar" title="CPU {Math.round(n.cpu * 100)}% of {n.maxcpu} cores"><span style="width: {Math.round(n.cpu * 100)}%"></span></span>
+					<span class="bar" title={$t('proxmox.cpuTitle', { pct: Math.round(n.cpu * 100), cores: n.maxcpu })}><span style="width: {Math.round(n.cpu * 100)}%"></span></span>
 					<span class="px-num">{Math.round(n.cpu * 100)}%</span>
-					<span class="bar mem" title="RAM {bytes(n.mem)} of {bytes(n.maxmem)}"><span style="width: {pct(n.mem, n.maxmem)}%"></span></span>
+					<span class="bar mem" title={$t('proxmox.ramTitle', { used: bytes(n.mem), total: bytes(n.maxmem) })}><span style="width: {pct(n.mem, n.maxmem)}%"></span></span>
 					<span class="px-num">{pct(n.mem, n.maxmem)}%</span>
 				{:else}
-					<span class="px-num off">offline</span>
+					<span class="px-num off">{$t('proxmox.offline')}</span>
 				{/if}
 			</div>
 		{/each}
@@ -81,34 +82,34 @@
 {#if message}<p class="px-msg" class:err={!message.ok}>{message.text}</p>{/if}
 
 {#if guests.length === 0}
-	<p class="px-empty">No guest{config?.hideStopped ? ' running' : ''}</p>
+	<p class="px-empty">{$t(config?.hideStopped ? 'proxmox.noGuestRunning' : 'proxmox.noGuest')}</p>
 {:else}
 	<ul class="px-guests" class:dense>
 		{#each guests as g (g.node + g.vmid)}
 			<li>
-				<span class="dot {g.status === 'running' ? 'running' : g.status === 'paused' ? 'paused' : 'stopped'}" title={g.status}></span>
+				<span class="dot {g.status === 'running' ? 'running' : g.status === 'paused' ? 'paused' : 'stopped'}" title={$tx(`proxmox.st.${g.status}`, g.status)}></span>
 				<span class="px-id">{g.vmid}</span>
-				<span class="px-name" title="{g.name} on {g.node}">{g.name}</span>
+				<span class="px-name" title={$t('proxmox.onNode', { name: g.name, node: g.node })}>{g.name}</span>
 				<span class="px-tag">{g.type === 'lxc' ? 'CT' : 'VM'}</span>
 				{#if multiNode && !dense}<span class="px-on">{g.node}</span>{/if}
 				<span class="px-use">
 					{#if g.status === 'running'}
 						{Math.round(g.cpu * 100)}% · {bytes(g.mem)}
 					{:else}
-						{g.status}
+						{$tx(`proxmox.st.${g.status}`, g.status)}
 					{/if}
 				</span>
 				{#if isAdmin}
 					<span class="px-actions">
 						{#if g.status === 'running'}
-							<button onclick={() => (confirm = { guest: g, action: 'reboot' })} onpointerdown={(e) => e.stopPropagation()} disabled={busy === g.vmid} title="Reboot {g.name}" aria-label="Reboot {g.name}">
+							<button onclick={() => (confirm = { guest: g, action: 'reboot' })} onpointerdown={(e) => e.stopPropagation()} disabled={busy === g.vmid} title={$t('proxmox.reboot', { name: g.name })} aria-label={$t('proxmox.reboot', { name: g.name })}>
 								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" /></svg>
 							</button>
-							<button onclick={() => (confirm = { guest: g, action: 'shutdown' })} onpointerdown={(e) => e.stopPropagation()} disabled={busy === g.vmid} title="Shut down {g.name}" aria-label="Shut down {g.name}">
+							<button onclick={() => (confirm = { guest: g, action: 'shutdown' })} onpointerdown={(e) => e.stopPropagation()} disabled={busy === g.vmid} title={$t('proxmox.shutdown', { name: g.name })} aria-label={$t('proxmox.shutdown', { name: g.name })}>
 								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v10" /><path d="M18.4 6.6a9 9 0 1 1-12.8 0" /></svg>
 							</button>
 						{:else if g.status === 'stopped'}
-							<button class="start" onclick={() => act(g, 'start')} onpointerdown={(e) => e.stopPropagation()} disabled={busy === g.vmid} title="Start {g.name}" aria-label="Start {g.name}">
+							<button class="start" onclick={() => act(g, 'start')} onpointerdown={(e) => e.stopPropagation()} disabled={busy === g.vmid} title={$t('proxmox.start', { name: g.name })} aria-label={$t('proxmox.start', { name: g.name })}>
 								<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z" /></svg>
 							</button>
 						{/if}
@@ -122,20 +123,20 @@
 {#if confirm}
 	{@const c = confirm}
 	<WidgetModal
-		title="{c.action === 'reboot' ? 'Reboot' : c.action === 'stop' ? 'Stop' : 'Shut down'} {c.guest.name}?"
-		saveLabel={c.action === 'reboot' ? 'Reboot' : c.action === 'stop' ? 'Stop now' : 'Shut down'}
+		title={$t(c.action === 'reboot' ? 'proxmox.confirmReboot' : c.action === 'stop' ? 'proxmox.confirmStop' : 'proxmox.confirmShutdown', { name: c.guest.name })}
+		saveLabel={$t(c.action === 'reboot' ? 'proxmox.btnReboot' : c.action === 'stop' ? 'proxmox.btnStop' : 'proxmox.btnShutdown')}
 		onclose={() => (confirm = null)}
 		onsave={() => act(c.guest, c.action)}
 	>
 		<p class="hint">
 			{#if c.action === 'stop'}
-				Stops {c.guest.type === 'lxc' ? 'container' : 'VM'} {c.guest.vmid} at once, like pulling the plug: unsaved data in it is lost.
+				{$t('proxmox.stopText', { kind: $t(c.guest.type === 'lxc' ? 'proxmox.container' : 'proxmox.vm'), id: c.guest.vmid })}
 			{:else}
-				Asks {c.guest.type === 'lxc' ? 'container' : 'VM'} {c.guest.vmid} on {c.guest.node} to {c.action === 'reboot' ? 'restart' : 'shut down'} cleanly{c.guest.type === 'qemu' ? ' (needs the QEMU guest agent or ACPI)' : ''}.
+				{$t(c.action === 'reboot' ? 'proxmox.cleanReboot' : 'proxmox.cleanShutdown', { kind: $t(c.guest.type === 'lxc' ? 'proxmox.container' : 'proxmox.vm'), id: c.guest.vmid, node: c.guest.node, agent: c.guest.type === 'qemu' ? $t('proxmox.agent') : '' })}
 			{/if}
 		</p>
 		{#if c.action !== 'stop'}
-			<button class="btn-ghost" onclick={() => (confirm = { ...c, action: 'stop' })}>Force stop instead</button>
+			<button class="btn-ghost" onclick={() => (confirm = { ...c, action: 'stop' })}>{$t('proxmox.forceStop')}</button>
 		{/if}
 	</WidgetModal>
 {/if}

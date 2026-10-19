@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { isEditing, layout, activeBreakpointId, manualBreakpointId, settings, saveNavbarLayout, removeNavbarItem, getBreakpointLabel, searchQuery, activeDashboardId, dashboardDirection, activeGrid, toggleEditMode, currentUser } from '$lib/stores/dashboard';
 	import { isPhone } from '$lib/stores/viewport';
 	import { fly } from 'svelte/transition';
@@ -185,13 +186,13 @@
 					{#if $isEditing}
 						{#if item.type !== 'navbar-title'}
 							<!-- The title carries the dashboard switcher: it can be moved, not removed. -->
-							<button class="navbar-delete-btn" onclick={() => handleDelete(item.id)} title="Remove">
+							<button class="navbar-delete-btn" onclick={() => handleDelete(item.id)} title={$t('nav.removeWidget')}>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M18 6L6 18M6 6l12 12" />
 								</svg>
 							</button>
 						{/if}
-						<button class="navbar-edit-btn" onclick={() => handleEdit(item)} title="Edit">
+						<button class="navbar-edit-btn" onclick={() => handleEdit(item)} title={$t('nav.editWidget')}>
 							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 								<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -221,20 +222,20 @@
 						{/each}
 					</select>
 				</div>
-				<button class="btn-add" onclick={() => onadd?.()} title="Add service or widget">
+				<button class="btn-add" onclick={() => onadd?.()} title={$t('nav.addTitle')}>
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M12 5v14M5 12h14" />
 					</svg>
-					<span>Add</span>
+					<span>{$t('nav.add')}</span>
 				</button>
 			{/if}
 			{#if $currentUser?.canEdit}
-				<button class="btn-edit-toggle" class:active={$isEditing} onclick={toggleEditMode} title="Toggle edit mode">
+				<button class="btn-edit-toggle" class:active={$isEditing} onclick={toggleEditMode} title={$t('nav.toggleEdit')}>
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
 					</svg>
-					<span>Edit</span>
+					<span>{$t('nav.edit')}</span>
 				</button>
 			{/if}
 			<OptionsDropdown {onsettings} {onlogout} />

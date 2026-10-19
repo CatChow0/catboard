@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Settings > Export: full export, backups, and import of chosen sections.
 	// Styles: settings.css.
+	import { t } from '$lib/i18n';
 	import type { Layout } from '$lib/types';
 	import { exportDashboard, importDashboard } from '$lib/stores/dashboard';
 	import BackupsPanel from './BackupsPanel.svelte';
@@ -27,7 +28,7 @@
 	function layoutSummary(l: Partial<Layout> | undefined): string {
 		const pages = [l?.layouts, ...Object.values(l?.pages ?? {})].filter(Boolean) as Record<string, { items?: unknown[] }>[];
 		const items = pages.reduce((n, p) => n + Math.max(0, ...Object.values(p).map((bp) => bp.items?.length ?? 0)), 0);
-		return `${pages.length} dashboard${pages.length === 1 ? '' : 's'}, ${items} item${items === 1 ? '' : 's'}`;
+		return $t('export.layoutSummary', { dashboards: $t('export.dashboards', { count: pages.length }), items: $t('export.items', { count: items }) });
 	}
 
 	async function handleExport() {
@@ -77,25 +78,25 @@
 	const sections = $derived(
 		importData
 			? [
-					importData.services && { id: 'services', label: 'Services', count: `${Array.isArray(importData.services.services) ? importData.services.services.length : 0} services` },
-					importData.layout && { id: 'layout', label: 'Layout', count: layoutSummary(importData.layout) },
-					importData.settings && { id: 'settings', label: 'Settings', count: 'Theme & preferences' },
-					importData.integrations && { id: 'integrations', label: 'Integrations', count: 'External connections' }
+					importData.services && { id: 'services', label: $t('export.services'), count: $t('export.servicesCount', { count: Array.isArray(importData.services.services) ? importData.services.services.length : 0 }) },
+					importData.layout && { id: 'layout', label: $t('export.layout'), count: layoutSummary(importData.layout) },
+					importData.settings && { id: 'settings', label: $t('export.settings'), count: $t('export.settingsDesc') },
+					importData.integrations && { id: 'integrations', label: $t('export.integrations'), count: $t('export.integrationsDesc') }
 				].filter((s): s is { id: string; label: string; count: string } => !!s)
 			: []
 	);
 </script>
 
 <div class="settings-section">
-	<h3>Export</h3>
-	<p class="export-desc">Download a complete backup of your dashboard configuration, including services, layout, settings, and integrations.</p>
-	<button class="btn-export" onclick={handleExport} disabled={exporting}>{exporting ? 'Exporting...' : 'Export Dashboard'}</button>
+	<h3>{$t('export.title')}</h3>
+	<p class="export-desc">{$t('export.desc')}</p>
+	<button class="btn-export" onclick={handleExport} disabled={exporting}>{exporting ? $t('export.exporting') : $t('export.button')}</button>
 </div>
 
 <BackupsPanel />
 
 <div class="settings-section">
-	<h3>Import</h3>
+	<h3>{$t('export.import')}</h3>
 	{#if !importData}
 		<label class="import-file-area">
 			<input type="file" accept=".json" onchange={handleImportFile} />
@@ -104,11 +105,11 @@
 				<polyline points="17 8 12 3 7 8" />
 				<line x1="12" y1="3" x2="12" y2="15" />
 			</svg>
-			<span>Select export file</span>
+			<span>{$t('export.select')}</span>
 		</label>
 	{:else}
 		<div class="import-summary">
-			<p class="import-file-name">{importData.exportedAt ? `Export from ${importData.exportedAt.slice(0, 10)}` : 'Export file loaded'}</p>
+			<p class="import-file-name">{importData.exportedAt ? $t('export.from', { date: importData.exportedAt.slice(0, 10) }) : $t('export.loaded')}</p>
 			<div class="import-sections">
 				{#each sections as s (s.id)}
 					<label class="section-check">
@@ -119,10 +120,10 @@
 				{/each}
 			</div>
 		</div>
-		<p class="import-warning">Importing replaces the selected sections. The current configuration is backed up first (see Backups above).</p>
+		<p class="import-warning">{$t('export.warning')}</p>
 		<div class="import-actions">
-			<button class="btn-cancel" onclick={() => { importData = null; importSections = []; }}>Cancel</button>
-			<button class="btn-import" onclick={handleImport} disabled={importSections.length === 0 || importing}>{importing ? 'Importing...' : 'Import Selected'}</button>
+			<button class="btn-cancel" onclick={() => { importData = null; importSections = []; }}>{$t('common.cancel')}</button>
+			<button class="btn-import" onclick={handleImport} disabled={importSections.length === 0 || importing}>{importing ? $t('export.importing') : $t('export.importSelected')}</button>
 		</div>
 	{/if}
 </div>

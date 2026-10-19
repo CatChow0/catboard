@@ -1,0 +1,25 @@
+import type { Dict } from '..';
+
+export const psi = {
+	'psi.oneTime': 'téléchargement unique',
+	'psi.expiresMin': 'expire dans {n} min',
+	'psi.expiresH': 'expire dans {n} h',
+	'psi.expiresD': 'expire dans {n} j',
+	'psi.files': { one: '{count} fichier', other: '{count} fichiers' },
+	'psi.cancelled': 'Annulé',
+	'psi.region': 'PsiTransfer : dépose des fichiers pour les partager',
+	'psi.remove': 'Retirer {name}',
+	'psi.keepFor': 'Garder',
+	'psi.password': 'Mot de passe',
+	'psi.optional': ' (facultatif)',
+	'psi.tooBig': 'Un fichier dépasse la taille acceptée par PsiTransfer ({max}).',
+	'psi.send': 'Envoyer',
+	'psi.sending': 'Envoi de {what}…',
+	'psi.progress': '{pct} % · {sent} sur {total} · {speed}/s',
+	'psi.shared': '✓ Partagé',
+	'psi.choose': 'Choisir des fichiers à partager',
+	'psi.connecting': 'Connexion à PsiTransfer…',
+	'psi.leaveEdit': 'Quitte le mode édition pour partager des fichiers',
+	'psi.drop': 'Dépose des fichiers ici',
+	'psi.orClick': ' ou clique pour choisir',
+} satisfies Partial<Dict>;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, errorText } from '$lib/i18n';
 	import type { StackerConfig, StackerSample, StackerSections, StackerServer, StackerStatic } from '$lib/types';
 	import { isEditing, getIntegrations } from '$lib/stores/dashboard';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
@@ -84,7 +85,7 @@
 					const res = await fetch(`/api/integrations/stacker/snapshot?${q}`);
 					const body = await res.json();
 					if (stopped) return;
-					if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+					if (!res.ok) throw new Error(errorText(body, res.status));
 					if (body.static) {
 						stat = body.static;
 						needStatic = false;
@@ -139,23 +140,23 @@
 	let showEditModal = $state(false);
 </script>
 
-<div class="stacker" class:compact class:basic={density === 'basic'} class:stale={!!error && !!s} title={compact ? `${stat?.sys.hostname ?? serverName}${error ? ` (offline: ${error})` : ''}` : undefined}>
+<div class="stacker" class:compact class:basic={density === 'basic'} class:stale={!!error && !!s} title={compact ? (error ? $t('stacker.offlineTitle', { host: stat?.sys.hostname ?? serverName, error }) : (stat?.sys.hostname ?? serverName)) : undefined}>
 	<div class="st-inner" bind:clientWidth={innerW} bind:clientHeight={innerH}>
 	<header class="st-head">
 		<span class="st-host">{stat?.sys.hostname ?? (serverName || 'Stacker')}</span>
 		{#if error}
-			<span class="st-status st-bad" title={error}>offline</span>
+			<span class="st-status st-bad" title={error}>{$t('stacker.offline')}</span>
 		{:else if s}
-			<span class="st-status st-ok">live</span>
+			<span class="st-status st-ok">{$t('stacker.live')}</span>
 		{/if}
 	</header>
 
 	{#if !config?.serverId}
-		<p class="st-msg">No Stacker server selected. Edit this widget to pick one.</p>
+		<p class="st-msg">{$t('stacker.noServer')}</p>
 	{:else if error && !s}
 		<p class="st-msg st-error">{error}</p>
 	{:else if !s || !stat}
-		<p class="st-msg">Connecting to {serverName || 'Stacker'}…</p>
+		<p class="st-msg">{$t('stacker.connecting', { name: serverName || 'Stacker' })}</p>
 	{:else}
 		<div class="st-grid">
 			{#if sections.cpu}
@@ -167,7 +168,7 @@
 							<span class="st-side">
 								<span>{ghz(s.cpu.freqMHz)}</span>
 								{#if s.cpu.tempC != null}<span>{temp(s.cpu.tempC)}</span>{/if}
-								<span>load {s.cpu.load1.toFixed(2)}</span>
+								<span>{$t('stacker.load', { value: s.cpu.load1.toFixed(2) })}</span>
 							</span>
 						{/if}
 					</div>
@@ -179,7 +180,7 @@
 							t={ts}
 							windowMs={WINDOW}
 							{interval}
-							label="CPU usage, clock and temperature"
+							label={$t('stacker.cpuGraph')}
 							series={[
 								{ values: col((x) => x.cpu.total), color: '--st-cpu', fill: true, max: 100 },
 								{ values: col((x) => x.cpu.freqMHz || null), color: '--st-freq', thin: true, max: cpuClockMax },
@@ -187,9 +188,9 @@
 							]}
 						/>
 						<ul class="st-legend">
-							<li style="--c: var(--st-cpu)">usage</li>
-							<li style="--c: var(--st-freq)">clock 0–{(cpuClockMax / 1000).toFixed(1)} GHz</li>
-							{#if hasTemp}<li class="dashed" style="--c: var(--st-temp)">temp 0–100 °C</li>{/if}
+							<li style="--c: var(--st-cpu)">{$t('stacker.usage')}</li>
+							<li style="--c: var(--st-freq)">{$t('stacker.clock', { max: (cpuClockMax / 1000).toFixed(1) })}</li>
+							{#if hasTemp}<li class="dashed" style="--c: var(--st-temp)">{$t('stacker.temp')}</li>{/if}
 						</ul>
 					{/if}
 				</section>
@@ -199,12 +200,12 @@
 				{@const used = split(bytes(s.mem.used))}
 				<section class="st-sec">
 					<div class="st-row">
-						<span class="st-label">Memory</span>
+						<span class="st-label">{$t('stacker.memory')}</span>
 						<span class="st-readout" style="--c: var(--st-mem)">{used[0]}<small>{used[1]}</small></span>
 						{#if !compact}
 							<span class="st-side">
-								<span>{pct(s.mem.percent)} of {bytes(s.mem.total)}</span>
-								<span>{bytes(s.mem.available)} free</span>
+								<span>{$t('stacker.of', { used: pct(s.mem.percent), total: bytes(s.mem.total) })}</span>
+								<span>{$t('stacker.free', { value: bytes(s.mem.available) })}</span>
 								<span>{swap(s.mem.swapUsed, s.mem.swapTotal)}</span>
 							</span>
 						{/if}
@@ -213,7 +214,7 @@
 						{#each segs(s.mem.percent, 100, 30) as on}<span class:on></span>{/each}
 					</div>
 					{#if showGraphs}
-						<StackerGraph t={ts} windowMs={WINDOW} {interval} label="Memory use" series={[{ values: col((x) => x.mem.percent), color: '--st-mem', fill: true, max: 100 }]} />
+						<StackerGraph t={ts} windowMs={WINDOW} {interval} label={$t('stacker.memGraph')} series={[{ values: col((x) => x.mem.percent), color: '--st-mem', fill: true, max: 100 }]} />
 					{/if}
 				</section>
 			{/if}
@@ -241,7 +242,7 @@
 								t={ts}
 								windowMs={WINDOW}
 								{interval}
-								label="GPU utilization and memory"
+								label={$t('stacker.gpuGraph')}
 								series={[
 									{ values: col((x) => x.gpus?.find((y) => y.index === g.index)?.util ?? null), color: '--st-gpu', fill: true, max: 100 },
 									{ values: col((x) => x.gpus?.find((y) => y.index === g.index)?.memUsed ?? null), color: '--st-gpu', dashed: true, max: g.memTotal }
@@ -256,13 +257,13 @@
 				<section class="st-sec">
 					{#if compact}
 						<div class="st-row">
-							<span class="st-label">Disk</span>
+							<span class="st-label">{$t('stacker.disk')}</span>
 							<span class="st-inline">R {bytesRate(diskR[diskR.length - 1])} · W {bytesRate(diskW[diskW.length - 1])}</span>
 						</div>
 					{:else}
 						<table class="st-table">
 							<thead>
-								<tr><th>Disk</th><th class="num">Read</th><th class="num">Write</th><th class="num">Active</th></tr>
+								<tr><th>{$t('stacker.disk')}</th><th class="num">{$t('stacker.read')}</th><th class="num">{$t('stacker.write')}</th><th class="num">{$t('stacker.active')}</th></tr>
 							</thead>
 							<tbody>
 								{#each s.disks ?? [] as d (d.name)}
@@ -281,13 +282,13 @@
 								windowMs={WINDOW}
 								{interval}
 								max={diskMax}
-								label="Disk read (solid) and write (dashed)"
+								label={$t('stacker.diskGraph')}
 								series={[
 									{ values: diskR, color: '--st-disk', fill: true },
 									{ values: diskW, color: '--st-disk', dashed: true }
 								]}
 							/>
-							<p class="st-note">read solid, write dashed, scale {bytesRate(diskMax)}</p>
+							<p class="st-note">{$t('stacker.diskNote', { scale: bytesRate(diskMax) })}</p>
 						{/if}
 					{/if}
 				</section>
@@ -297,13 +298,13 @@
 				<section class="st-sec">
 					{#if compact}
 						<div class="st-row">
-							<span class="st-label">Network</span>
+							<span class="st-label">{$t('stacker.network')}</span>
 							<span class="st-inline">↓ {bits(netR[netR.length - 1])} ↑ {bits(netT[netT.length - 1])}</span>
 						</div>
 					{:else}
 						<table class="st-table">
 							<thead>
-								<tr><th>Adapter</th><th class="num">Receive</th><th class="num">Send</th></tr>
+								<tr><th>{$t('stacker.adapter')}</th><th class="num">{$t('stacker.receive')}</th><th class="num">{$t('stacker.send')}</th></tr>
 							</thead>
 							<tbody>
 								{#each s.nics ?? [] as n (n.name)}
@@ -321,31 +322,31 @@
 								windowMs={WINDOW}
 								{interval}
 								max={netMax}
-								label="Network receive (solid) and send (dashed)"
+								label={$t('stacker.netGraph')}
 								series={[
 									{ values: netR, color: '--st-net', fill: true },
 									{ values: netT, color: '--st-net', dashed: true }
 								]}
 							/>
-							<p class="st-note">receive solid, send dashed, scale {bits(netMax)}</p>
+							<p class="st-note">{$t('stacker.netNote', { scale: bits(netMax) })}</p>
 						{/if}
 					{/if}
 				</section>
 			{/if}
 		</div>
 		{#if totals && !compact && (sections.disk || sections.network)}
-			<p class="st-foot">Second line under rates: total since boot</p>
+			<p class="st-foot">{$t('stacker.foot')}</p>
 		{/if}
 	{/if}
 	</div>
 
 	{#if $isEditing}
-		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title="Remove Stacker widget">
+		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title={$t('widget.removeNamed', { name: 'Stacker' })}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>
 		</button>
-		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title="Edit Stacker widget">
+		<button class="btn-edit" onclick={(e) => { e.stopPropagation(); showEditModal = true; }} onpointerdown={(e) => e.stopPropagation()} title={$t('widget.editNamed', { name: 'Stacker' })}>
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />

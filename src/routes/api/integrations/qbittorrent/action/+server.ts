@@ -1,6 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/auth';
 import { qbitConn, setPaused } from '$lib/server/qbittorrent';
+import { apiError } from '$lib/server/api-error';
 
 /** POST { action: 'pause' | 'resume', hashes: string[] | 'all' } — admins only. */
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -10,10 +11,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const action = body?.action;
 	const hashes = body?.hashes;
 	const valid = hashes === 'all' || (Array.isArray(hashes) && hashes.length > 0 && hashes.length <= 200 && hashes.every((h) => typeof h === 'string' && /^[a-f0-9]{40}$/i.test(h)));
-	if ((action !== 'pause' && action !== 'resume') || !valid) return json({ error: 'Bad request' }, { status: 400 });
+	if ((action !== 'pause' && action !== 'resume') || !valid) return apiError(400, 'errors.badRequest');
 
 	const conn = await qbitConn();
-	if (!conn) return json({ error: 'qBittorrent not configured' }, { status: 404 });
+	if (!conn) return apiError(404, 'errors.notSetUp', { name: 'qBittorrent' });
 	try {
 		await setPaused(conn, hashes === 'all' ? 'all' : (hashes as string[]).join('|'), action === 'pause');
 		return json({ ok: true });

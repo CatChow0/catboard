@@ -1,0 +1,28 @@
+import type { Dict } from '..';
+
+export const qbit = {
+	'qbit.downloading': 'Téléchargement',
+	'qbit.seeding': 'Partage',
+	'qbit.paused': 'En pause',
+	'qbit.queued': 'En file',
+	'qbit.checking': 'Vérification',
+	'qbit.stalled': 'Bloqué',
+	'qbit.error': 'Erreur',
+	'qbit.completed': 'Terminé',
+	'qbit.download': 'Réception',
+	'qbit.upload': 'Envoi',
+	'qbit.resumeAll': 'Tout reprendre',
+	'qbit.pauseAll': 'Tout mettre en pause',
+	'qbit.resumeAllLabel': 'Reprendre tous les torrents',
+	'qbit.pauseAllLabel': 'Mettre tous les torrents en pause',
+	'qbit.graph': 'Débit de réception (plein) et d\'envoi (pointillés)',
+	'qbit.nDownloading': 'en téléchargement',
+	'qbit.nSeeding': 'en partage',
+	'qbit.nPaused': 'en pause',
+	'qbit.nErrors': 'en erreur',
+	'qbit.nothingActive': 'Rien d\'actif pour le moment',
+	'qbit.none': 'Aucun torrent',
+	'qbit.resume': 'Reprendre',
+	'qbit.pause': 'Pause',
+	'qbit.ofSize': '{pct} % de {size}',
+} satisfies Partial<Dict>;

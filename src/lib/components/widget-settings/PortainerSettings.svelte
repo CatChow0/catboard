@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, errorText } from '$lib/i18n';
 	import { onMount } from 'svelte';
 
 	let { config = $bindable() }: { config: { endpointId: string } } = $props();
@@ -10,7 +11,7 @@
 		try {
 			const res = await fetch('/api/integrations/portainer/overview');
 			const body = await res.json();
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			endpoints = body.endpoints;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -19,14 +20,14 @@
 </script>
 
 <label class="field">
-	<span>Environment</span>
+	<span>{$t('ws.environment')}</span>
 	{#if endpoints}
 		<select bind:value={config.endpointId}>
-			<option value="">Every environment</option>
+			<option value="">{$t('ws.everyEnvironment')}</option>
 			{#each endpoints as e (e.id)}<option value={String(e.id)}>{e.name}</option>{/each}
 		</select>
 	{:else}
-		<span class="hint">{error || 'Loading environments…'}</span>
+		<span class="hint">{error || $t('ws.loadingEnvironments')}</span>
 	{/if}
 </label>
-<p class="hint">Refreshed every 30 seconds. Admins can start and stop stacks.</p>
+<p class="hint">{$t('ws.refreshedEvery30SecondsAdminsCan')}</p>

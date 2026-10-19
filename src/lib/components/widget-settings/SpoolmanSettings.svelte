@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { SpoolmanConfig, SpoolmanSection } from '$lib/types';
 
 	type Draft = Required<Pick<SpoolmanConfig, 'title' | 'showRecent' | 'showLow' | 'showOnly' | 'sort' | 'order' | 'limit' | 'lowPercent' | 'lowGrams' | 'includeArchived'>>;
 	let { config = $bindable() }: { config: Draft } = $props();
 
-	const NAMES: Record<SpoolmanSection, string> = { list: 'Spool list', recent: 'Recently used', low: 'Running low / empty' };
+	const NAMES: Record<SpoolmanSection, string> = { list: $t('ws.spoolList'), recent: $t('ws.recentlyUsed'), low: $t('ws.runningLowEmpty') };
 	const canShowOnly = $derived(config.showRecent || config.showLow);
 	/** Whether a block would be shown with these settings. */
 	const shown = (k: SpoolmanSection) => (k === 'list' ? !(canShowOnly && config.showOnly) : k === 'recent' ? config.showRecent : config.showLow);
@@ -17,62 +18,62 @@
 </script>
 
 <label class="field">
-	<span>Title</span>
+	<span>{$t('ws.title')}</span>
 	<input type="text" bind:value={config.title} placeholder="Spoolman" />
 </label>
 <label class="field">
-	<span>Sort the spool list by</span>
+	<span>{$t('ws.sortTheSpoolListBy')}</span>
 	<select bind:value={config.sort}>
-		<option value="name">Name</option>
-		<option value="remaining">Remaining filament (least first)</option>
-		<option value="lastUsed">Last used</option>
+		<option value="name">{$t('ws.name')}</option>
+		<option value="remaining">{$t('ws.remainingFilamentLeastFirst')}</option>
+		<option value="lastUsed">{$t('ws.lastUsed')}</option>
 	</select>
 </label>
-<p class="group-title">Extra sections</p>
+<p class="group-title">{$t('ws.extraSections')}</p>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.showRecent} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Recently used</span>
+	<span class="toggle-label">{$t('ws.recentlyUsed')}</span>
 </label>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.showLow} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Running low / empty</span>
+	<span class="toggle-label">{$t('ws.runningLowEmpty')}</span>
 </label>
-<label class="toggle-switch" class:disabled={!canShowOnly} title={canShowOnly ? undefined : 'Enable a section first'}>
+<label class="toggle-switch" class:disabled={!canShowOnly} title={canShowOnly ? undefined : $t('ws.enableSectionFirst')}>
 	<input type="checkbox" bind:checked={config.showOnly} disabled={!canShowOnly} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Show only these sections <small>(hide the spool list)</small></span>
+	<span class="toggle-label">{$t('ws.showOnlyTheseSections')} <small>{$t('ws.hideTheSpoolList')}</small></span>
 </label>
-<p class="group-title">Order</p>
+<p class="group-title">{$t('ws.order')}</p>
 <ol class="order">
 	{#each config.order as key, i (key)}
 		<li class:off={!shown(key)}>
 			<span class="name">{NAMES[key]}</span>
-			{#if !shown(key)}<span class="tag">hidden</span>{/if}
-			<button type="button" disabled={i === 0} onclick={() => move(i, -1)} aria-label="Move {NAMES[key]} up">↑</button>
-			<button type="button" disabled={i === config.order.length - 1} onclick={() => move(i, 1)} aria-label="Move {NAMES[key]} down">↓</button>
+			{#if !shown(key)}<span class="tag">{$t('ws.hidden')}</span>{/if}
+			<button type="button" disabled={i === 0} onclick={() => move(i, -1)} aria-label={$t('ws.moveUp', { name: NAMES[key] })}>↑</button>
+			<button type="button" disabled={i === config.order.length - 1} onclick={() => move(i, 1)} aria-label={$t('ws.moveDown', { name: NAMES[key] })}>↓</button>
 		</li>
 	{/each}
 </ol>
 <label class="field">
-	<span>Spools per section</span>
+	<span>{$t('ws.spoolsPerSection')}</span>
 	<input type="number" min="1" max="50" bind:value={config.limit} />
 </label>
 <div class="field-row">
 	<label class="field">
-		<span>Running low below (%)</span>
+		<span>{$t('ws.runningLowBelow')}</span>
 		<input type="number" min="0" max="100" bind:value={config.lowPercent} />
 	</label>
 	<label class="field">
-		<span>…or below (g, 0 = off)</span>
+		<span>{$t('ws.orBelowG0Off')}</span>
 		<input type="number" min="0" bind:value={config.lowGrams} />
 	</label>
 </div>
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.includeArchived} />
 	<span class="toggle-slider"></span>
-	<span class="toggle-label">Include archived spools <small>(finished spools are often archived)</small></span>
+	<span class="toggle-label">{$t('ws.includeArchivedSpools')} <small>{$t('ws.finishedSpoolsAreOftenArchived')}</small></span>
 </label>
 
 <style>

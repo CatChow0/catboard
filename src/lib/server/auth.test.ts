@@ -16,7 +16,7 @@ describe('isAdmin / requireAdmin', () => {
 		expect(isAdmin(locals('user'))).toBe(false);
 		const res = requireAdmin(locals(null))!;
 		expect(res.status).toBe(403);
-		expect(await res.json()).toEqual({ error: 'Only an admin can do this' });
+		expect(await res.json()).toMatchObject({ error: 'Only an admin can do this', code: 'errors.adminOnly' });
 	});
 });
 
@@ -61,7 +61,7 @@ describe('canEditDashboards', () => {
 		expect(await canEditDashboards(locals('user'))).toBe(false);
 		const res = (await requireEditor(locals('user')))!;
 		expect(res.status).toBe(403);
-		expect(await res.json()).toEqual({ error: 'Only an admin can change the dashboards' });
+		expect(await res.json()).toMatchObject({ error: 'Only an admin can change the dashboards', code: 'errors.adminDashboards' });
 	});
 
 	it('with "everyone": every signed-in user, never an anonymous one', async () => {

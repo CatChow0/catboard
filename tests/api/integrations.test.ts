@@ -49,7 +49,7 @@ describe('test connection', () => {
 	});
 
 	it('PsiTransfer: retentions, upload password missing / wrong / right', async () => {
-		expect(await test('psitransfer', { url: mocks.psitransfer.url })).toEqual({ ok: true, message: 'PsiTransfer is reachable (3 retention choices)' });
+		expect(await test('psitransfer', { url: mocks.psitransfer.url })).toMatchObject({ ok: true, message: 'PsiTransfer is reachable (3 retention choices)', code: 'test.psiOk' });
 		const locked = await psitransferMock(undefined, { uploadPassword: TOKENS.psitransfer.uploadPassword });
 		try {
 			expect((await test('psitransfer', { url: locked.url })).message).toMatch(/asks for an upload password/);
@@ -74,13 +74,13 @@ describe('test connection', () => {
 	});
 
 	it('Immich: tells admin keys apart', async () => {
-		expect(await test('immich', { url: mocks.immich.url, apiKey: TOKENS.immich.adminKey })).toEqual({ ok: true, message: 'Immich 3.3.3, key of Admin (admin)' });
-		expect(await test('immich', { url: mocks.immich.url, apiKey: TOKENS.immich.userKey })).toEqual({ ok: true, message: 'Immich 3.3.3, key of User' });
+		expect(await test('immich', { url: mocks.immich.url, apiKey: TOKENS.immich.adminKey })).toMatchObject({ ok: true, message: 'Immich 3.3.3, key of Admin (admin)' });
+		expect(await test('immich', { url: mocks.immich.url, apiKey: TOKENS.immich.userKey })).toMatchObject({ ok: true, message: 'Immich 3.3.3, key of User' });
 		expect((await test('immich', { url: mocks.immich.url, apiKey: 'bad' })).message).toMatch(/refused the API key/);
 	});
 
 	it('Nextcloud: signs in with an app password', async () => {
-		expect(await test('nextcloud', { url: mocks.nextcloud.url, ...TOKENS.nextcloud })).toEqual({ ok: true, message: 'Nextcloud, signed in as Ann' });
+		expect(await test('nextcloud', { url: mocks.nextcloud.url, ...TOKENS.nextcloud })).toMatchObject({ ok: true, message: 'Nextcloud, signed in as Ann' });
 		expect((await test('nextcloud', { url: mocks.nextcloud.url, username: 'ann', appPassword: 'bad' })).message).toMatch(/app password/);
 		expect((await test('nextcloud', { url: mocks.nextcloud.url })).message).toMatch(/username/);
 	});

@@ -15,7 +15,9 @@ export default defineConfig({
 	use: {
 		baseURL: `http://127.0.0.1:${E2E_PORT}`,
 		trace: 'on-first-retry',
-		screenshot: 'only-on-failure'
+		screenshot: 'only-on-failure',
+		// The interface follows the browser language: the specs expect English.
+		locale: 'en-US'
 	},
 	projects: [
 		{ name: 'desktop', testIgnore: /phone\.spec/, use: { ...devices['Desktop Chrome'], viewport: { width: 1400, height: 900 } } },

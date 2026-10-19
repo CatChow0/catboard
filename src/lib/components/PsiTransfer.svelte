@@ -3,6 +3,7 @@
 	// long they are kept and an optional password, send, and get the share link.
 	// Files go through CatBoard in small chunks; the last links are remembered
 	// by this browser.
+	import { t, errorText } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import type { PsiTransferConfig } from '$lib/types';
 	import { isEditing } from '$lib/stores/dashboard';
@@ -54,7 +55,7 @@
 		try {
 			const res = await fetch('/api/integrations/psitransfer/config');
 			const body = await res.json();
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			info = body;
 			infoError = '';
 		} catch (e) {
@@ -87,11 +88,11 @@
 	}
 	function expiryLabel(l: Link): string {
 		const exp = expiresAt(l);
-		if (exp === null) return info?.retentions[l.retention] ?? 'one-time download';
+		if (exp === null) return info?.retentions[l.retention] ?? $t('psi.oneTime');
 		const left = exp - Date.now();
-		if (left < 3600_000) return `expires in ${Math.max(1, Math.round(left / 60_000))} min`;
-		if (left < 86400_000) return `expires in ${Math.round(left / 3600_000)} h`;
-		return `expires in ${Math.round(left / 86400_000)} d`;
+		if (left < 3600_000) return $t('psi.expiresMin', { n: Math.max(1, Math.round(left / 60_000)) });
+		if (left < 86400_000) return $t('psi.expiresH', { n: Math.round(left / 3600_000) });
+		return $t('psi.expiresD', { n: Math.round(left / 86400_000) });
 	}
 
 	// --- Picking files ---
@@ -147,7 +148,7 @@
 	async function api<T>(url: string, init: RequestInit): Promise<T> {
 		const res = await fetch(url, { ...init, signal: cancel?.signal });
 		const body = await res.json().catch(() => ({}));
-		if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+		if (!res.ok) throw new Error(errorText(body, res.status));
 		return body as T;
 	}
 
@@ -189,11 +190,11 @@
 			});
 			link = url;
 			copied = false;
-			if (historySize > 0) remember({ url, label: files.length === 1 ? files[0].name : `${files.length} files`, at: Date.now(), retention: ret });
+			if (historySize > 0) remember({ url, label: files.length === 1 ? files[0].name : $t('psi.files', { count: files.length }), at: Date.now(), retention: ret });
 			phase = 'done';
 			files = [];
 		} catch (e) {
-			error = cancel?.signal.aborted ? 'Cancelled' : e instanceof Error ? e.message : String(e);
+			error = cancel?.signal.aborted ? $t('psi.cancelled') : e instanceof Error ? e.message : String(e);
 			phase = askOptions ? 'review' : 'idle';
 		} finally {
 			cancel = null;
@@ -220,65 +221,65 @@
 	ondragover={onDragOver}
 	ondrop={onDrop}
 	role="region"
-	aria-label="PsiTransfer: drop files to share them"
+	aria-label={$t('psi.region')}
 >
 	<input bind:this={input} type="file" multiple hidden onchange={(e) => { pick(e.currentTarget.files); e.currentTarget.value = ''; }} />
 
 	<div class="ps-inner">
 		{#if phase === 'review'}
 			<div class="ps-head">
-				<span class="ps-title">{files.length} file{files.length > 1 ? 's' : ''} · {fmtSize(totalSize)}</span>
-				<button class="ps-link-btn" onclick={openPicker} onpointerdown={(e) => e.stopPropagation()}>Add</button>
+				<span class="ps-title">{$t('psi.files', { count: files.length })} · {fmtSize(totalSize)}</span>
+				<button class="ps-link-btn" onclick={openPicker} onpointerdown={(e) => e.stopPropagation()}>{$t('common.add')}</button>
 			</div>
 			<ul class="ps-files">
 				{#each files as f, i (i + f.name)}
 					<li>
 						<span class="ps-fname" title={f.name}>{f.name}</span>
 						<span class="ps-fsize">{fmtSize(f.size)}</span>
-						<button class="ps-x" onclick={() => (files = files.filter((_, j) => j !== i))} onpointerdown={(e) => e.stopPropagation()} aria-label="Remove {f.name}">✕</button>
+						<button class="ps-x" onclick={() => (files = files.filter((_, j) => j !== i))} onpointerdown={(e) => e.stopPropagation()} aria-label={$t('psi.remove', { name: f.name })}>✕</button>
 					</li>
 				{/each}
 			</ul>
 			<div class="ps-opts cb-form">
 				<label class="field">
-					<span>Keep for</span>
+					<span>{$t('psi.keepFor')}</span>
 					<select bind:value={retention} onpointerdown={(e) => e.stopPropagation()}>
 						{#each Object.entries(info?.retentions ?? {}) as [key, label] (key)}<option value={key}>{label}</option>{/each}
 					</select>
 				</label>
 				<label class="field">
-					<span>Password{info?.requireBucketPassword ? '' : ' (optional)'}</span>
+					<span>{$t('psi.password')}{info?.requireBucketPassword ? '' : $t('psi.optional')}</span>
 					<input type="password" bind:value={password} autocomplete="new-password" onpointerdown={(e) => e.stopPropagation()} />
 				</label>
 			</div>
-			{#if tooBig}<p class="ps-err">A file is larger than PsiTransfer accepts ({fmtSize(info?.maxFileSize ?? 0)}).</p>{/if}
+			{#if tooBig}<p class="ps-err">{$t('psi.tooBig', { max: fmtSize(info?.maxFileSize ?? 0) })}</p>{/if}
 			{#if error}<p class="ps-err">{error}</p>{/if}
 			<div class="ps-actions">
-				<button class="ps-btn" onclick={reset} onpointerdown={(e) => e.stopPropagation()}>Cancel</button>
-				<button class="ps-btn primary" onclick={send} onpointerdown={(e) => e.stopPropagation()} disabled={!files.length || tooBig || needsPassword}>Send</button>
+				<button class="ps-btn" onclick={reset} onpointerdown={(e) => e.stopPropagation()}>{$t('common.cancel')}</button>
+				<button class="ps-btn primary" onclick={send} onpointerdown={(e) => e.stopPropagation()} disabled={!files.length || tooBig || needsPassword}>{$t('psi.send')}</button>
 			</div>
 		{:else if phase === 'sending'}
 			<div class="ps-sending">
-				<span class="ps-title">Sending {files.length > 1 ? `${files.length} files` : files[0]?.name}…</span>
+				<span class="ps-title">{$t('psi.sending', { what: files.length > 1 ? $t('psi.files', { count: files.length }) : (files[0]?.name ?? '') })}</span>
 				<div class="ps-bar"><div class="ps-fill" style:width="{pct}%"></div></div>
-				<span class="ps-meta">{pct}% · {fmtSize(sent)} of {fmtSize(total)} · {fmtSize(speed)}/s</span>
-				<button class="ps-btn" onclick={() => cancel?.abort()} onpointerdown={(e) => e.stopPropagation()}>Cancel</button>
+				<span class="ps-meta">{$t('psi.progress', { pct, sent: fmtSize(sent), total: fmtSize(total), speed: fmtSize(speed) })}</span>
+				<button class="ps-btn" onclick={() => cancel?.abort()} onpointerdown={(e) => e.stopPropagation()}>{$t('common.cancel')}</button>
 			</div>
 		{:else}
 			{#if phase === 'done' && link}
 				<div class="ps-done">
-					<span class="ps-ok">✓ Shared</span>
+					<span class="ps-ok">{$t('psi.shared')}</span>
 					<div class="ps-linkrow">
 						<input bind:this={linkInput} class="ps-url" value={link} readonly onpointerdown={(e) => e.stopPropagation()} onfocus={(e) => e.currentTarget.select()} />
-						<button class="ps-btn primary" onclick={() => copy(link)} onpointerdown={(e) => e.stopPropagation()}>{copied ? 'Copied' : 'Copy'}</button>
-						<a class="ps-btn" href={link} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()}>Open</a>
+						<button class="ps-btn primary" onclick={() => copy(link)} onpointerdown={(e) => e.stopPropagation()}>{copied ? $t('common.copied') : $t('common.copy')}</button>
+						<a class="ps-btn" href={link} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()}>{$t('common.open')}</a>
 					</div>
 				</div>
 			{/if}
-			<button class="ps-zone" class:small={compact || (phase === 'done' && !!link)} onclick={openPicker} onpointerdown={(e) => !$isEditing && e.stopPropagation()} disabled={!info} aria-label="Choose files to share">
+			<button class="ps-zone" class:small={compact || (phase === 'done' && !!link)} onclick={openPicker} onpointerdown={(e) => !$isEditing && e.stopPropagation()} disabled={!info} aria-label={$t('psi.choose')}>
 				<Glyph name="upload" size={compact ? 18 : 26} />
 				<span class="ps-zone-text">
-					{#if infoError}{infoError}{:else if !info}Connecting to PsiTransfer…{:else if $isEditing}Leave edit mode to share files{:else}<b>Drop files here</b>{#if !compact}{' or click to choose'}{/if}{/if}
+					{#if infoError}{infoError}{:else if !info}{$t('psi.connecting')}{:else if $isEditing}{$t('psi.leaveEdit')}{:else}<b>{$t('psi.drop')}</b>{#if !compact}{$t('psi.orClick')}{/if}{/if}
 				</span>
 				{#if error && !compact}<span class="ps-err">{error}</span>{/if}
 			</button>
@@ -288,14 +289,14 @@
 						<li>
 							<a href={h.url} target="_blank" rel="noopener noreferrer" onpointerdown={(e) => e.stopPropagation()} title={h.url}>{h.label}</a>
 							<span class="ps-meta">{expiryLabel(h)}</span>
-							<button class="ps-link-btn" onclick={() => copy(h.url)} onpointerdown={(e) => e.stopPropagation()}>Copy</button>
+							<button class="ps-link-btn" onclick={() => copy(h.url)} onpointerdown={(e) => e.stopPropagation()}>{$t('common.copy')}</button>
 						</li>
 					{/each}
 				</ul>
 			{/if}
 		{/if}
 	</div>
-	<EditButtons label="PsiTransfer widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblPsiTransfer')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

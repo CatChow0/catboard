@@ -1,0 +1,25 @@
+import type { Dict } from '..';
+
+export const exportTab = {
+	'export.title': 'Export',
+	'export.desc': 'Télécharge une copie complète de la configuration de ton dashboard : services, mise en page, réglages et intégrations.',
+	'export.exporting': 'Export...',
+	'export.button': 'Exporter le dashboard',
+	'export.import': 'Import',
+	'export.select': 'Choisir un fichier d\'export',
+	'export.from': 'Export du {date}',
+	'export.loaded': 'Fichier d\'export chargé',
+	'export.services': 'Services',
+	'export.servicesCount': { one: '{count} service', other: '{count} services' },
+	'export.layout': 'Mise en page',
+	'export.layoutSummary': '{dashboards}, {items}',
+	'export.dashboards': { one: '{count} dashboard', other: '{count} dashboards' },
+	'export.items': { one: '{count} élément', other: '{count} éléments' },
+	'export.settings': 'Réglages',
+	'export.settingsDesc': 'Thème et préférences',
+	'export.integrations': 'Intégrations',
+	'export.integrationsDesc': 'Connexions externes',
+	'export.warning': 'L\'import remplace les sections choisies. La configuration actuelle est d\'abord sauvegardée (voir Sauvegardes plus haut).',
+	'export.importing': 'Import...',
+	'export.importSelected': 'Importer la sélection',
+} satisfies Partial<Dict>;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -793,14 +794,14 @@
 			const n = await transferItems(ids, to, toBp, copy);
 			selectedItemIds = new Set();
 			selectedChildIds = new Map();
-			showToast(`${n > 1 ? `${n} tiles` : 'Tile'} ${copy ? 'copied' : 'moved'} to ${dash} · ${bpName}`);
+			showToast($t(copy ? 'dashboard.tilesCopied' : 'dashboard.tilesMoved', { count: n, target: `${dash} · ${bpName}` }));
 		} catch (err) {
-			showToast(err instanceof Error ? err.message : 'Failed');
+			showToast(err instanceof Error ? err.message : $t('common.failed'));
 		}
 	}
 
 	async function deleteSelection(ids: string[]) {
-		if (ids.length > 1 && !confirm(`Delete ${ids.length} tiles?`)) return;
+		if (ids.length > 1 && !confirm($t('dashboard.confirmDelete', { count: ids.length }))) return;
 		for (const id of ids) await removeDashboardItem(id);
 		selectedItemIds = new Set();
 		selectedChildIds = new Map();
@@ -1000,8 +1001,8 @@
 								<rect x="3" y="14" width="7" height="7" rx="1" />
 								<rect x="14" y="14" width="7" height="7" rx="1" />
 							</svg>
-							<p>Ce layout est vide</p>
-							<p class="hint">Ajoutez des services et widgets via le bouton + pour le format {getBreakpointLabel($layout.grid.breakpoints, $activeBreakpointId)}</p>
+							<p>{$t('dashboard.empty')}</p>
+							<p class="hint">{$t('dashboard.emptyHint', { layout: getBreakpointLabel($layout.grid.breakpoints, $activeBreakpointId) })}</p>
 						</div>
 					{/if}
 				</div>
@@ -1025,7 +1026,7 @@
 		{/if}
 
 		{#if menu}
-			<ContextMenu x={menu.x} y={menu.y} title={menu.ids.length > 1 ? `${menu.ids.length} selected tiles` : '1 selected tile'} items={menuItems} onclose={() => (menu = null)} />
+			<ContextMenu x={menu.x} y={menu.y} title={$t('dashboard.selected', { count: menu.ids.length })} items={menuItems} onclose={() => (menu = null)} />
 		{/if}
 	</main>
 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Uptime Kuma status page summary, overall bar and monitor list. Shared by
 	// the standard widget and the navbar popover so both show the same thing.
+	import { t } from '$lib/i18n';
 	import type { UptimeKumaStatusPageData } from '$lib/types';
 	import UptimeKumaLogo from '../icons/UptimeKumaLogo.svelte';
 
@@ -19,8 +20,8 @@
 		<span class="uk-name">{data.title}</span>
 	</div>
 	<div class="uk-summary">
-		<span class="uk-badge active">{data.activeCount} up</span>
-		<span class="uk-badge inactive">{data.inactiveCount} down</span>
+		<span class="uk-badge active">{$t('count.up', { n: data.activeCount })}</span>
+		<span class="uk-badge inactive">{$t('count.down', { n: data.inactiveCount })}</span>
 		<span class="uk-uptime" style="color: {uptimeColor(data.overallUptime)}">{data.overallUptime}%</span>
 	</div>
 	{#if showBar}

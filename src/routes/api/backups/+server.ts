@@ -1,8 +1,9 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { configDir } from '$lib/server/config';
 import { createBackup, listBackups, pruneBackups } from '$lib/server/backup';
+import { apiError } from '$lib/server/api-error';
 
-const denied = () => json({ error: 'Only the admin can manage backups' }, { status: 403 });
+const denied = () => apiError(403, 'errors.adminBackups');
 
 /** GET — the config backups, newest first (admin). */
 export const GET: RequestHandler = async ({ locals }) => {

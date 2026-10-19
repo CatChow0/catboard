@@ -1,13 +1,14 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { qbitConn, qbit, toTorrent } from '$lib/server/qbittorrent';
 import type { QBittorrentData, TorrentState } from '$lib/types';
+import { apiError, errorBody } from '$lib/server/api-error';
 
 const FILTERS = new Set(['active', 'all', 'downloading', 'seeding']);
 
 /** GET ?filter=active|all|downloading|seeding&limit=N — speeds, counters and torrents. */
 export const GET: RequestHandler = async ({ url }) => {
 	const conn = await qbitConn();
-	if (!conn) return json({ error: 'qBittorrent not configured' }, { status: 404 });
+	if (!conn) return apiError(404, 'errors.notSetUp', { name: 'qBittorrent' });
 	const filter = FILTERS.has(url.searchParams.get('filter') || '') ? url.searchParams.get('filter')! : 'active';
 	const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '8', 10) || 8, 1), 50);
 	try {
@@ -35,6 +36,6 @@ export const GET: RequestHandler = async ({ url }) => {
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : '';
 		const known = msg.startsWith('Wrong') || msg.startsWith('qBittorrent');
-		return json({ error: known ? msg : 'Cannot reach qBittorrent' }, { status: 502 });
+		return known ? json(errorBody(err), { status: 502 }) : apiError(502, 'errors.cannotReach', { name: 'qBittorrent' });
 	}
 };

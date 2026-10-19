@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { AdGuardHomeConfig } from '$lib/types';
 	import { adguardHomeData, isEditing, settings, currentUser } from '$lib/stores/dashboard';
 
@@ -80,18 +81,18 @@
 			class:anim-full={animations === 'full'}
 			onclick={() => toggleProtection(!isActive)}
 			disabled={actionLoading || !isAdmin}
-			title={!isAdmin ? `AdGuard ${isPaused ? 'paused' : isActive ? 'active' : 'off'} (only an admin can change it)` : isPaused ? 'AdGuard Paused - click to resume' : isActive ? 'AdGuard Active - click to disable' : 'AdGuard Inactive - click to enable'}
+			title={!isAdmin ? $t('adguard.readonly', { state: $t(isPaused ? 'adguard.stPaused' : isActive ? 'adguard.stActive' : 'adguard.stOff') }) : $t(isPaused ? 'adguard.clickResume' : isActive ? 'adguard.clickDisable' : 'adguard.clickEnable')}
 		>
 			<svg class="shield" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
 			</svg>
 			<span class="status-dot" class:active={isActive} class:paused={isPaused} class:anim-full={animations === 'full'}></span>
-			<span class="label">{isPaused ? 'Paused' : isActive ? 'Active' : 'Off'}</span>
+			<span class="label">{$t(isPaused ? 'adguard.paused' : isActive ? 'adguard.active' : 'adguard.off')}</span>
 		</button>
 
 		{#if isActive && !isPaused && showAll && isAdmin}
 			<div class="pause-section">
-				<span class="pause-label">Pause for</span>
+				<span class="pause-label">{$t('adguard.pauseFor')}</span>
 				<div class="pause-buttons">
 					{#each quickDurations as d}
 						<button class="btn-pause" onclick={() => toggleProtection(false, d.value)} disabled={actionLoading}>
@@ -100,9 +101,9 @@
 					{/each}
 				</div>
 				<div class="pause-custom">
-					<input type="number" bind:value={pauseDuration} min="1" placeholder="seconds" />
+					<input type="number" bind:value={pauseDuration} min="1" placeholder={$t('adguard.seconds')} />
 					<button class="btn-pause-custom" onclick={() => toggleProtection(false, pauseDuration)} disabled={actionLoading}>
-						Custom
+						{$t('adguard.custom')}
 					</button>
 				</div>
 			</div>
@@ -110,7 +111,7 @@
 	</div>
 
 	{#if $isEditing}
-		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title="Remove AdGuard control">
+		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title={$t('adguard.removeControl')}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>

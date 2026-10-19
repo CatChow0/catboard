@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Navbar print status: printer icon, mini progress bar, % and time left while
 	// printing; click for the full details (actions included for admins).
+	import { t, locale } from '$lib/i18n';
+	import { printLabel } from '$lib/i18n/catalog';
 	import type { ElegooPrintConfig } from '$lib/types';
 	import { isEditing } from '$lib/stores/dashboard';
 	import PrinterIcon from '../icons/PrinterIcon.svelte';
@@ -14,7 +16,7 @@
 	const poll = pollElegoo(() => config?.printerId || '', 5000);
 	const status = $derived(poll.status);
 	const printing = $derived(!!status && ['printing', 'preheating', 'pausing', 'paused', 'stopping'].includes(status.state));
-	const label = $derived(status ? `${status.name}: ${status.online ? status.stateLabel : 'offline'}` : '3D printer');
+	const label = $derived(status ? `${status.name}: ${status.online ? printLabel($locale, status.stateLabel) : $t('printer.offline')}` : $t('printer.default'));
 
 	let button = $state<HTMLButtonElement>();
 	let open = $state(false);
@@ -31,24 +33,24 @@
 </script>
 
 <div class="nb-wrap">
-	<button bind:this={button} class="print-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label="{label}, show print details">
+	<button bind:this={button} class="print-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label={$t('navw.print', { label })}>
 		<span class="nb-logo"><PrinterIcon size="calc(15px * var(--nb-icon, 1))" /></span>
 		{#if !config?.printerId}
-			<span class="pw-muted">No printer</span>
+			<span class="pw-muted">{$t('printer.none')}</span>
 		{:else if !status}
 			<span class="pw-muted">…</span>
 		{:else if !status.online}
-			<span class="pw-dot off"></span><span class="pw-muted">Offline</span>
+			<span class="pw-dot off"></span><span class="pw-muted">{$t('print.offline')}</span>
 		{:else if printing}
 			<span class="pw-bar"><span class="pw-fill {status.state}" style:width="{status.progress}%"></span></span>
 			<span class="pw-pct">{Math.floor(status.progress)}%</span>
 			{#if status.state === 'paused'}
-				<span class="pw-muted">Paused</span>
+				<span class="pw-muted">{$t('print.paused')}</span>
 			{:else if status.remainingSec > 0}
 				<span class="pw-left">{duration(status.remainingSec)}</span>
 			{/if}
 		{:else}
-			<span class="pw-dot {status.state}"></span><span class="pw-muted">{status.stateLabel}</span>
+			<span class="pw-dot {status.state}"></span><span class="pw-muted">{printLabel($locale, status.stateLabel)}</span>
 		{/if}
 	</button>
 
@@ -57,7 +59,7 @@
 			{#if status}
 				<ElegooPrintDetails {status} printerId={config.printerId} showThumbnail={config?.showThumbnail ?? true} showTemps={config?.showTemps ?? true} onchanged={poll.refresh} />
 			{:else}
-				<p class="nb-empty">{poll.error || 'Connecting to the printer…'}</p>
+				<p class="nb-empty">{poll.error || $t('printer.connecting')}</p>
 			{/if}
 		</NavbarPopover>
 	{/if}

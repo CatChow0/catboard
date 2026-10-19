@@ -1,0 +1,27 @@
+import type { Dict } from '..';
+
+export const nav = {
+	'nav.settings': 'Réglages',
+	'nav.logout': 'Déconnexion',
+	'nav.options': 'Options',
+	'nav.newVersion': 'Nouvelle : {version}',
+	'nav.updateAvailable': 'mise à jour disponible : {version}',
+	'nav.add': 'Ajouter',
+	'nav.addTitle': 'Ajouter un service ou un widget',
+	'nav.edit': 'Modifier',
+	'nav.toggleEdit': 'Mode édition',
+	'nav.done': 'Terminé',
+	'nav.layout': 'Mise en page',
+	'nav.editDashboard': 'Modifier le dashboard',
+	'nav.doneEditing': 'Terminer l\'édition',
+	'nav.menu': 'Menu',
+	'nav.search': 'Rechercher',
+	'nav.editTitle': 'Modifier le titre',
+	'nav.removeWidget': 'Retirer',
+	'nav.editWidget': 'Modifier',
+	'nav.widgetToolbar': 'Widget de la barre',
+	'nav.moveLeft': 'Déplacer à gauche',
+	'nav.moveRight': 'Déplacer à droite',
+	'nav.narrower': 'Plus étroit',
+	'nav.wider': 'Plus large',
+} satisfies Partial<Dict>;

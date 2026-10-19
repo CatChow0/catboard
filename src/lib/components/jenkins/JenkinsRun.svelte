@@ -1,6 +1,7 @@
 <script lang="ts">
 	// "Run" button of a Jenkins job (admins only): starts the build at once,
 	// or first asks for the job's parameters, pre-filled with their defaults.
+	import { errorText, t } from '$lib/i18n';
 	import type { JenkinsParameter } from '$lib/types';
 	import { currentUser } from '$lib/stores/dashboard';
 	import WidgetModal from '../widget/WidgetModal.svelte';
@@ -28,9 +29,9 @@
 				body: JSON.stringify({ job, params })
 			});
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			parameters = null;
-			flash(true, 'Queued');
+			flash(true, $t('jenkins.queuedFlash'));
 			onqueued?.();
 		} catch (e) {
 			flash(false, e instanceof Error ? e.message : String(e));
@@ -45,7 +46,7 @@
 		try {
 			const res = await fetch(`/api/integrations/jenkins/params?job=${encodeURIComponent(job)}`);
 			const body = await res.json();
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			parameters = body.parameters;
 			values = Object.fromEntries((body.parameters as JenkinsParameter[]).map((p) => [p.name, p.default]));
 		} catch (e) {
@@ -59,15 +60,15 @@
 {#if isAdmin && job}
 	<span class="jr">
 		{#if message}<span class="msg" class:err={!message.ok} title={message.text}>{message.text}</span>{/if}
-		<button class="run" onclick={run} onpointerdown={(e) => e.stopPropagation()} disabled={busy} title="Start a build of {job}" aria-label="Start a build of {job}">
+		<button class="run" onclick={run} onpointerdown={(e) => e.stopPropagation()} disabled={busy} title={$t('jenkins.startTitle', { job })} aria-label={$t('jenkins.startTitle', { job })}>
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z" /></svg>
-			Run
+			{$t('jenkins.run')}
 		</button>
 	</span>
 {/if}
 
 {#if parameters}
-	<WidgetModal title="Run {job.split('/').pop()}" saveLabel={busy ? 'Starting…' : 'Run'} saveDisabled={busy} onclose={() => (parameters = null)} onsave={() => start($state.snapshot(values))}>
+	<WidgetModal title={$t('jenkins.runTitle', { job: job.split('/').pop() ?? job })} saveLabel={busy ? $t('jenkins.starting') : $t('jenkins.run')} saveDisabled={busy} onclose={() => (parameters = null)} onsave={() => start($state.snapshot(values))}>
 		{#each parameters as p (p.name)}
 			{#if p.type === 'boolean'}
 				<label class="toggle-switch">
@@ -91,7 +92,7 @@
 				</label>
 			{/if}
 		{:else}
-			<p class="hint">This job has no parameters.</p>
+			<p class="hint">{$t('jenkins.noParams')}</p>
 		{/each}
 		{#if message && !message.ok}<p class="hint err">{message.text}</p>{/if}
 	</WidgetModal>

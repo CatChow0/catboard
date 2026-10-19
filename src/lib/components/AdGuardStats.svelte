@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { AdGuardHomeConfig } from '$lib/types';
 	import { adguardHomeData, isEditing } from '$lib/stores/dashboard';
 
@@ -23,32 +24,32 @@
 				<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
 				<path d="M12 6v6l4 2" />
 			</svg>
-			<span>No data</span>
+			<span>{$t('adguard.noData')}</span>
 		</div>
 	{:else}
 		<div class="adguard-grid" class:compact={!showAll}>
 			<div class="stat-card queries">
 				<span class="stat-value">{data.stats.dnsQueries.toLocaleString()}</span>
-				<span class="stat-label">Queries</span>
+				<span class="stat-label">{$t('adguard.queries')}</span>
 			</div>
 			<div class="stat-card blocked">
 				<span class="stat-value">{data.stats.blockedQueries.toLocaleString()}</span>
-				<span class="stat-label">Blocked</span>
+				<span class="stat-label">{$t('adguard.blocked')}</span>
 			</div>
 			{#if showAll}
 				<div class="stat-card domains">
 					<span class="stat-value">{data.stats.blockedDomains.toLocaleString()}</span>
-					<span class="stat-label">Domains</span>
+					<span class="stat-label">{$t('adguard.domains')}</span>
 				</div>
 				<div class="stat-card latency">
 					<span class="stat-value">{(data.stats.avgProcessingTime * 1000).toFixed(0)}ms</span>
-					<span class="stat-label">Latency</span>
+					<span class="stat-label">{$t('adguard.latency')}</span>
 				</div>
 			{/if}
 		</div>
 	{/if}
 	{#if $isEditing}
-		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title="Remove AdGuard stats">
+		<button class="btn-delete" onclick={(e) => { e.stopPropagation(); ondelete?.(); }} onpointerdown={(e) => e.stopPropagation()} title={$t('adguard.removeStats')}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M18 6L6 18M6 6l12 12" />
 			</svg>

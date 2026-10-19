@@ -1,6 +1,7 @@
 <script lang="ts">
 	// qBittorrent: speeds (with a 60 s graph), counters and the busiest
 	// torrents. Admins can pause/resume single torrents or everything.
+	import { t, errorText, type Key } from '$lib/i18n';
 	import { untrack } from 'svelte';
 	import { pollJson } from '$lib/utils/pollJson.svelte';
 	import type { QBittorrentConfig, QBittorrentData, Torrent } from '$lib/types';
@@ -52,7 +53,7 @@
 				body: JSON.stringify({ action, hashes })
 			});
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+			if (!res.ok) throw new Error(errorText(body, res.status));
 			actionError = '';
 			poll.refresh();
 		} catch (e) {
@@ -72,8 +73,8 @@
 		return `${Math.round(sec / 86400)}d`;
 	}
 
-	const stateLabel: Record<string, string> = {
-		downloading: 'Downloading', seeding: 'Seeding', paused: 'Paused', queued: 'Queued', checking: 'Checking', stalled: 'Stalled', error: 'Error', completed: 'Completed'
+	const stateLabel: Record<string, Key> = {
+		downloading: 'qbit.downloading', seeding: 'qbit.seeding', paused: 'qbit.paused', queued: 'qbit.queued', checking: 'qbit.checking', stalled: 'qbit.stalled', error: 'qbit.error', completed: 'qbit.completed'
 	};
 
 	let showEdit = $state(false);
@@ -84,10 +85,10 @@
 		<div class="qb-head">
 			<span class="qb-title">qBittorrent</span>
 			{#if data}
-				<span class="qb-speed dl" title="Download">↓ {bytesRate(data.dlSpeed)}</span>
-				<span class="qb-speed ul" title="Upload">↑ {bytesRate(data.upSpeed)}</span>
+				<span class="qb-speed dl" title={$t('qbit.download')}>↓ {bytesRate(data.dlSpeed)}</span>
+				<span class="qb-speed ul" title={$t('qbit.upload')}>↑ {bytesRate(data.upSpeed)}</span>
 				{#if isAdmin && data.total > 0}
-					<button class="qb-global" disabled={busy} onclick={() => act(allPaused ? 'resume' : 'pause', 'all')} title={allPaused ? 'Resume all' : 'Pause all'} aria-label={allPaused ? 'Resume all torrents' : 'Pause all torrents'}>
+					<button class="qb-global" disabled={busy} onclick={() => act(allPaused ? 'resume' : 'pause', 'all')} title={$t(allPaused ? 'qbit.resumeAll' : 'qbit.pauseAll')} aria-label={$t(allPaused ? 'qbit.resumeAllLabel' : 'qbit.pauseAllLabel')}>
 						{#if allPaused}
 							<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
 						{:else}
@@ -101,7 +102,7 @@
 		{#if error && !data}
 			<p class="qb-msg qb-error">{error}</p>
 		{:else if !data}
-			<p class="qb-msg">Loading…</p>
+			<p class="qb-msg">{$t('common.loading')}</p>
 		{:else}
 			{#if error}<p class="qb-inline-error">{error}</p>{/if}
 			{#if showGraph}
@@ -111,7 +112,7 @@
 						windowMs={HISTORY * POLL_MS}
 						interval={POLL_MS}
 						max={graphMax}
-						label="Download (solid) and upload (dashed) speed"
+						label={$t('qbit.graph')}
 						series={[
 							{ values: history.map((h) => h.dl), color: '--qb-dl', fill: true },
 							{ values: history.map((h) => h.ul), color: '--qb-ul', dashed: true }
@@ -121,22 +122,22 @@
 			{/if}
 			{#if !compact}
 				<div class="qb-counts">
-					<span><b>{data.counts.downloading + data.counts.stalled}</b> downloading</span>
-					<span><b>{data.counts.seeding}</b> seeding</span>
-					<span><b>{data.counts.paused + data.counts.completed}</b> paused</span>
-					{#if data.counts.error}<span class="err"><b>{data.counts.error}</b> errors</span>{/if}
+					<span><b>{data.counts.downloading + data.counts.stalled}</b> {$t('qbit.nDownloading')}</span>
+					<span><b>{data.counts.seeding}</b> {$t('qbit.nSeeding')}</span>
+					<span><b>{data.counts.paused + data.counts.completed}</b> {$t('qbit.nPaused')}</span>
+					{#if data.counts.error}<span class="err"><b>{data.counts.error}</b> {$t('qbit.nErrors')}</span>{/if}
 				</div>
 				{#if data.torrents.length === 0}
-					<p class="qb-msg">{filter === 'active' ? 'Nothing active right now' : 'No torrents'}</p>
+					<p class="qb-msg">{filter === 'active' ? $t('qbit.nothingActive') : $t('qbit.none')}</p>
 				{:else}
 					<ul class="qb-list">
-						{#each data.torrents as t (t.hash)}
+						{#each data.torrents as tor (tor.hash)}
 							<li class="qb-row">
 								<div class="qb-line">
-									<span class="qb-name" title={t.name}>{t.name}</span>
+									<span class="qb-name" title={tor.name}>{tor.name}</span>
 									{#if isAdmin}
-										<button class="qb-btn" disabled={busy} onclick={() => act(isPaused(t) ? 'resume' : 'pause', [t.hash])} title={isPaused(t) ? 'Resume' : 'Pause'} aria-label="{isPaused(t) ? 'Resume' : 'Pause'} {t.name}">
-											{#if isPaused(t)}
+										<button class="qb-btn" disabled={busy} onclick={() => act(isPaused(tor) ? 'resume' : 'pause', [tor.hash])} title={$t(isPaused(tor) ? 'qbit.resume' : 'qbit.pause')} aria-label="{$t(isPaused(tor) ? 'qbit.resume' : 'qbit.pause')} {tor.name}">
+											{#if isPaused(tor)}
 												<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
 											{:else}
 												<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
@@ -144,13 +145,13 @@
 										</button>
 									{/if}
 								</div>
-								<div class="qb-bar"><div class="qb-fill {t.state}" style:width="{t.progress * 100}%"></div></div>
+								<div class="qb-bar"><div class="qb-fill {tor.state}" style:width="{tor.progress * 100}%"></div></div>
 								<div class="qb-meta">
-									<span class="qb-state {t.state}">{stateLabel[t.state]}</span>
-									<span>{(t.progress * 100).toFixed(t.progress < 1 ? 1 : 0)}% of {bytes(t.size)}</span>
-									{#if t.dlSpeed > 0}<span>↓ {bytesRate(t.dlSpeed)}</span>{/if}
-									{#if t.upSpeed > 0}<span>↑ {bytesRate(t.upSpeed)}</span>{/if}
-									{#if t.progress < 1 && t.state === 'downloading'}<span class="qb-eta">{eta(t.eta)}</span>{/if}
+									<span class="qb-state {tor.state}">{stateLabel[tor.state] ? $t(stateLabel[tor.state]) : tor.state}</span>
+									<span>{$t('qbit.ofSize', { pct: (tor.progress * 100).toFixed(tor.progress < 1 ? 1 : 0), size: bytes(tor.size) })}</span>
+									{#if tor.dlSpeed > 0}<span>↓ {bytesRate(tor.dlSpeed)}</span>{/if}
+									{#if tor.upSpeed > 0}<span>↑ {bytesRate(tor.upSpeed)}</span>{/if}
+									{#if tor.progress < 1 && tor.state === 'downloading'}<span class="qb-eta">{eta(tor.eta)}</span>{/if}
 								</div>
 							</li>
 						{/each}
@@ -159,7 +160,7 @@
 			{/if}
 		{/if}
 	</div>
-	<EditButtons label="qBittorrent widget" {ondelete} onedit={() => (showEdit = true)} />
+	<EditButtons label={$t('widget.lblQbittorrent')} {ondelete} onedit={() => (showEdit = true)} />
 </div>
 
 {#if showEdit}

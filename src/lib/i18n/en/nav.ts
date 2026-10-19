@@ -1,0 +1,27 @@
+import type { Entry } from '..';
+
+export const nav = {
+	'nav.settings': 'Settings',
+	'nav.logout': 'Logout',
+	'nav.options': 'Options',
+	'nav.newVersion': 'New: {version}',
+	'nav.updateAvailable': 'update available: {version}',
+	'nav.add': 'Add',
+	'nav.addTitle': 'Add service or widget',
+	'nav.edit': 'Edit',
+	'nav.toggleEdit': 'Toggle edit mode',
+	'nav.done': 'Done',
+	'nav.layout': 'Layout',
+	'nav.editDashboard': 'Edit dashboard',
+	'nav.doneEditing': 'Done editing',
+	'nav.menu': 'Menu',
+	'nav.search': 'Search',
+	'nav.editTitle': 'Edit title',
+	'nav.removeWidget': 'Remove',
+	'nav.editWidget': 'Edit',
+	'nav.widgetToolbar': 'Navbar widget',
+	'nav.moveLeft': 'Move left',
+	'nav.moveRight': 'Move right',
+	'nav.narrower': 'Narrower',
+	'nav.wider': 'Wider',
+} satisfies Record<string, Entry>;

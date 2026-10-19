@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Navbar Proxmox: guests running / total and the busiest node's CPU; click
 	// for the nodes and guests (with the power buttons for admins).
+	import { t } from '$lib/i18n';
 	import type { ProxmoxConfig, ProxmoxData } from '$lib/types';
 	import { isEditing } from '$lib/stores/dashboard';
 	import { integrations, loadIntegrations } from '$lib/stores/integrations';
@@ -20,7 +21,7 @@
 	const guests = $derived(data?.guests.filter((g) => !config?.node || g.node === config.node) ?? []);
 	const running = $derived(guests.filter((g) => g.status === 'running').length);
 	const cpu = $derived(Math.round(Math.max(0, ...(data?.nodes.filter((n) => !config?.node || n.node === config.node).map((n) => n.cpu) ?? [0])) * 100));
-	const label = $derived(data ? `${name}: ${running} of ${guests.length} guests running, CPU ${cpu}%` : name);
+	const label = $derived(data ? $t('proxmox.navLabel', { name, running, total: guests.length, cpu }) : name);
 
 	let button = $state<HTMLButtonElement>();
 	let open = $state(false);
@@ -31,7 +32,7 @@
 </script>
 
 <div class="nb-wrap">
-	<button bind:this={button} class="px-widget" class:open class:editing={$isEditing} onclick={() => !$isEditing && (open = !open)} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label="{label}, show the guests">
+	<button bind:this={button} class="px-widget" class:open class:editing={$isEditing} onclick={() => !$isEditing && (open = !open)} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label={$t('navw.guests', { label })}>
 		<span class="nb-logo"><Glyph name="server" size={15} /></span>
 		{#if !data}
 			<span class="muted">{poll.error ? 'Error' : '…'}</span>

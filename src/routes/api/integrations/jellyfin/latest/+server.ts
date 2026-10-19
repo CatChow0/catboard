@@ -2,6 +2,7 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { getIntegrations } from '$lib/server/config';
 import type { JellyfinLatestData, JellyfinMediaItem } from '$lib/types';
 import { jellyfinImagePath } from '$lib/server/jellyfin';
+import { apiError } from '$lib/server/api-error';
 
 function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
@@ -57,7 +58,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const integrations = await getIntegrations();
 	const conn = integrations.jellyfin;
 	if (!conn?.url || !conn?.apiKey) {
-		return json({ error: 'Jellyfin not configured' }, { status: 404 });
+		return apiError(404, 'errors.notSetUp', { name: 'Jellyfin' });
 	}
 
 	const baseUrl = normalizeUrl(conn.url);
@@ -70,7 +71,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		userId = await getJellyfinUserId(baseUrl, apiKey);
 	}
 	if (!userId) {
-		return json({ error: 'Could not determine Jellyfin user' }, { status: 500 });
+		return apiError(500, 'errors.jellyfinUser');
 	}
 
 	try {
@@ -82,7 +83,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			}
 		);
 		if (!res.ok) {
-			return json({ error: `Jellyfin API error: ${res.status}` }, { status: res.status });
+			return apiError(res.status, 'errors.answeredHttp', { name: 'Jellyfin', status: res.status });
 		}
 
 		const raw = await res.json();
@@ -129,6 +130,6 @@ export const GET: RequestHandler = async ({ url }) => {
 			headers: { 'Cache-Control': 'max-age=300' }
 		});
 	} catch {
-		return json({ error: 'Failed to fetch Jellyfin data' }, { status: 500 });
+		return apiError(500, 'errors.jellyfinFetch');
 	}
 };

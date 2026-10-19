@@ -3,6 +3,7 @@
 import { getIntegrations } from '$lib/server/config';
 import { normalizeUrl } from '$lib/server/arr';
 import type { JenkinsBuild, JenkinsData, JenkinsParameter } from '$lib/types';
+import { AppError } from '$lib/server/api-error';
 
 export type JenkinsConn = { base: string; publicBase: string; auth: string };
 
@@ -61,10 +62,10 @@ export async function jenkins(conn: JenkinsConn, path: string, init: RequestInit
 
 export async function jenkinsJson<T>(conn: JenkinsConn, path: string): Promise<T> {
 	const res = await jenkins(conn, path);
-	if (res.status === 401) throw new Error('Jenkins refused the username or API token');
-	if (res.status === 403) throw new Error('This Jenkins user may not read jobs (Overall/Read, Job/Read)');
-	if (res.status === 404) throw new Error('Job not found in Jenkins');
-	if (!res.ok) throw new Error(`Jenkins answered HTTP ${res.status}`);
+	if (res.status === 401) throw new AppError('errors.jenkinsAuth');
+	if (res.status === 403) throw new AppError('errors.jenkinsRead');
+	if (res.status === 404) throw new AppError('errors.jenkinsJob');
+	if (!res.ok) throw new AppError('errors.answeredHttp', { name: 'Jenkins', status: res.status });
 	return res.json() as Promise<T>;
 }
 
@@ -178,9 +179,9 @@ export async function startBuild(conn: JenkinsConn, job: string, params?: Record
 		headers: body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
 		body
 	});
-	if (res.status === 401) throw new Error('Jenkins refused the username or API token');
-	if (res.status === 403) throw new Error('This Jenkins user may not start builds (Job/Build permission)');
-	if (res.status === 404) throw new Error('Job not found in Jenkins');
-	if (res.status === 400) throw new Error('Jenkins refused the build (does this job take parameters?)');
-	if (!res.ok && res.status !== 201) throw new Error(`Jenkins answered HTTP ${res.status}`);
+	if (res.status === 401) throw new AppError('errors.jenkinsAuth');
+	if (res.status === 403) throw new AppError('errors.jenkinsBuild');
+	if (res.status === 404) throw new AppError('errors.jenkinsJob');
+	if (res.status === 400) throw new AppError('errors.jenkinsBuildRefused');
+	if (!res.ok && res.status !== 201) throw new AppError('errors.answeredHttp', { name: 'Jenkins', status: res.status });
 }

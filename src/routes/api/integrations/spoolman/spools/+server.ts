@@ -1,5 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { spoolmanUrl, spoolmanData } from '$lib/server/spoolman';
+import { apiError, AppError, errorBody } from '$lib/server/api-error';
 
 const num = (v: string | null, def: number, min: number, max: number) => {
 	const n = Number(v);
@@ -9,7 +10,7 @@ const num = (v: string | null, def: number, min: number, max: number) => {
 /** GET ?limit=N&lowPercent=15&lowGrams=0&archived=0&sort=name|remaining|lastUsed — recently used, running low and empty spools. */
 export const GET: RequestHandler = async ({ url }) => {
 	const base = await spoolmanUrl();
-	if (!base) return json({ error: 'Spoolman not configured' }, { status: 404 });
+	if (!base) return apiError(404, 'errors.notSetUp', { name: 'Spoolman' });
 	const q = url.searchParams;
 	try {
 		const data = await spoolmanData(base, {
@@ -21,7 +22,6 @@ export const GET: RequestHandler = async ({ url }) => {
 		});
 		return json(data, { headers: { 'Cache-Control': 'no-store' } });
 	} catch (err) {
-		const msg = err instanceof Error ? err.message : '';
-		return json({ error: msg.startsWith('Spoolman') || msg.startsWith('Not a') ? msg : 'Cannot reach Spoolman' }, { status: 502 });
+		return err instanceof AppError ? json(errorBody(err), { status: 502 }) : apiError(502, 'errors.cannotReach', { name: 'Spoolman' });
 	}
 };

@@ -55,8 +55,8 @@ export class LayoutDraft {
 		return !!this.edits[pairKey(dashboard, breakpoint)];
 	}
 
-	addBreakpoint() {
-		this.breakpoints = [...this.breakpoints, { id: uid(), name: 'New Layout', minWidth: 0, columns: 4 }];
+	addBreakpoint(name: string) {
+		this.breakpoints = [...this.breakpoints, { id: uid(), name, minWidth: 0, columns: 4 }];
 	}
 
 	removeBreakpoint(index: number) {

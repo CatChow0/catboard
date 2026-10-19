@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { WeatherLocation } from '$lib/types';
 	import LocationSearch from '../LocationSearch.svelte';
 
@@ -6,6 +7,6 @@
 </script>
 
 <div class="field">
-	<span>Location</span>
+	<span>{$t('ws.location')}</span>
 	<LocationSearch bind:location={config.location} />
 </div>

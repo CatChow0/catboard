@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { DockerWidgetConfig } from '$lib/types';
 	import { dockerData, isEditing } from '$lib/stores/dashboard';
 	import DockerLogo from '../icons/DockerLogo.svelte';
@@ -29,7 +30,7 @@
 </script>
 
 <div class="nb-wrap">
-	<button bind:this={button} class="docker-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label="{label}, show containers">
+	<button bind:this={button} class="docker-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label={$t('navw.containers', { label })}>
 		<span class="nb-logo"><DockerLogo size="calc(15px * var(--nb-icon, 1))" /></span>
 		{#if data}
 			<span class="docker-dot up"></span>
@@ -38,8 +39,8 @@
 			<span class="docker-count">{data.stoppedCount}</span>
 			{#if totals}
 				<span class="docker-totals">
-					{#if config.showCpu}<span title="CPU of all running containers (100% = one core)">CPU {cpu(totals.cpuPercent)}</span>{/if}
-					{#if config.showRam}<span title="Memory of all running containers">RAM {bytes(totals.memUsage)}</span>{/if}
+					{#if config.showCpu}<span title={$t('docker.cpuAll')}>CPU {cpu(totals.cpuPercent)}</span>{/if}
+					{#if config.showRam}<span title={$t('docker.ramAll')}>RAM {bytes(totals.memUsage)}</span>{/if}
 				</span>
 			{/if}
 		{:else}
@@ -53,7 +54,7 @@
 			{#if data}
 				<DockerDetails {data} showCpu={config?.showCpu} showRam={config?.showRam} />
 			{:else}
-				<p class="nb-empty">Loading…</p>
+				<p class="nb-empty">{$t('common.loading')}</p>
 			{/if}
 		</NavbarPopover>
 	{/if}

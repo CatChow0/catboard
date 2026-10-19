@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	let { config = $bindable() }: { config: { placeholder?: string } } = $props();
 </script>
 
 <label class="field">
-	<span>Placeholder text</span>
-	<input type="text" bind:value={config.placeholder} placeholder="Search services..." />
+	<span>{$t('ws.placeholderText')}</span>
+	<input type="text" bind:value={config.placeholder} placeholder={$t('ws.searchServices')} />
 </label>
-<p class="hint">Searches every dashboard; Enter with no match searches the web.</p>
+<p class="hint">{$t('ws.searchesEveryDashboardEnterWithNo')}</p>

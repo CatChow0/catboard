@@ -1,3 +1,4 @@
+import { tr } from '$lib/i18n';
 // Number formatting for the Stacker widget (ported from Stacker's web/src/format.ts).
 
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
@@ -35,7 +36,7 @@ export const ghz = (mhz: number) => (mhz > 0 ? `${(mhz / 1000).toFixed(2)} GHz` 
 export const temp = (c: number | null | undefined) => (c == null ? '–' : `${Math.round(c)} °C`);
 
 /** "swap 1.2 GB / 8.0 GB", or "no swap" when none is configured. */
-export const swap = (used: number, total: number) => (total > 0 ? `swap ${bytes(used)} / ${bytes(total)}` : 'no swap');
+export const swap = (used: number, total: number) => (total > 0 ? tr('stacker.swap', { used: bytes(used), total: bytes(total) }) : tr('stacker.noSwap'));
 
 /** A "nice" ceiling for auto-scaled graphs, e.g. 7.3 MB/s -> 10 MB/s. */
 export function niceMax(v: number, floor: number): number {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import Dashboard from '$lib/components/Dashboard.svelte';
@@ -64,7 +65,7 @@
 {:else}
 	<div class="loading">
 		<div class="spinner"></div>
-		<p>Loading dashboard...</p>
+		<p>{$t('dashboard.loading')}</p>
 	</div>
 {/if}
 

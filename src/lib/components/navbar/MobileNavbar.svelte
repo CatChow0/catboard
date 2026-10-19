@@ -3,6 +3,7 @@
 	// horizontally scrolling strip with the other navbar widgets of the active
 	// breakpoint, in column order. In edit mode, tapping a strip widget selects it
 	// and an action row lets you move, resize, edit or remove it.
+	import { t } from '$lib/i18n';
 	import { isEditing, layout, activeBreakpointId, saveNavbarLayout, removeNavbarItem, searchQuery } from '$lib/stores/dashboard';
 	import type { NavbarItem, NavbarLayout } from '$lib/types';
 	import NavbarTitle from './NavbarTitle.svelte';
@@ -127,7 +128,7 @@
 			<NavbarTitle />
 		</div>
 		{#if titleItem && $isEditing}
-			<button class="mnav-icon" onclick={() => (editingItem = titleItem)} aria-label="Edit title">
+			<button class="mnav-icon" onclick={() => (editingItem = titleItem)} aria-label={$t('nav.editTitle')}>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 					<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -135,14 +136,14 @@
 			</button>
 		{/if}
 		{#if searchItem}
-			<button class="mnav-icon" class:active={searchOpen} onclick={toggleSearch} aria-label="Search" aria-expanded={searchOpen}>
+			<button class="mnav-icon" class:active={searchOpen} onclick={toggleSearch} aria-label={$t('nav.search')} aria-expanded={searchOpen}>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<circle cx="11" cy="11" r="8" />
 					<path d="M21 21l-4.35-4.35" />
 				</svg>
 			</button>
 		{/if}
-		<button class="mnav-icon" class:active={$isEditing} onclick={() => (menuOpen = true)} aria-label="Menu">
+		<button class="mnav-icon" class:active={$isEditing} onclick={() => (menuOpen = true)} aria-label={$t('nav.menu')}>
 			<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
 				<path d="M4 6h16M4 12h16M4 18h16" />
 			</svg>
@@ -153,7 +154,7 @@
 		<div class="mnav-search">
 			<NavbarSearch placeholder={searchItem.placeholder} onsearch={handleSearch} />
 			{#if $isEditing}
-				<button class="mnav-chip" onclick={() => (editingItem = searchItem)}>Edit</button>
+				<button class="mnav-chip" onclick={() => (editingItem = searchItem)}>{$t('nav.editWidget')}</button>
 			{/if}
 		</div>
 	{/if}
@@ -184,13 +185,13 @@
 	{/if}
 
 	{#if $isEditing && selected}
-		<div class="mnav-actions" role="toolbar" aria-label="Navbar widget">
-			<button onclick={() => move(-1)} disabled={stripItems[0]?.id === selected.id} aria-label="Move left">◀</button>
-			<button onclick={() => move(1)} disabled={stripItems[stripItems.length - 1]?.id === selected.id} aria-label="Move right">▶</button>
-			<button onclick={() => resize(-1)} disabled={selected.colSpan <= 1} aria-label="Narrower">−</button>
-			<button onclick={() => resize(1)} disabled={!roomToGrow(selected)} aria-label="Wider">+</button>
-			<button onclick={() => (editingItem = selected)}>Edit</button>
-			<button class="danger" onclick={remove}>Remove</button>
+		<div class="mnav-actions" role="toolbar" aria-label={$t('nav.widgetToolbar')}>
+			<button onclick={() => move(-1)} disabled={stripItems[0]?.id === selected.id} aria-label={$t('nav.moveLeft')}>◀</button>
+			<button onclick={() => move(1)} disabled={stripItems[stripItems.length - 1]?.id === selected.id} aria-label={$t('nav.moveRight')}>▶</button>
+			<button onclick={() => resize(-1)} disabled={selected.colSpan <= 1} aria-label={$t('nav.narrower')}>−</button>
+			<button onclick={() => resize(1)} disabled={!roomToGrow(selected)} aria-label={$t('nav.wider')}>+</button>
+			<button onclick={() => (editingItem = selected)}>{$t('nav.editWidget')}</button>
+			<button class="danger" onclick={remove}>{$t('nav.removeWidget')}</button>
 		</div>
 	{/if}
 </header>

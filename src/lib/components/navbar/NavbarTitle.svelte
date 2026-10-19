@@ -3,6 +3,7 @@
 	// title (the active one is wider and accent-coloured); click a square or use
 	// the mouse wheel over the widget to switch. In edit mode a "+" square adds a
 	// dashboard, and clicking the active square opens rename / move / delete.
+	import { t } from '$lib/i18n';
 	import {
 		settings, isEditing, dashboards, activeDashboardId,
 		switchDashboard, createDashboard, renameDashboard, moveDashboard, deleteDashboard
@@ -71,12 +72,12 @@
 		}
 	}
 
-	const add = () => run(async () => { menuOpen = false; await createDashboard(); });
+	const add = () => run(async () => { menuOpen = false; await createDashboard($t('navTitle.newName', { n: list.length + 1 })); });
 	const saveName = () => active && editName.trim() && editName.trim() !== active.name && run(() => renameDashboard(active.id, editName));
 	const move = (dir: -1 | 1) => active && run(() => moveDashboard(active.id, dir));
 	const remove = () =>
 		active &&
-		confirm(`Delete the dashboard "${active.name}" with its tiles and navbar? This cannot be undone.`) &&
+		confirm($t('navTitle.confirmDelete', { name: active.name })) &&
 		run(async () => { menuOpen = false; await deleteDashboard(active.id); });
 
 	// Squares sit inside a draggable navbar item: never start a navbar drag from them.
@@ -84,9 +85,9 @@
 </script>
 
 <div class="nt" class:editing={$isEditing} bind:this={root}>
-	<h1 class="navbar-title">{$settings.title || 'Dashboard'}</h1>
+	<h1 class="navbar-title">{$settings.title || $t('navTitle.default')}</h1>
 	{#if showDots}
-		<div class="nt-dots" role="tablist" aria-label="Dashboards">
+		<div class="nt-dots" role="tablist" aria-label={$t('navTitle.dashboards')}>
 			{#each list as d (d.id)}
 				{#if d.id === $activeDashboardId}
 					<button
@@ -95,8 +96,8 @@
 						data-dashboard-id={d.id}
 						role="tab"
 						aria-selected="true"
-						aria-label="Dashboard {d.name}{$isEditing ? ' (manage)' : ''}"
-						title={$isEditing ? `${d.name}: click to rename, move or delete` : d.name}
+						aria-label={$t('navTitle.dashboard', { name: d.name }) + ($isEditing ? $t('navTitle.manageSuffix') : '')}
+						title={$isEditing ? $t('navTitle.manageTitle', { name: d.name }) : d.name}
 						onpointerdown={stop}
 						onclick={() => clickDot(d.id)}
 					></button>
@@ -106,7 +107,7 @@
 						data-dashboard-id={d.id}
 						role="tab"
 						aria-selected="false"
-						aria-label="Dashboard {d.name}"
+						aria-label={$t('navTitle.dashboard', { name: d.name })}
 						title={d.name}
 						onpointerdown={stop}
 						onclick={() => clickDot(d.id)}
@@ -114,7 +115,7 @@
 				{/if}
 			{/each}
 			{#if $isEditing}
-				<button class="nt-dot nt-add" disabled={busy} onpointerdown={stop} onclick={add} title="New dashboard" aria-label="New dashboard">
+				<button class="nt-dot nt-add" disabled={busy} onpointerdown={stop} onclick={add} title={$t('navTitle.new')} aria-label={$t('navTitle.new')}>
 					<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 2v6M2 5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
 				</button>
 			{/if}
@@ -124,17 +125,17 @@
 </div>
 
 {#if menuOpen && activeDot && active}
-	<NavbarPopover anchor={activeDot} label="Manage dashboard {active.name}" width={260} onclose={() => (menuOpen = false)}>
+	<NavbarPopover anchor={activeDot} label={$t('navTitle.manage', { name: active.name })} width={260} onclose={() => (menuOpen = false)}>
 		<div class="nt-menu">
 			<label class="nt-field">
-				<span>Name</span>
+				<span>{$t('service.name')}</span>
 				<input type="text" maxlength="40" bind:value={editName} onkeydown={(e) => e.key === 'Enter' && saveName()} onblur={saveName} />
 			</label>
 			<div class="nt-row">
-				<button class="nt-btn" disabled={busy || activeIndex <= 0} onclick={() => move(-1)} aria-label="Move left">← Move</button>
-				<button class="nt-btn" disabled={busy || activeIndex >= list.length - 1} onclick={() => move(1)} aria-label="Move right">Move →</button>
+				<button class="nt-btn" disabled={busy || activeIndex <= 0} onclick={() => move(-1)} aria-label={$t('nav.moveLeft')}>{$t('navTitle.moveLeft')}</button>
+				<button class="nt-btn" disabled={busy || activeIndex >= list.length - 1} onclick={() => move(1)} aria-label={$t('nav.moveRight')}>{$t('navTitle.moveRight')}</button>
 			</div>
-			<button class="nt-btn danger" disabled={busy || list.length <= 1} onclick={remove} title={list.length <= 1 ? 'The last dashboard cannot be deleted' : undefined}>Delete dashboard</button>
+			<button class="nt-btn danger" disabled={busy || list.length <= 1} onclick={remove} title={list.length <= 1 ? $t('navTitle.lastOne') : undefined}>{$t('navTitle.delete')}</button>
 			{#if error}<p class="nt-error">{error}</p>{/if}
 		</div>
 	</NavbarPopover>

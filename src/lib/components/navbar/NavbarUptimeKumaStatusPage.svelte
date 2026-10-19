@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { UptimeKumaStatusPageConfig } from '$lib/types';
 	import { uptimeKumaData, isEditing } from '$lib/stores/dashboard';
 	import UptimeKumaLogo from '../icons/UptimeKumaLogo.svelte';
@@ -31,7 +32,7 @@
 </script>
 
 <div class="nb-wrap">
-	<button bind:this={button} class="uk-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label="{label}, show monitors">
+	<button bind:this={button} class="uk-widget" class:open class:editing={$isEditing} onclick={toggle} aria-expanded={open} aria-haspopup="dialog" title={label} aria-label={$t('navw.monitors', { label })}>
 		<span class="nb-logo"><UptimeKumaLogo size="calc(15px * var(--nb-icon, 1))" /></span>
 		{#if data}
 			<span class="uk-dot up"></span>
@@ -50,7 +51,7 @@
 			{#if data}
 				<UptimeKumaDetails {data} />
 			{:else}
-				<p class="nb-empty">Loading…</p>
+				<p class="nb-empty">{$t('common.loading')}</p>
 			{/if}
 		</NavbarPopover>
 	{/if}
