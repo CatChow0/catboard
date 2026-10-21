@@ -340,9 +340,12 @@
 			<div class="webhook">
 				<span class="webhook-title">{$t('integrations.webhook')}</span>
 				{#if token}
-					<div class="secret">
-						<input type="text" readonly value={webhookUrl(token)} onfocus={(e) => e.currentTarget.select()} aria-label={$t('integrations.webhook')} />
-						<button type="button" class="btn-ghost" onclick={() => copyWebhook(token)}>{webhookCopied ? $t('common.copied') : $t('common.copy')}</button>
+					<!-- .field gives the input the shared form look (theme.css) -->
+					<div class="field webhook-field">
+						<div class="secret">
+							<input type="text" readonly value={webhookUrl(token)} onfocus={(e) => e.currentTarget.select()} aria-label={$t('integrations.webhook')} />
+							<button type="button" class="btn-ghost" onclick={() => copyWebhook(token)}>{webhookCopied ? $t('common.copied') : $t('common.copy')}</button>
+						</div>
 					</div>
 					<span class="hint">{$t('integrations.webhookHint')}</span>
 					<button type="button" class="btn-ghost" onclick={newWebhookToken}>{$t('integrations.webhookNew')}</button>
@@ -622,8 +625,15 @@
 		border-top: 1px solid var(--border);
 	}
 
-	.webhook .secret {
+	.webhook-field {
 		align-self: stretch;
+		margin-bottom: 0;
+	}
+
+	/* specific enough to win over .cb-form .field input:not(...) */
+	.webhook .webhook-field input[readonly] {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 0.8rem;
 	}
 
 	.webhook-title {

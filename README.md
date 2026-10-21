@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.9.0-blue)
+![Version](https://img.shields.io/badge/version-3.9.1-blue)
 
 ## Features
 
