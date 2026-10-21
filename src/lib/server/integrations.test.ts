@@ -9,6 +9,7 @@ import { overview as portainerOverview, stackAction, type PortainerConn } from '
 import { summary as immichSummary, isAssetId, type ImmichConn } from './immich';
 import { parseSearch, overview as nextcloudOverview, nextcloudConnOf } from './nextcloud';
 import { overview as giteaOverview, giteaConnOf } from './gitea';
+import { fetchDeezerReleases } from './deezer';
 
 vi.mock('$lib/server/config', () => ({ getIntegrations: async () => ({}) }));
 afterEach(() => vi.unstubAllGlobals());
@@ -341,5 +342,74 @@ describe('gitea', () => {
 		await expect(giteaOverview(conn, { repos: 0, issues: 0 })).rejects.toThrow('refused the access token');
 		fakeFetch([[/./, () => new Response('', { status: 403 })]]);
 		await expect(giteaOverview(conn, { repos: 0, issues: 0 })).rejects.toMatchObject({ code: 'errors.giteaScope' });
+	});
+});
+
+// --- Deezer to Navidrome ------------------------------------------------------------
+describe('deezer', () => {
+	const rel = (id: string, date: string, extra: Record<string, unknown> = {}) => ({
+		id, title: `Album ${id}`, cover: `https://cdn/${id}.jpg`, release_date: date, record_type: 'album', artist: 'Ann', artist_id: '1', nb_tracks: 10, featured: false,
+		followed: [{ id: '1', name: 'Ann' }], ...extra
+	});
+	const feed = (releases: unknown[], muted: Record<string, string> = {}) => json({ ok: true, connected: true, artists: 3, muted, releases });
+
+	it('keeps the period, drops muted artists and features unless asked', async () => {
+		fakeFetch([
+			['/api/releases', () => feed([
+				rel('a', '2026-10-10'),
+				rel('b', '2026-10-12', { featured: true, artist: 'Bob', artist_id: '9' }),
+				rel('c', '2026-10-15', { followed: [{ id: '2', name: 'Cat' }], artist: 'Cat', artist_id: '2' }),
+				rel('d', '2026-09-01')
+			], { '2': 'Cat' })],
+			['POST /search/library-check', () => json({ ok: true, results: { a: { owned_count: 10 }, b: { owned_count: 3 } } })]
+		]);
+		const { entries } = await fetchDeezerReleases({ url: 'http://dz:8080/' }, '2026-10-01', '2026-10-31');
+		expect(entries).toEqual([{ id: 'deezer-a', type: 'deezer', title: 'Ann', subtitle: 'Album a', date: '2026-10-10', hasFile: true, posterUrl: 'https://cdn/a.jpg', kind: 'album' }]);
+		const all = await fetchDeezerReleases({ url: 'http://dz:8080' }, '2026-10-01', '2026-10-31', { includeFeatures: true });
+		expect(all.entries.map((e) => [e.id, e.hasFile])).toEqual([['deezer-a', true], ['deezer-b', false]]);
+	});
+
+	it('checks the library 100 releases at a time', async () => {
+		const many = Array.from({ length: 150 }, (_, i) => rel(String(i), '2026-10-10'));
+		const { calls } = fakeFetch([
+			['/api/releases', () => feed(many)],
+			['POST /search/library-check', (req) => {
+				const items = JSON.parse(req.body!).items as { key: string }[];
+				return json({ ok: true, results: Object.fromEntries(items.map((it) => [it.key, { owned_count: 10 }])) });
+			}]
+		]);
+		const { entries } = await fetchDeezerReleases({ url: 'http://dz' }, '2026-10-01', '2026-10-31');
+		const checks = calls.filter((c) => c.method === 'POST');
+		expect(checks.map((c) => JSON.parse(c.body!).items.length)).toEqual([100, 50]);
+		expect(entries.every((e) => e.hasFile)).toBe(true);
+	});
+
+	it('still shows the releases when the library check fails', async () => {
+		fakeFetch([
+			['/api/releases', () => feed([rel('a', '2026-10-10')])],
+			['POST /search/library-check', () => new Response('', { status: 500 })]
+		]);
+		const { entries, error } = await fetchDeezerReleases({ url: 'http://dz' }, '2026-10-01', '2026-10-31');
+		expect(error).toBeUndefined();
+		expect(entries).toHaveLength(1);
+		expect(entries[0].hasFile).toBe(false);
+	});
+
+	it('sends the API token, and explains a refused one', async () => {
+		const { calls } = fakeFetch([
+			['/api/releases', () => feed([rel('a', '2026-10-10')])],
+			['POST /search/library-check', () => json({ ok: true, results: {} })]
+		]);
+		await fetchDeezerReleases({ url: 'http://dz', apiToken: 'tok' }, '2026-10-01', '2026-10-31');
+		expect(calls.map((c) => c.headers.authorization)).toEqual(['Bearer tok', 'Bearer tok']);
+		fakeFetch([[/./, () => json({ ok: false }, { status: 401 })]]);
+		expect((await fetchDeezerReleases({ url: 'http://dz', apiToken: 'bad' }, '2026-10-01', '2026-10-31')).error).toBe('Deezer to Navidrome refused the API token');
+	});
+
+	it('reports an unreachable or wrong app', async () => {
+		fakeFetch([[/./, () => { throw new TypeError('fetch failed'); }]]);
+		expect((await fetchDeezerReleases({ url: 'http://dz' }, '2026-10-01', '2026-10-31')).error).toBe('Cannot reach Deezer to Navidrome');
+		fakeFetch([[/./, () => json({ hello: 1 })]]);
+		expect((await fetchDeezerReleases({ url: 'http://dz' }, '2026-10-01', '2026-10-31')).error).toBe('This does not look like Deezer to Navidrome');
 	});
 });

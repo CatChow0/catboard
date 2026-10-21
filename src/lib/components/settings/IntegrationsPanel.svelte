@@ -174,6 +174,26 @@
 		}
 	}
 
+	// Deezer to Navidrome calls this URL when its feed or library changed.
+	let webhookCopied = $state(false);
+	const webhookUrl = (token: string) => `${location.origin}/api/integrations/deezer/webhook?token=${encodeURIComponent(token)}`;
+	async function copyWebhook(token: string) {
+		try {
+			await navigator.clipboard.writeText(webhookUrl(token));
+			webhookCopied = true;
+			setTimeout(() => (webhookCopied = false), 1500);
+		} catch {
+			// no clipboard (plain HTTP): the field selects itself on focus
+		}
+	}
+	async function newWebhookToken() {
+		if (!confirm($t('integrations.webhookConfirm'))) return;
+		const res = await fetch('/api/integrations/deezer/webhook-token', { method: 'POST' });
+		const body = await res.json().catch(() => ({}));
+		if (!res.ok) saveMessage = { ok: false, text: errorText(body, res.status) };
+		await loadIntegrations(true);
+	}
+
 	const basicFields = $derived(def.fields.filter((f) => !f.advanced));
 	const advancedFields = $derived(def.fields.filter((f) => f.advanced));
 	const testState = $derived(tests[selected]);
@@ -314,6 +334,23 @@
 		{/if}
 
 		{#if def.help}<p class="hint help">{def.help}</p>{/if}
+
+		{#if def.key === 'deezer' && canEdit}
+			{@const token = $integrations.deezer?.webhookToken}
+			<div class="webhook">
+				<span class="webhook-title">{$t('integrations.webhook')}</span>
+				{#if token}
+					<div class="secret">
+						<input type="text" readonly value={webhookUrl(token)} onfocus={(e) => e.currentTarget.select()} aria-label={$t('integrations.webhook')} />
+						<button type="button" class="btn-ghost" onclick={() => copyWebhook(token)}>{webhookCopied ? $t('common.copied') : $t('common.copy')}</button>
+					</div>
+					<span class="hint">{$t('integrations.webhookHint')}</span>
+					<button type="button" class="btn-ghost" onclick={newWebhookToken}>{$t('integrations.webhookNew')}</button>
+				{:else}
+					<span class="hint">{$t('integrations.webhookAfterSave')}</span>
+				{/if}
+			</div>
+		{/if}
 
 		{#if testState && (def.kind === 'single' || testState.state !== 'ok' || !testState.items)}
 			<p class="result {testState.state}">
@@ -573,6 +610,26 @@
 	.reveal:hover {
 		color: var(--accent);
 		border-color: var(--accent);
+	}
+
+	.webhook {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px;
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border);
+	}
+
+	.webhook .secret {
+		align-self: stretch;
+	}
+
+	.webhook-title {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--text-secondary);
 	}
 
 	.detect-row {

@@ -72,10 +72,11 @@ const clamp = (v: unknown, min: number, max: number, fallback: number) => {
 	return Number.isFinite(n) && v !== '' && v != null ? Math.min(max, Math.max(min, n)) : fallback;
 };
 const ALL_SECTIONS: StackerSections = { cpu: true, memory: true, gpu: true, disk: true, network: true };
+const ARR = ['radarr', 'sonarr', 'lidarr', 'deezer'] as const;
+/** Release sources of the calendar and new releases: the saved choice, else every configured one. */
 const arrSources = (c: Cfg | undefined, conn: IntegrationsConfig) =>
-	c?.integrations
-		? { radarr: !!c.integrations.radarr, sonarr: !!c.integrations.sonarr, lidarr: !!c.integrations.lidarr }
-		: { radarr: !!conn.radarr?.url, sonarr: !!conn.sonarr?.url, lidarr: !!conn.lidarr?.url };
+	Object.fromEntries(ARR.map((k) => [k, c?.integrations ? !!c.integrations[k] : !!conn[k]?.url])) as Record<(typeof ARR)[number], boolean>;
+const arrSaved = (d: Cfg) => Object.fromEntries(ARR.map((k) => [k, !!d.integrations?.[k]]));
 
 export const WIDGETS: WidgetDef[] = [
 	// --- Basics ---
@@ -129,13 +130,13 @@ export const WIDGETS: WidgetDef[] = [
 	{
 		id: 'calendar',
 		name: 'Calendar',
-		description: 'Month view, with upcoming Radarr / Sonarr / Lidarr releases',
+		description: 'Month view, with upcoming Radarr / Sonarr / Lidarr / Deezer releases',
 		icon: 'calendar',
 		category: 'Basics',
 		grid: { type: 'calendar', colSpan: 4, rowSpan: 2, minColSpan: 2 },
 		settings: CalendarSettings,
-		prepare: (c, _t, conn) => ({ integrations: arrSources(c, conn) }),
-		normalize: (d) => ({ integrations: { radarr: !!d.integrations.radarr, sonarr: !!d.integrations.sonarr, lidarr: !!d.integrations.lidarr } })
+		prepare: (c, _t, conn) => ({ integrations: arrSources(c, conn), includeFeatures: !!c?.includeFeatures }),
+		normalize: (d) => ({ integrations: arrSaved(d), includeFeatures: d.includeFeatures || undefined })
 	},
 	{
 		id: 'notes',
@@ -306,15 +307,16 @@ export const WIDGETS: WidgetDef[] = [
 	{
 		id: 'arr-releases',
 		name: 'New releases',
-		description: 'Recently released movies, episodes and albums',
+		description: 'Recently released movies, episodes, albums and Deezer releases',
 		icon: 'releases',
 		category: 'Media',
-		integrations: ['radarr', 'sonarr', 'lidarr'],
+		integrations: ['radarr', 'sonarr', 'lidarr', 'deezer'],
 		grid: { type: 'arr-releases', colSpan: 4, rowSpan: 3 },
 		settings: ArrReleasesSettings,
-		prepare: (c, _t, conn) => ({ integrations: arrSources(c, conn), days: c?.days ?? 14, limit: c?.limit ?? 10, onlyDownloaded: c?.onlyDownloaded ?? false }),
+		prepare: (c, _t, conn) => ({ integrations: arrSources(c, conn), includeFeatures: !!c?.includeFeatures, days: c?.days ?? 14, limit: c?.limit ?? 10, onlyDownloaded: c?.onlyDownloaded ?? false }),
 		normalize: (d) => ({
-			integrations: { radarr: !!d.integrations.radarr, sonarr: !!d.integrations.sonarr, lidarr: !!d.integrations.lidarr },
+			integrations: arrSaved(d),
+			includeFeatures: d.includeFeatures || undefined,
 			days: clamp(d.days, 1, 90, 14),
 			limit: clamp(d.limit, 1, 50, 10),
 			onlyDownloaded: !!d.onlyDownloaded

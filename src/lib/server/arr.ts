@@ -1,5 +1,6 @@
 import { getIntegrations } from '$lib/server/config';
 import type { ArrCalendarEntry } from '$lib/types';
+import { fetchDeezerReleases } from '$lib/server/deezer';
 
 export type ArrSource = 'radarr' | 'sonarr' | 'lidarr';
 
@@ -20,7 +21,23 @@ interface FetchResult {
 }
 
 const CACHE_TTL = 300_000; // 5 minutes
+/** Deezer before the app's first webhook (after it, entries stay until the next one). */
+const DEEZER_TTL = 3_600_000;
 const cache = new Map<string, FetchResult & { expires: number }>();
+let deezerWebhookSeen = false;
+
+/** The deezer-to-navidrome webhook: its feed or library changed, read it again. */
+export function deezerChanged(): void {
+	deezerWebhookSeen = true;
+	for (const key of cache.keys()) if (key.startsWith('deezer:')) cache.delete(key);
+}
+
+function ttlOf(source: string, result: FetchResult): number {
+	if (source !== 'deezer') return CACHE_TTL;
+	// Errors are retried soon; a good feed waits for the webhook.
+	if (result.error) return CACHE_TTL;
+	return deezerWebhookSeen ? Number.POSITIVE_INFINITY : DEEZER_TTL;
+}
 
 export function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
@@ -161,12 +178,13 @@ export async function fetchArrEntries(
 	sources: string[],
 	start: string,
 	end: string,
-	mode: ArrDateMode = 'calendar'
+	mode: ArrDateMode = 'calendar',
+	opts: { includeFeatures?: boolean } = {}
 ): Promise<{ entries: ArrCalendarEntry[]; errors: { source: string; message: string }[] }> {
 	const integrations = await getIntegrations();
 
 	const results = await Promise.all(sources.map(async (source) => {
-		const cacheKey = `${source}:${start}:${end}:${mode}`;
+		const cacheKey = `${source}:${start}:${end}:${mode}:${opts.includeFeatures ? 'f' : ''}`;
 		const cached = cache.get(cacheKey);
 		if (cached && cached.expires > Date.now()) {
 			return { source, entries: cached.entries, error: cached.error };
@@ -182,11 +200,14 @@ export async function fetchArrEntries(
 		} else if (source === 'lidarr') {
 			if (!integrations.lidarr) return { source, entries: [], error: 'Not configured' };
 			result = await fetchLidarrCalendar(integrations.lidarr, start, end);
+		} else if (source === 'deezer') {
+			if (!integrations.deezer?.url) return { source, entries: [], error: 'Not configured' };
+			result = await fetchDeezerReleases(integrations.deezer, start, end, opts);
 		} else {
 			return { source, entries: [], error: 'Unknown source' };
 		}
 
-		cache.set(cacheKey, { ...result, expires: Date.now() + CACHE_TTL });
+		cache.set(cacheKey, { ...result, expires: Date.now() + ttlOf(source, result) });
 		return { source, entries: result.entries, error: result.error };
 	}));
 

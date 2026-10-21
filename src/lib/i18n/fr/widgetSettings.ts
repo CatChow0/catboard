@@ -132,4 +132,6 @@ export const widgetSettings = {
 	'ws.diskAndNetworkTotalsSinceBoot': 'Totaux disque et réseau depuis le démarrage',
 	'ws.theWidgetAdaptsToItsSize': 'Le widget s\'adapte à sa taille : une ligne par section sur les petites tuiles, des tableaux et graphiques sur les plus grandes.',
 	'ws.location': 'Lieu',
+	'ws.includeFeatures': 'Inclure les featurings',
+	'ws.includeFeaturesHint': '(sorties où un artiste suivi n\'est qu\'invité)',
 } satisfies Partial<Dict>;

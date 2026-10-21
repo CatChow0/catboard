@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t, errorText, intlLocale, type Key } from '$lib/i18n';
+	import { t, tx, errorText, intlLocale, type Key } from '$lib/i18n';
 	import { whileVisible } from '$lib/utils/poll';
 	import type { ArrReleasesConfig, ArrCalendarEntry } from '$lib/types';
 	import { isEditing, settings } from '$lib/stores/dashboard';
@@ -15,7 +15,7 @@
 	} = $props();
 
 	const sources = $derived(
-		(['radarr', 'sonarr', 'lidarr'] as const).filter((s) => config?.integrations?.[s]).join(',')
+		(['radarr', 'sonarr', 'lidarr', 'deezer'] as const).filter((s) => config?.integrations?.[s]).join(',')
 	);
 	const days = $derived(config?.days || 14);
 	const limit = $derived(config?.limit || 10);
@@ -43,7 +43,8 @@
 				sources,
 				days: String(days),
 				limit: String(displayLimit),
-				onlyDownloaded: String(onlyDownloaded)
+				onlyDownloaded: String(onlyDownloaded),
+				includeFeatures: String(!!config?.includeFeatures)
 			});
 			const res = await fetch(`/api/integrations/arr/releases?${params}`);
 			if (!res.ok) {
@@ -69,6 +70,7 @@
 		void days;
 		void displayLimit;
 		void onlyDownloaded;
+		void config?.includeFeatures;
 		fetchData();
 	});
 
@@ -77,8 +79,11 @@
 	const SOURCE_META: Record<ArrCalendarEntry['type'], { label: Key; color: string }> = {
 		radarr: { label: 'arr.movie', color: '#FF9800' },
 		sonarr: { label: 'arr.episode', color: '#2196F3' },
-		lidarr: { label: 'arr.album', color: '#4CAF50' }
+		lidarr: { label: 'arr.album', color: '#4CAF50' },
+		deezer: { label: 'arr.album', color: '#A238FF' }
 	};
+	/** Deezer entries say what they are (album, EP, single). */
+	const badge = (e: ArrCalendarEntry) => (e.type === 'deezer' ? $tx(`deezer.type.${e.kind}`, $t('arr.album')) : $t(SOURCE_META[e.type].label));
 
 	function relativeDate(date: string): string {
 		const [y, m, d] = date.split('-').map(Number);
@@ -138,7 +143,7 @@
 					<div class="releases-gradient"></div>
 					<div class="releases-content">
 						<div class="releases-header">
-							<span class="releases-badge" style:background={SOURCE_META[entry.type].color}>{$t(SOURCE_META[entry.type].label)}</span>
+							<span class="releases-badge" style:background={SOURCE_META[entry.type].color}>{badge(entry)}</span>
 							<span class="releases-title">{truncate(entry.title, 40)}</span>
 							<span class="releases-status" class:downloaded={entry.hasFile} title={entry.hasFile ? $t('arr.downloaded') : $t('arr.missing')}></span>
 						</div>

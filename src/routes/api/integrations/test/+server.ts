@@ -10,6 +10,7 @@ import { httpFetch, isOn } from '$lib/server/http';
 import { pveConnOf, pve } from '$lib/server/proxmox';
 import { nextcloudConnOf, ocsUser } from '$lib/server/nextcloud';
 import { giteaConnOf, giteaUser } from '$lib/server/gitea';
+import { deezerFeed } from '$lib/server/deezer';
 import { AppError, msg } from '$lib/server/api-error';
 import type { Key, Params } from '$lib/i18n';
 import { translate } from '$lib/i18n';
@@ -193,6 +194,11 @@ async function run(key: IntegrationKey, v: Values): Promise<Result> {
 			if (!v.username) return { ok: false, ...msg('errors.enterUsername') };
 			const user = await ocsUser(nextcloudConnOf({ url, username: v.username, appPassword: v.appPassword }));
 			return { ok: true, ...msg('test.nextcloudOk', { user: user.displayname || v.username }) };
+		}
+		case 'deezer': {
+			const feed = await deezerFeed({ url, apiToken: v.apiToken });
+			const params = { count: feed.releases?.length ?? 0, artists: feed.artists ?? 0 };
+			return { ok: true, ...msg(feed.connected === false ? 'test.deezerNoAccount' : 'test.deezerOk', params) };
 		}
 		case 'gitea': {
 			const conn = giteaConnOf({ url, apiToken: v.apiToken });

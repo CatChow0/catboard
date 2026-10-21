@@ -122,4 +122,7 @@ export const errors = {
 	'errors.giteaScope': 'Ce jeton n\'a pas le droit de lire ceci (il faut l\'accès en lecture à user, repository et issue)',
 	'errors.enterToken': 'Saisis le jeton d\'accès',
 	'test.giteaOk': 'Gitea / Forgejo {version}, connecté en tant que {user}',
+	'test.deezerOk': '{count} sorties de {artists} artistes favoris',
+	'test.deezerNoAccount': 'Joignable, mais aucun compte Deezer n\'est connecté dans l\'app ({count} sorties)',
+	'errors.deezerAuth': 'Deezer to Navidrome a refusé le jeton API',
 } satisfies Partial<Dict>;

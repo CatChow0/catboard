@@ -58,7 +58,8 @@ await post('/api/integrations', {
 	portainer: { url: mocks.portainer.url, ...TOKENS.portainer },
 	immich: { url: mocks.immich.url, apiKey: TOKENS.immich.adminKey },
 	nextcloud: { url: mocks.nextcloud.url, ...TOKENS.nextcloud },
-	gitea: { url: mocks.gitea.url, ...TOKENS.gitea }
+	gitea: { url: mocks.gitea.url, ...TOKENS.gitea },
+	deezer: { url: mocks.deezer.url, ...TOKENS.deezer }
 }, cookie, 'PUT');
 await post('/api/services', { name: 'Grafana', url: mocks.status.url + '/grafana', description: 'Dashboards', statusCheck: { enabled: true, method: 'HEAD' } }, cookie);
 

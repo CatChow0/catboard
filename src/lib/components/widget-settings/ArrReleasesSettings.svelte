@@ -6,7 +6,7 @@
 	let { config = $bindable() }: { config: ArrReleasesConfig & { integrations: NonNullable<ArrReleasesConfig['integrations']> } } = $props();
 </script>
 
-<ArrSources bind:sources={config.integrations} />
+<ArrSources bind:sources={config.integrations} bind:includeFeatures={config.includeFeatures} />
 <label class="toggle-switch">
 	<input type="checkbox" bind:checked={config.onlyDownloaded} />
 	<span class="toggle-slider"></span>

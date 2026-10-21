@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { t, intlLocale } from '$lib/i18n';
+	import { t, tx, intlLocale } from '$lib/i18n';
 	import type { CalendarConfig, ArrCalendarEntry } from '$lib/types';
 	import { isEditing, arrCalendarData } from '$lib/stores/dashboard';
 	import WidgetEditModal from './widget/WidgetEditModal.svelte';
+	import { onMount } from 'svelte';
+	import { whileVisible } from '$lib/utils/poll';
 
 	let { config, colSpan = 1, rowSpan = 1, ondelete, itemid }: {
 		config?: CalendarConfig;
@@ -56,11 +58,18 @@
 	let selectedDayEntries = $derived(selectedDay !== null ? (dayEntries().get(selectedDay) || []) : []);
 	let popupStyle = $state('');
 
+	// Re-read every few minutes: CatBoard answers from its cache, and the
+	// Deezer to Navidrome webhook empties it when the feed changed.
+	let tick = $state(0);
+	onMount(() => whileVisible(() => tick++, 120_000));
+
 	$effect(() => {
+		void tick;
 		const sources = [];
 		if (config?.integrations?.radarr) sources.push('radarr');
 		if (config?.integrations?.sonarr) sources.push('sonarr');
 		if (config?.integrations?.lidarr) sources.push('lidarr');
+		if (config?.integrations?.deezer) sources.push('deezer');
 
 		if (sources.length === 0) {
 			arrCalendarData.set({ entries: [], updatedAt: 0 });
@@ -73,7 +82,7 @@
 		const start = `${year}-${String(month + 1).padStart(2, '0')}-01`;
 		const end = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-		fetch(`/api/integrations/arr/calendar?sources=${sources.join(',')}&start=${start}&end=${end}`)
+		fetch(`/api/integrations/arr/calendar?sources=${sources.join(',')}&start=${start}&end=${end}${config?.includeFeatures ? '&includeFeatures=true' : ''}`)
 			.then((res) => res.json())
 			.then((data) => {
 				arrCalendarData.set(data);
@@ -132,6 +141,7 @@
 	function dotColor(type: string): string {
 		if (type === 'sonarr') return '#2196F3';
 		if (type === 'radarr') return '#FF9800';
+		if (type === 'deezer') return '#A238FF';
 		return '#4CAF50';
 	}
 
@@ -248,7 +258,7 @@
 					{#if entry.subtitle}
 						<span class="popup-subtitle">{entry.subtitle}</span>
 					{/if}
-					<span class="popup-type">{entry.type}</span>
+					<span class="popup-type">{entry.type === 'deezer' ? `Deezer · ${$tx(`deezer.type.${entry.kind}`, entry.kind ?? '')}` : entry.type}</span>
 				</div>
 			</div>
 		{/each}

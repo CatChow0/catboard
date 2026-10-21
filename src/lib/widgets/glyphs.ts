@@ -38,6 +38,7 @@ export const GLYPHS = {
 	stacks: { svg: '<path d="M12 2l9 5-9 5-9-5z" /><path d="M3 12l9 5 9-5" /><path d="M3 17l9 5 9-5" />' },
 	photos: { svg: '<rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />' },
 	git: { svg: '<circle cx="6" cy="5" r="2.5" /><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="8" r="2.5" /><path d="M6 7.5v9M18 10.5c0 4-6 3-11 6.5" />' },
+	deezer: { svg: '<path d="M3 18h3M8 18h3M13 18h3M18 18h3M8 14h3M13 14h3M18 14h3M13 10h3M18 10h3M18 6h3" />' },
 	cloud: { svg: '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" /><path d="M9 14h6" />' },
 } satisfies Record<string, GlyphDef>;
 

@@ -2,7 +2,7 @@
 
 A self-hosted, customizable dashboard for managing and monitoring your homelab services. Built with SvelteKit 5, TypeScript, and real-time system monitoring.
 
-![Version](https://img.shields.io/badge/version-3.8.0-blue)
+![Version](https://img.shields.io/badge/version-3.9.0-blue)
 
 ## Features
 
@@ -14,7 +14,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Dynamic navbar** -- Customizable navbar with draggable/resizable widgets: title, search, clock, weather, CPU, RAM, disk monitors, Uptime Kuma status, and Docker container status (click for details)
 - **System monitoring** -- Real-time CPU usage/temperature, RAM/swap usage, and disk utilization via SSE
 - **Clock & Weather widgets** -- Configurable clock with seconds/date options and weather display with location search
-- **Calendar widget** -- Month view with today highlighted; optional *Arr integration shows upcoming movie/TV/music releases from Radarr, Sonarr, and Lidarr
+- **Calendar widget** -- Month view with today highlighted; optional *Arr integration shows upcoming movie/TV/music releases from Radarr, Sonarr, and Lidarr, and the releases of your favorite Deezer artists (Deezer to Navidrome)
 - **AdGuard Home integration** -- Monitor DNS queries, blocked requests, and filter statistics; toggle protection and set temporary pauses directly from the dashboard
 - **Jellyfin integration** -- Recently added movies, TV shows, albums, and episodes as media cards, plus a **Now Playing** widget (who watches what, progress, direct play or transcode). Artwork is proxied through CatBoard, so the browser never needs to reach Jellyfin
 - **Jellyseerr / Overseerr integration** -- Pending and recent media requests with counters; admins can approve or decline from the dashboard
@@ -23,6 +23,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Spoolman integration** -- Recently used filament spools, and spools running low or empty, with colours and remaining weight
 - **Elegoo Centauri Carbon 2 integration** -- Live 3D print status (progress, time left, ETA, layers, temperatures, model preview), as a widget or in the navbar; admins can pause, resume or stop the print
 - **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status
+- **Deezer to Navidrome integration** -- The release feed of the deezer-to-navidrome app (albums, EPs and singles of your favorite Deezer artists) in the Calendar and New releases widgets, with whether each one is already in the music library
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP), with optional per-container CPU and RAM usage
 - **Stacker integration** -- Live CPU, memory, GPU, disk and network gauges and graphs from one or more Stacker servers, with selectable sections
@@ -31,7 +32,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Immich integration** -- Photo, video and storage counts and the latest photos (thumbnails proxied by CatBoard)
 - **Nextcloud integration** -- Storage quota, server info and the latest modified files
 - **Gitea / Forgejo integration** -- Recently updated repositories and the open issues and pull requests, with their totals
-- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins, Proxmox VE, Portainer, Immich, Nextcloud, Gitea/Forgejo)
+- **Integrations system** -- Extensible integration framework for connecting external services (Uptime Kuma, Docker, AdGuard Home, Radarr, Sonarr, Lidarr, Jellyfin, Jellyseerr/Overseerr, qBittorrent, Spoolman, Elegoo CC2, Stacker, PsiTransfer, Jenkins, Proxmox VE, Portainer, Immich, Nextcloud, Gitea/Forgejo, Deezer to Navidrome)
 - **Export & Import** -- Backup and restore your dashboard configuration selectively (services, layout, settings, integrations)
 - **Version check** -- Automatic Docker Hub update check with visual notification
 - **Multi-user auth** -- Admin setup on first run, role-based access (admin, mini-admin, user), per-user settings, a choice of who may edit the shared dashboards, and a limit on failed login attempts
@@ -81,7 +82,7 @@ The server listens on port 3000 by default (configurable via the `PORT` environm
 |---|---|---|
 | `npm run check` | TypeScript, Svelte types and accessibility (must report 0 errors and 0 warnings) | whole project |
 | `npm test` | Unit tests (Vitest): grid engine, search, Markdown escaping, themes and theme files, integration registry, widget catalog (every widget has a loader and a stable config), secret masking, status checks, integration clients with a fake `fetch` | `src/**/*.test.ts`, next to the code |
-| `npm run test:api` | API tests: the built app runs on a free port with an empty temporary config (admin + plain user created), routes are called like the widgets do, against fake Jenkins, PsiTransfer, Proxmox (HTTPS, self-signed), Portainer, Immich, Nextcloud and Gitea servers. Needs `npm run build` first | `tests/api/` |
+| `npm run test:api` | API tests: the built app runs on a free port with an empty temporary config (admin + plain user created), routes are called like the widgets do, against fake Jenkins, PsiTransfer, Proxmox (HTTPS, self-signed), Portainer, Immich, Nextcloud, Gitea and Deezer to Navidrome servers. Needs `npm run build` first | `tests/api/` |
 | `npm run test:e2e` | Browser tests (Playwright, Chromium): login, lazy widgets, catalog, appearance and custom CSS, theme files, integration widgets, phone layout. Needs `npm run build` and `npx playwright install chromium` once | `tests/e2e/` |
 | `npm run test:all` | All of the above, in order | |
 
@@ -196,6 +197,7 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
 | **New releases** (Arr) | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter. Posters are loaded through CatBoard, so the API keys never reach the browser |
+| **Deezer releases** | The Calendar and New releases widgets take **Deezer to Navidrome** as a source: albums, EPs and singles of your favorite Deezer artists (muted artists left out), with their type and "in library" status from the app. Releases where a followed artist is only a guest are hidden unless **Include features** is ticked |
 | **Stacker** | Live hardware monitor from a Stacker server; choose CPU, Memory, GPU, Disk and Network sections; adapts from one-line gauges to full graphs as the tile grows |
 | **Jellyfin Now Playing** | Active streams: title, user and device, progress, paused state, Direct/Transcode badge (codec and reason on hover); one line per stream on 1-row tiles |
 | **Jellyseerr Requests** | Pending or all recent requests with poster, requester and status; approve/decline buttons for admins |
@@ -232,6 +234,7 @@ Connections to external services are set up in **Settings > Integrations**: a se
 | **Immich** | URL and API key (Account settings > API keys); optional public URL for the links to photos |
 | **Nextcloud** | URL, username and an app password (Personal settings > Security); optional public URL for the links to files |
 | **Gitea / Forgejo** | URL and an access token (Settings > Applications, read access to user, repository and issue); optional public URL for the header link |
+| **Deezer to Navidrome** | URL of the deezer-to-navidrome app (e.g. `http://deezer-to-navidrome:8080`) and its API token (app Settings > Sign-in and other apps). After saving, CatBoard shows a **webhook URL** to paste in the app: the app calls it when its release feed or library index changed, and CatBoard keeps the feed cached until then instead of polling the app |
 | **Elegoo printers** | Centauri Carbon 2: name, IP, access code (if set); **Detect** reads the serial number. The printer must be in **LAN Only** mode (Settings > Network) |
 | **AdGuard Home** | URL, username, password |
 
@@ -303,8 +306,8 @@ After 5 failed logins on an account within 15 minutes, that account must wait 30
 | `GET` | `/api/integrations/docker/heartbeat` | SSE stream for Docker container status |
 | `GET` | `/api/integrations/adguard-home/heartbeat` | SSE stream for AdGuard Home stats and status |
 | `POST` | `/api/integrations/adguard-home/protection` | Toggle AdGuard Home protection (with optional pause duration) |
-| `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr |
-| `GET` | `/api/integrations/arr/releases` | Recently released items from Radarr/Sonarr/Lidarr (`sources`, `days`, `limit`, `onlyDownloaded`) |
+| `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr/Deezer (`sources`, `start`, `end`, `includeFeatures`) |
+| `GET` | `/api/integrations/arr/releases` | Recently released items from Radarr/Sonarr/Lidarr/Deezer (`sources`, `days`, `limit`, `onlyDownloaded`, `includeFeatures`) |
 | `GET` | `/api/integrations/jellyfin/latest` | Recently added items from Jellyfin |
 | `GET` | `/api/integrations/jellyfin/sessions` | Streams currently playing on Jellyfin |
 | `GET` | `/api/integrations/jellyfin/image` | Jellyfin artwork proxy (`item`, `type`, `tag`, `w`) |
@@ -333,6 +336,8 @@ After 5 failed logins on an account within 15 minutes, that account must wait 30
 | `GET` | `/api/integrations/immich/summary` | Immich statistics and the latest photos (`photos`) |
 | `GET` | `/api/integrations/immich/thumb/[id]` | A photo thumbnail, fetched with the API key on the server |
 | `GET` | `/api/integrations/nextcloud/overview` | Quota, server info and recent files (`server`, `files`) |
+| `POST` | `/api/integrations/deezer/webhook?token=…` | Called by deezer-to-navidrome when its feed or library changed (no session; the token is the secret) |
+| `POST` | `/api/integrations/deezer/webhook-token` | New webhook secret (admin) |
 | `GET` | `/api/integrations/gitea/overview` | Recent repositories, open issues and pull requests with totals (`repos`, `issues`) |
 | `GET` | `/api/weather` | Weather data via Open-Meteo |
 | `GET` | `/api/geocode` | Location search via Open-Meteo |

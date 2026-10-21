@@ -6,5 +6,5 @@
 	let { config = $bindable() }: { config: CalendarConfig & { integrations: NonNullable<CalendarConfig['integrations']> } } = $props();
 </script>
 
-<ArrSources bind:sources={config.integrations} />
+<ArrSources bind:sources={config.integrations} bind:includeFeatures={config.includeFeatures} />
 <p class="hint">{$t('ws.upcomingReleasesFromTheEnabledSources')}</p>

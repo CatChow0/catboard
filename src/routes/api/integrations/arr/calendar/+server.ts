@@ -12,7 +12,8 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	const sources = sourcesParam.split(',').filter(Boolean);
-	const { entries, errors } = await fetchArrEntries(sources, start, end, 'calendar');
+	const includeFeatures = url.searchParams.get('includeFeatures') === 'true';
+	const { entries, errors } = await fetchArrEntries(sources, start, end, 'calendar', { includeFeatures });
 
 	return json({
 		entries: entries.sort((a, b) => a.date.localeCompare(b.date)),

@@ -11,6 +11,7 @@ import { catalog } from './catalog';
 import { common } from './common';
 import { counts } from './counts';
 import { dashboard } from './dashboard';
+import { deezer } from './deezer';
 import { disk } from './disk';
 import { docker } from './docker';
 import { errors } from './errors';
@@ -47,4 +48,4 @@ import { widget } from './widget';
 import { widgetSettings } from './widgetSettings';
 
 /** Reference texts: every key exists here. */
-export const en = { ...add, ...adguard, ...admin, ...appearance, ...arr, ...auth, ...backups, ...cache, ...calendar, ...catalog, ...common, ...counts, ...dashboard, ...disk, ...docker, ...errors, ...exportTab, ...gitea, ...group, ...icons, ...immich, ...integrations, ...jellyfin, ...jenkins, ...layoutTab, ...location, ...misc, ...nav, ...navTitle, ...navWidgets, ...nextcloud, ...notes, ...portainer, ...print, ...proxmox, ...psi, ...qbit, ...requests, ...search, ...service, ...settings, ...small, ...spoolman, ...stacker, ...time, ...widget, ...widgetSettings };
+export const en = { ...add, ...adguard, ...admin, ...appearance, ...arr, ...auth, ...backups, ...cache, ...calendar, ...catalog, ...common, ...counts, ...dashboard, ...deezer, ...disk, ...docker, ...errors, ...exportTab, ...gitea, ...group, ...icons, ...immich, ...integrations, ...jellyfin, ...jenkins, ...layoutTab, ...location, ...misc, ...nav, ...navTitle, ...navWidgets, ...nextcloud, ...notes, ...portainer, ...print, ...proxmox, ...psi, ...qbit, ...requests, ...search, ...service, ...settings, ...small, ...spoolman, ...stacker, ...time, ...widget, ...widgetSettings };

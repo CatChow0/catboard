@@ -5,6 +5,8 @@ import { isSetupDone, findUserByUsername, migrateAuthToUsers } from '$lib/server
 export const handle: Handle = async ({ event, resolve }) => {
 	// Health check (Docker HEALTHCHECK, monitoring): no session, works before setup.
 	if (event.url.pathname === '/api/health') return resolve(event);
+	// Called by deezer-to-navidrome: the secret token in its URL replaces the session.
+	if (event.url.pathname === '/api/integrations/deezer/webhook' && event.request.method === 'POST') return resolve(event);
 
 	// Run migration once
 	await migrateAuthToUsers();

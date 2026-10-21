@@ -12,6 +12,7 @@ import { catalog } from './catalog';
 import { common } from './common';
 import { counts } from './counts';
 import { dashboard } from './dashboard';
+import { deezer } from './deezer';
 import { disk } from './disk';
 import { docker } from './docker';
 import { errors } from './errors';
@@ -48,4 +49,4 @@ import { widget } from './widget';
 import { widgetSettings } from './widgetSettings';
 
 /** Typed against the English keys: a missing text fails `npm run check`. */
-export const fr = { ...add, ...adguard, ...admin, ...appearance, ...arr, ...auth, ...backups, ...cache, ...calendar, ...catalog, ...common, ...counts, ...dashboard, ...disk, ...docker, ...errors, ...exportTab, ...gitea, ...group, ...icons, ...immich, ...integrations, ...jellyfin, ...jenkins, ...layoutTab, ...location, ...misc, ...nav, ...navTitle, ...navWidgets, ...nextcloud, ...notes, ...portainer, ...print, ...proxmox, ...psi, ...qbit, ...requests, ...search, ...service, ...settings, ...small, ...spoolman, ...stacker, ...time, ...widget, ...widgetSettings } satisfies Dict;
+export const fr = { ...add, ...adguard, ...admin, ...appearance, ...arr, ...auth, ...backups, ...cache, ...calendar, ...catalog, ...common, ...counts, ...dashboard, ...deezer, ...disk, ...docker, ...errors, ...exportTab, ...gitea, ...group, ...icons, ...immich, ...integrations, ...jellyfin, ...jenkins, ...layoutTab, ...location, ...misc, ...nav, ...navTitle, ...navWidgets, ...nextcloud, ...notes, ...portainer, ...print, ...proxmox, ...psi, ...qbit, ...requests, ...search, ...service, ...settings, ...small, ...spoolman, ...stacker, ...time, ...widget, ...widgetSettings } satisfies Dict;

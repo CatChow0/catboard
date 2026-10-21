@@ -26,7 +26,7 @@ export async function requireEditor(locals: App.Locals): Promise<Response | null
 	return (await canEditDashboards(locals)) ? null : apiError(403, 'errors.adminDashboards');
 }
 
-const SECRET_KEYS = new Set(['apiKey', 'password', 'accessCode', 'apiToken', 'uploadPassword', 'tokenSecret', 'appPassword']);
+const SECRET_KEYS = new Set(['apiKey', 'password', 'accessCode', 'apiToken', 'uploadPassword', 'tokenSecret', 'appPassword', 'webhookToken']);
 
 /** Deep copy with every secret field blanked, for non-admin readers. */
 export function maskSecrets<T>(value: T): T {

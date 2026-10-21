@@ -103,3 +103,16 @@ test('Gitea shows repositories, open issues and pull requests', async ({ page })
 	await expect(w.getByText('1 PR')).toBeVisible();
 	await expect(w.locator('a', { hasText: 'Add French' })).toHaveAttribute('href', 'https://git.example.com/ann/catboard/pulls/8');
 });
+
+test('Deezer releases appear in New releases and the calendar', async ({ page }) => {
+	await setDashboard(page, [
+		tile('nr', 'arr-releases', 0, 0, 5, 3, { integrations: { deezer: true }, days: 30, limit: 10 }),
+		tile('cal', 'calendar', 5, 0, 5, 3, { integrations: { deezer: true } })
+	]);
+	await page.goto('/');
+	const releases = page.locator('.cb-item-arr-releases');
+	await expect(releases.getByText('Owned Album')).toBeVisible();
+	await expect(releases.getByText('Album', { exact: true })).toBeVisible();
+	await expect(releases.getByText('Guest Spot')).toHaveCount(0);
+	await expect(page.locator('.cb-item-calendar .entry-dot').first()).toBeVisible();
+});

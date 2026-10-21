@@ -19,11 +19,12 @@ beforeAll(async () => {
 		portainer: { url: mocks.portainer.url, ...TOKENS.portainer, publicUrl: 'https://portainer.example.com' },
 		immich: { url: mocks.immich.url, apiKey: TOKENS.immich.adminKey, publicUrl: 'https://photos.example.com' },
 		nextcloud: { url: mocks.nextcloud.url, ...TOKENS.nextcloud, publicUrl: 'https://cloud.example.com' },
-		gitea: { url: mocks.gitea.url, ...TOKENS.gitea, publicUrl: 'https://git.example.com' }
+		gitea: { url: mocks.gitea.url, ...TOKENS.gitea, publicUrl: 'https://git.example.com' },
+		deezer: { url: mocks.deezer.url, ...TOKENS.deezer }
 	});
 });
 afterAll(async () => {
-	await admin.put('/api/integrations', { jenkins: null, psitransfer: null, proxmox: null, portainer: null, immich: null, nextcloud: null, gitea: null });
+	await admin.put('/api/integrations', { jenkins: null, psitransfer: null, proxmox: null, portainer: null, immich: null, nextcloud: null, gitea: null, deezer: null });
 	await mocks.close();
 });
 
@@ -192,6 +193,64 @@ describe('Gitea / Forgejo', () => {
 	it('only asks for what the widget shows', async () => {
 		const data = (await user.get('/api/integrations/gitea/overview?repos=0&issues=0')).body;
 		expect(data).toMatchObject({ repos: [], open: [], counts: null });
+	});
+});
+
+describe('Deezer to Navidrome releases', () => {
+	it('new releases: past only, muted and features out, library status', async () => {
+		const data = (await user.get('/api/integrations/arr/releases?sources=deezer&days=30&limit=10')).body;
+		expect(data.entries.map((e: { subtitle: string; hasFile: boolean; kind: string }) => [e.subtitle, e.hasFile, e.kind])).toEqual([['Owned Album', true, 'album']]);
+		const withFeatures = (await user.get('/api/integrations/arr/releases?sources=deezer&days=30&includeFeatures=true')).body;
+		expect(withFeatures.entries.map((e: { subtitle: string }) => e.subtitle)).toEqual(['Owned Album', 'Guest Spot']);
+		const owned = (await user.get('/api/integrations/arr/releases?sources=deezer&days=30&includeFeatures=true&onlyDownloaded=true')).body;
+		expect(owned.entries.map((e: { subtitle: string }) => e.subtitle)).toEqual(['Owned Album']);
+	});
+
+	it('calendar: upcoming releases too', async () => {
+		const day = (n: number) => new Date(Date.now() + n * 86400e3).toISOString().slice(0, 10);
+		const data = (await user.get(`/api/integrations/arr/calendar?sources=deezer&start=${day(-10)}&end=${day(10)}`)).body;
+		expect(data.entries.map((e: { subtitle: string; type: string }) => [e.subtitle, e.type])).toEqual([['Owned Album', 'deezer'], ['Next Single', 'deezer']]);
+	});
+});
+
+describe('Deezer to Navidrome webhook', () => {
+	const releasesOf = async () => (await user.get('/api/integrations/arr/releases?sources=deezer&days=30')).body.entries.map((e: { subtitle: string }) => e.subtitle);
+
+	it('a secret is made with the connection, kept on save, hidden from users', async () => {
+		const token = (await admin.get('/api/integrations')).body.deezer.webhookToken;
+		expect(token).toMatch(/^[\w-]{20,}$/);
+		await admin.put('/api/integrations', { deezer: { url: mocks.deezer.url, ...TOKENS.deezer, webhookToken: token } });
+		expect((await admin.get('/api/integrations')).body.deezer.webhookToken).toBe(token);
+		expect((await user.get('/api/integrations')).body.deezer.webhookToken).toBe('');
+		expect((await user.post('/api/integrations/deezer/webhook-token')).status).toBe(403);
+	});
+
+	it('refuses a wrong token, needs no session', async () => {
+		const anon = await client('anon');
+		expect((await anon.post('/api/integrations/deezer/webhook?token=nope', { event: 'releases.updated' })).status).toBe(401);
+		expect((await anon.post('/api/integrations/deezer/webhook', { event: 'releases.updated' })).status).toBe(401);
+		const token = (await admin.get('/api/integrations')).body.deezer.webhookToken;
+		expect((await anon.post(`/api/integrations/deezer/webhook?token=${token}`, { event: 'test' })).status).toBe(200);
+	});
+
+	it('the feed stays cached until the webhook says it changed', async () => {
+		const token = (await admin.get('/api/integrations')).body.deezer.webhookToken;
+		const anon = await client('anon');
+		await anon.post(`/api/integrations/deezer/webhook?token=${token}`, { event: 'releases.updated' });
+		expect(await releasesOf()).toEqual(['Owned Album']);
+		mocks.deezer.addRelease('Fresh Album');
+		expect(await releasesOf()).toEqual(['Owned Album']);
+		await anon.post(`/api/integrations/deezer/webhook?token=${token}`, { event: 'releases.updated' });
+		expect(await releasesOf()).toEqual(['Fresh Album', 'Owned Album']);
+	});
+
+	it('a new secret replaces the old URL', async () => {
+		const old = (await admin.get('/api/integrations')).body.deezer.webhookToken;
+		const fresh = (await admin.post('/api/integrations/deezer/webhook-token')).body.webhookToken;
+		expect(fresh).not.toBe(old);
+		const anon = await client('anon');
+		expect((await anon.post(`/api/integrations/deezer/webhook?token=${old}`, { event: 'test' })).status).toBe(401);
+		expect((await anon.post(`/api/integrations/deezer/webhook?token=${fresh}`, { event: 'test' })).status).toBe(200);
 	});
 });
 

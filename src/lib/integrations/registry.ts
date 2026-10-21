@@ -145,6 +145,20 @@ export const INTEGRATIONS: IntegrationDef[] = [
 		requiredField: 'url'
 	},
 	{
+		key: 'deezer',
+		name: 'Deezer to Navidrome',
+		description: 'Recent releases of your favorite Deezer artists, in the calendar and new releases',
+		icon: 'deezer',
+		category: 'Media',
+		kind: 'single',
+		fields: [
+			{ id: 'url', label: 'URL', type: 'url', placeholder: 'http://deezer-to-navidrome:8080' },
+			{ id: 'apiToken', label: 'API token', type: 'secret', placeholder: 'Settings > Sign-in and other apps > API token' }
+		],
+		requiredField: 'url',
+		help: "The feed comes from the favorite artists of the Deezer account connected in the app. After saving, copy the webhook URL below into the app: it tells CatBoard when the feed or the library changed, and CatBoard stops asking on its own. Muted artists stay out."
+	},
+	{
 		key: 'qbittorrent',
 		name: 'qBittorrent',
 		description: 'Speeds, torrents, pause and resume',

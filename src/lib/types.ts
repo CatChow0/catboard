@@ -61,7 +61,10 @@ export interface CalendarConfig {
 		radarr?: boolean;
 		sonarr?: boolean;
 		lidarr?: boolean;
+		deezer?: boolean;
 	};
+	/** Deezer releases where a followed artist only appears (guest, compilation). */
+	includeFeatures?: boolean;
 }
 
 export interface CalendarItem extends DashboardItemBase {
@@ -74,7 +77,10 @@ export interface ArrReleasesConfig {
 		radarr?: boolean;
 		sonarr?: boolean;
 		lidarr?: boolean;
+		deezer?: boolean;
 	};
+	/** Deezer releases where a followed artist only appears (guest, compilation). */
+	includeFeatures?: boolean;
 	days?: number;
 	limit?: number;
 	onlyDownloaded?: boolean;
@@ -376,6 +382,8 @@ export interface IntegrationsConfig {
 	nextcloud?: { url: string; publicUrl?: string; username: string; appPassword: string };
 	/** Gitea or Forgejo (same API). */
 	gitea?: { url: string; publicUrl?: string; apiToken: string };
+	/** The deezer-to-navidrome app (release feed of the favorite Deezer artists). */
+	deezer?: { url: string; apiToken?: string; /** Secret of the webhook URL the app calls (made by CatBoard). */ webhookToken?: string };
 }
 
 /** A Proxmox VE node or cluster, read with an API token. */
@@ -454,12 +462,14 @@ export interface DockerEnvironmentData {
 
 export interface ArrCalendarEntry {
 	id: string;
-	type: 'radarr' | 'sonarr' | 'lidarr';
+	type: 'radarr' | 'sonarr' | 'lidarr' | 'deezer';
 	title: string;
 	subtitle?: string;
 	date: string;
 	hasFile: boolean;
 	posterUrl?: string;
+	/** Deezer: album, ep, single or compile. */
+	kind?: string;
 }
 
 export interface ArrCalendarData {

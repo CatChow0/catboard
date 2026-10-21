@@ -14,7 +14,8 @@ export const TOKENS = {
 	portainer: { apiKey: 'ptr_test' },
 	immich: { adminKey: 'immich-admin', userKey: 'immich-user' },
 	nextcloud: { username: 'ann', appPassword: 'nc-app-pass' },
-	gitea: { apiToken: 'gitea-token' }
+	gitea: { apiToken: 'gitea-token' },
+	deezer: { apiToken: 'dz-token' }
 };
 
 type Req = http.IncomingMessage & { body: Buffer };
@@ -269,6 +270,31 @@ export function giteaMock(port?: number) {
 	}, { port });
 }
 
+// --- Deezer to Navidrome --------------------------------------------------------
+/** Release feed: one owned album, one feature, one of a muted artist, one upcoming single. Needs the API token; `addRelease` changes the feed. */
+export function deezerMock(port?: number) {
+	const day = (n: number) => new Date(Date.now() + n * 86400e3).toISOString().slice(0, 10);
+	const rel = (id: string, date: string, extra: Record<string, unknown> = {}) => ({
+		id, title: `Album ${id}`, cover: '', release_date: date, record_type: 'album', artist: 'Nova', artist_id: '1', nb_tracks: 8, featured: false,
+		followed: [{ id: '1', name: 'Nova' }], ...extra
+	});
+	const releases = [
+		rel('900', day(5), { title: 'Next Single', record_type: 'single', nb_tracks: 1 }),
+		rel('901', day(-2), { title: 'Owned Album' }),
+		rel('902', day(-3), { title: 'Guest Spot', artist: 'Someone Else', artist_id: '7', featured: true }),
+		rel('903', day(-4), { title: 'Muted Album', artist: 'Quiet', artist_id: '3', followed: [{ id: '3', name: 'Quiet' }] })
+	];
+	return serve((req, res, url) => {
+		if (req.headers.authorization !== `Bearer ${TOKENS.deezer.apiToken}`) return send(res, 401, { ok: false, error: 'Sign in first' });
+		if (url.pathname === '/api/releases') return send(res, 200, { ok: true, connected: true, refresh_hours: 24, muted: { '3': 'Quiet' }, updated_at: 1, artists: 3, window_days: 180, releases });
+		if (url.pathname === '/search/library-check' && req.method === 'POST') {
+			const items = (JSON.parse(req.body.toString() || '{}').items ?? []) as { key: string }[];
+			return send(res, 200, { ok: true, results: Object.fromEntries(items.map((it) => [it.key, { owned_count: it.key === '901' ? 8 : 0 }])) });
+		}
+		return send(res, 404, 'not found');
+	}, { port }).then((m) => Object.assign(m, { addRelease: (title: string) => releases.push(rel(String(950 + releases.length), day(-1), { title })) }));
+}
+
 // --- Status target --------------------------------------------------------------
 /** Counts HEAD probes per path (other requests, like icon lookups, are not counted); /down/* answers 500. Slow enough to overlap concurrent checks. */
 export function statusTarget(port?: number) {
@@ -281,8 +307,8 @@ export function statusTarget(port?: number) {
 	}, { port }).then((m) => Object.assign(m, { hits }));
 }
 
-export async function startAll(ports: Partial<Record<'jenkins' | 'psitransfer' | 'proxmox' | 'portainer' | 'immich' | 'nextcloud' | 'gitea' | 'status', number>> = {}) {
-	const [jenkins, psitransfer, proxmox, portainer, immich, nextcloud, gitea, status] = await Promise.all([
+export async function startAll(ports: Partial<Record<'jenkins' | 'psitransfer' | 'proxmox' | 'portainer' | 'immich' | 'nextcloud' | 'gitea' | 'deezer' | 'status', number>> = {}) {
+	const [jenkins, psitransfer, proxmox, portainer, immich, nextcloud, gitea, deezer, status] = await Promise.all([
 		jenkinsMock(ports.jenkins),
 		psitransferMock(ports.psitransfer),
 		proxmoxMock(ports.proxmox),
@@ -290,8 +316,9 @@ export async function startAll(ports: Partial<Record<'jenkins' | 'psitransfer' |
 		immichMock(ports.immich),
 		nextcloudMock(ports.nextcloud),
 		giteaMock(ports.gitea),
+		deezerMock(ports.deezer),
 		statusTarget(ports.status)
 	]);
-	const all = { jenkins, psitransfer, proxmox, portainer, immich, nextcloud, gitea, status };
+	const all = { jenkins, psitransfer, proxmox, portainer, immich, nextcloud, gitea, deezer, status };
 	return { ...all, close: () => Promise.all(Object.values(all).map((m) => m.close())) };
 }

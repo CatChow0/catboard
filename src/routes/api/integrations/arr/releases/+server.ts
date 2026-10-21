@@ -23,7 +23,8 @@ export const GET: RequestHandler = async ({ url }) => {
 	// Calendar `end` is exclusive on some *Arr versions, so ask one day past today
 	const end = new Date(now.getTime() + 86_400_000).toISOString().split('T')[0];
 
-	const { entries, errors } = await fetchArrEntries(sources, start, end, 'released');
+	const includeFeatures = url.searchParams.get('includeFeatures') === 'true';
+	const { entries, errors } = await fetchArrEntries(sources, start, end, 'released', { includeFeatures });
 
 	const released = entries
 		.filter((e) => e.date >= start && e.date <= today && (!onlyDownloaded || e.hasFile))
@@ -32,6 +33,6 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	return json(
 		{ entries: released, updatedAt: Date.now(), errors },
-		{ headers: { 'Cache-Control': 'max-age=300' } }
+		{ headers: { 'Cache-Control': 'max-age=60' } }
 	);
 };

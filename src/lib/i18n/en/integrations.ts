@@ -32,4 +32,9 @@ export const integrations = {
 	'integrations.revert': 'Revert',
 	'integrations.saving': 'Saving…',
 	'integrations.testConnection': 'Test connection',
+	'integrations.webhook': 'Webhook URL for Deezer to Navidrome',
+	'integrations.webhookHint': 'Paste it in the app (Settings > Sign-in and other apps > CatBoard webhook). Use an address the app can reach, e.g. http://catboard:3000 on the same Docker network.',
+	'integrations.webhookNew': 'New webhook URL',
+	'integrations.webhookAfterSave': 'Save the connection to get the webhook URL.',
+	'integrations.webhookConfirm': 'Make a new webhook URL? The current one stops working until you paste the new one in the app.',
 } satisfies Record<string, Entry>;

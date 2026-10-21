@@ -79,6 +79,12 @@ describe('test connection', () => {
 		expect((await test('immich', { url: mocks.immich.url, apiKey: 'bad' })).message).toMatch(/refused the API key/);
 	});
 
+	it('Deezer to Navidrome: reads the release feed', async () => {
+		expect(await test('deezer', { url: mocks.deezer.url, ...TOKENS.deezer })).toMatchObject({ ok: true, message: '4 releases from 3 favorite artists', code: 'test.deezerOk' });
+		expect(await test('deezer', { url: mocks.deezer.url, apiToken: 'bad' })).toMatchObject({ ok: false, code: 'errors.deezerAuth' });
+		expect(await test('deezer', { url: mocks.status.url })).toMatchObject({ ok: false, code: 'errors.answeredHttp' });
+	});
+
 	it('Gitea / Forgejo: checks the version, then the token', async () => {
 		expect(await test('gitea', { url: mocks.gitea.url, ...TOKENS.gitea })).toMatchObject({ ok: true, message: 'Gitea / Forgejo 1.22.3, signed in as Ann', code: 'test.giteaOk' });
 		expect(await test('gitea', { url: mocks.gitea.url, apiToken: 'bad' })).toMatchObject({ ok: false, code: 'errors.giteaAuth' });

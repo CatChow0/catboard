@@ -132,4 +132,6 @@ export const widgetSettings = {
 	'ws.diskAndNetworkTotalsSinceBoot': 'Disk and network totals since boot',
 	'ws.theWidgetAdaptsToItsSize': 'The widget adapts to its size: one line per section on small tiles, tables and graphs on larger ones.',
 	'ws.location': 'Location',
+	'ws.includeFeatures': 'Include features',
+	'ws.includeFeaturesHint': '(releases a followed artist only appears on)',
 } satisfies Record<string, Entry>;

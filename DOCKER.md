@@ -238,6 +238,15 @@ http://host.docker.internal:8989   # Sonarr
 http://host.docker.internal:8686   # Lidarr
 ```
 
+### Deezer to Navidrome
+
+1. In the app, **Settings > Sign-in and other apps**: create an API token
+2. In **Settings > Integrations > Deezer to Navidrome**, enter the app's URL (e.g. `http://deezer-to-navidrome:8080` on the same Docker network) and the token, then save
+3. Copy the **webhook URL** shown below the form into the app (**CatBoard webhook**), with an address the app can reach (e.g. `http://catboard:3000/...`)
+4. Tick **Deezer to Navidrome** in the sources of a **Calendar** or **New releases** widget
+
+CatBoard keeps the feed until the webhook says it changed (until then, at most an hour).
+
 ### Jellyfin
 
 To connect CatBoard to a Jellyfin instance:

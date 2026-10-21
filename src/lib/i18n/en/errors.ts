@@ -122,4 +122,7 @@ export const errors = {
 	'errors.giteaScope': 'This token may not read this (needs read access to user, repository and issue)',
 	'errors.enterToken': 'Enter the access token',
 	'test.giteaOk': 'Gitea / Forgejo {version}, signed in as {user}',
+	'test.deezerOk': '{count} releases from {artists} favorite artists',
+	'test.deezerNoAccount': 'Reachable, but no Deezer account is connected in the app ({count} releases)',
+	'errors.deezerAuth': 'Deezer to Navidrome refused the API token',
 } satisfies Record<string, Entry>;
