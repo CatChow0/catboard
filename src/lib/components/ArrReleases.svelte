@@ -20,12 +20,17 @@
 	const days = $derived(config?.days || 14);
 	const limit = $derived(config?.limit || 10);
 	const onlyDownloaded = $derived(!!config?.onlyDownloaded);
+	// Sonarr language filter; empty = air dates only, as before
+	const languages = $derived(config?.integrations?.sonarr ? (config?.languages ?? []).join(',') : '');
+	const vostfrPattern = $derived(config?.languagePatterns?.vostfr || '');
+	const vfPattern = $derived(config?.languagePatterns?.vf || '');
 	const cells = $derived(colSpan * rowSpan);
 	const isCompact = $derived(rowSpan === 1);
 	const displayLimit = $derived(cells < 4 ? Math.min(limit, 3) : limit);
 	const animLevel = $derived($settings?.animations || 'subtle');
 
 	let entries = $state<ArrCalendarEntry[]>([]);
+	let languageCounts = $state<{ VOSTFR: number; VF: number } | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
@@ -34,6 +39,7 @@
 	async function fetchData() {
 		if (!sources) {
 			entries = [];
+			languageCounts = null;
 			error = null;
 			loading = false;
 			return;
@@ -46,6 +52,11 @@
 				onlyDownloaded: String(onlyDownloaded),
 				includeFeatures: String(!!config?.includeFeatures)
 			});
+			if (languages) {
+				params.set('languages', languages);
+				if (vostfrPattern) params.set('vostfr', vostfrPattern);
+				if (vfPattern) params.set('vf', vfPattern);
+			}
 			const res = await fetch(`/api/integrations/arr/releases?${params}`);
 			if (!res.ok) {
 				const err = await res.json().catch(() => ({}));
@@ -54,6 +65,7 @@
 			}
 			const data = await res.json();
 			entries = data.entries || [];
+			languageCounts = data.languageCounts || null;
 			error = entries.length === 0 && data.errors?.length
 				? data.errors.map((e: { source: string; message: string }) => `${e.source}: ${e.message}`).join(', ')
 				: null;
@@ -71,6 +83,9 @@
 		void displayLimit;
 		void onlyDownloaded;
 		void config?.includeFeatures;
+		void languages;
+		void vostfrPattern;
+		void vfPattern;
 		fetchData();
 	});
 
@@ -82,6 +97,11 @@
 		lidarr: { label: 'arr.album', color: '#4CAF50' },
 		deezer: { label: 'arr.album', color: '#A238FF' }
 	};
+	/** French versions of an episode: SUB = VOSTFR, DUB = VF (MULTi included). */
+	const LANG_BADGES = [
+		{ lang: 'VOSTFR', label: 'arr.sub', title: 'arr.subTitle', color: '#009688' },
+		{ lang: 'VF', label: 'arr.dub', title: 'arr.dubTitle', color: '#E91E63' }
+	] as const;
 	/** Deezer entries say what they are (album, EP, single). */
 	const badge = (e: ArrCalendarEntry) => (e.type === 'deezer' ? $tx(`deezer.type.${e.kind}`, $t('arr.album')) : $t(SOURCE_META[e.type].label));
 
@@ -137,6 +157,11 @@
 			<span>{$t('arr.none', { days })}</span>
 		</div>
 	{:else}
+		{#if languageCounts && !isCompact}
+			<div class="releases-counts" title={$t('arr.langCountTitle', { days })}>
+				{$t('arr.langCount', { vostfr: languageCounts.VOSTFR, vf: languageCounts.VF })}
+			</div>
+		{/if}
 		<div class="releases-list">
 			{#each entries as entry (entry.type + entry.id)}
 				<div class="releases-card" style:background-image={entry.posterUrl ? `url(${entry.posterUrl})` : undefined} class:no-image={!entry.posterUrl}>
@@ -144,6 +169,9 @@
 					<div class="releases-content">
 						<div class="releases-header">
 							<span class="releases-badge" style:background={SOURCE_META[entry.type].color}>{badge(entry)}</span>
+							{#each LANG_BADGES.filter((b) => entry.languages?.includes(b.lang)) as b (b.lang)}
+								<span class="releases-badge" style:background={b.color} title={$t(b.title)}>{$t(b.label)}</span>
+							{/each}
 							<span class="releases-title">{truncate(entry.title, 40)}</span>
 							<span class="releases-status" class:downloaded={entry.hasFile} title={entry.hasFile ? $t('arr.downloaded') : $t('arr.missing')}></span>
 						</div>
@@ -202,6 +230,14 @@
 		font-size: 0.75rem;
 		text-align: center;
 		height: 100%;
+	}
+
+	.releases-counts {
+		flex-shrink: 0;
+		font-size: 0.7rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		padding: 0 2px;
 	}
 
 	.releases-list {
@@ -288,6 +324,11 @@
 		color: white;
 		flex-shrink: 0;
 		white-space: nowrap;
+	}
+
+	/* SUB / DUB sit right after the type badge */
+	.releases-badge + .releases-badge {
+		margin-left: -4px;
 	}
 
 	.releases-title {

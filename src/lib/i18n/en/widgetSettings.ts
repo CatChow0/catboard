@@ -134,4 +134,11 @@ export const widgetSettings = {
 	'ws.location': 'Location',
 	'ws.includeFeatures': 'Include features',
 	'ws.includeFeaturesHint': '(releases a followed artist only appears on)',
+	'ws.languages': 'Sonarr languages',
+	'ws.languagesHint': 'Read from the release names in the Sonarr history; MULTi counts as VF. None ticked: air dates only, as before.',
+	'ws.languageVo': 'VO (original)',
+	'ws.languageVostfr': 'VOSTFR (French subtitles)',
+	'ws.languageVf': 'VF (French dub, MULTi)',
+	'ws.languagePatterns': 'Custom patterns',
+	'ws.languagePatternsHint': 'Case-insensitive regexes matched on the release name. Empty: default pattern.',
 } satisfies Record<string, Entry>;

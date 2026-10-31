@@ -77,6 +77,17 @@ const ARR = ['radarr', 'sonarr', 'lidarr', 'deezer'] as const;
 const arrSources = (c: Cfg | undefined, conn: IntegrationsConfig) =>
 	Object.fromEntries(ARR.map((k) => [k, c?.integrations ? !!c.integrations[k] : !!conn[k]?.url])) as Record<(typeof ARR)[number], boolean>;
 const arrSaved = (d: Cfg) => Object.fromEntries(ARR.map((k) => [k, !!d.integrations?.[k]]));
+const RELEASE_LANGUAGES = ['VO', 'VOSTFR', 'VF'];
+/** Saved Sonarr language filter: known values only, unset when empty (air dates as before). */
+const languagesSaved = (d: Cfg) => {
+	const list = Array.isArray(d.languages) ? RELEASE_LANGUAGES.filter((l) => d.languages.includes(l)) : [];
+	return list.length ? list : undefined;
+};
+const patternsSaved = (d: Cfg) => {
+	const vostfr = String(d.languagePatterns?.vostfr ?? '').trim() || undefined;
+	const vf = String(d.languagePatterns?.vf ?? '').trim() || undefined;
+	return vostfr || vf ? { vostfr, vf } : undefined;
+};
 
 export const WIDGETS: WidgetDef[] = [
 	// --- Basics ---
@@ -313,13 +324,23 @@ export const WIDGETS: WidgetDef[] = [
 		integrations: ['radarr', 'sonarr', 'lidarr', 'deezer'],
 		grid: { type: 'arr-releases', colSpan: 4, rowSpan: 3 },
 		settings: ArrReleasesSettings,
-		prepare: (c, _t, conn) => ({ integrations: arrSources(c, conn), includeFeatures: !!c?.includeFeatures, days: c?.days ?? 14, limit: c?.limit ?? 10, onlyDownloaded: c?.onlyDownloaded ?? false }),
+		prepare: (c, _t, conn) => ({
+			integrations: arrSources(c, conn),
+			includeFeatures: !!c?.includeFeatures,
+			days: c?.days ?? 14,
+			limit: c?.limit ?? 10,
+			onlyDownloaded: c?.onlyDownloaded ?? false,
+			languages: [...(c?.languages ?? [])],
+			languagePatterns: { vostfr: c?.languagePatterns?.vostfr ?? '', vf: c?.languagePatterns?.vf ?? '' }
+		}),
 		normalize: (d) => ({
 			integrations: arrSaved(d),
 			includeFeatures: d.includeFeatures || undefined,
 			days: clamp(d.days, 1, 90, 14),
 			limit: clamp(d.limit, 1, 50, 10),
-			onlyDownloaded: !!d.onlyDownloaded
+			onlyDownloaded: !!d.onlyDownloaded,
+			languages: languagesSaved(d),
+			languagePatterns: patternsSaved(d)
 		})
 	},
 	{

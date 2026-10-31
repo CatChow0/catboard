@@ -1,6 +1,9 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { fetchArrEntries } from '$lib/server/arr';
+import type { ReleaseLanguage } from '$lib/types';
+
+const LANGUAGES: ReleaseLanguage[] = ['VO', 'VOSTFR', 'VF'];
 
 function clampInt(value: string | null, fallback: number, min: number, max: number): number {
 	const n = parseInt(value || '', 10);
@@ -12,6 +15,16 @@ export const GET: RequestHandler = async ({ url }) => {
 	const days = clampInt(url.searchParams.get('days'), 14, 1, 90);
 	const limit = clampInt(url.searchParams.get('limit'), 10, 1, 50);
 	const onlyDownloaded = url.searchParams.get('onlyDownloaded') === 'true';
+	// Sonarr versions; MULTi is read as VF by the patterns
+	const languages = (url.searchParams.get('languages') || '')
+		.split(',')
+		.map((l) => l.trim().toUpperCase())
+		.map((l) => (l === 'MULTI' ? 'VF' : l))
+		.filter((l, i, all): l is ReleaseLanguage => LANGUAGES.includes(l as ReleaseLanguage) && all.indexOf(l) === i);
+	const languagePatterns = {
+		vostfr: url.searchParams.get('vostfr') || undefined,
+		vf: url.searchParams.get('vf') || undefined
+	};
 
 	if (sources.length === 0) {
 		return json({ entries: [], updatedAt: Date.now(), errors: [] });
@@ -24,7 +37,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const end = new Date(now.getTime() + 86_400_000).toISOString().split('T')[0];
 
 	const includeFeatures = url.searchParams.get('includeFeatures') === 'true';
-	const { entries, errors } = await fetchArrEntries(sources, start, end, 'released', { includeFeatures });
+	const { entries, errors, languageCounts } = await fetchArrEntries(sources, start, end, 'released', { includeFeatures, languages, languagePatterns });
 
 	const released = entries
 		.filter((e) => e.date >= start && e.date <= today && (!onlyDownloaded || e.hasFile))
@@ -32,7 +45,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		.slice(0, limit);
 
 	return json(
-		{ entries: released, updatedAt: Date.now(), errors },
+		{ entries: released, updatedAt: Date.now(), errors, ...(languageCounts && { languageCounts }) },
 		{ headers: { 'Cache-Control': 'max-age=60' } }
 	);
 };

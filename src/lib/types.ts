@@ -84,7 +84,14 @@ export interface ArrReleasesConfig {
 	days?: number;
 	limit?: number;
 	onlyDownloaded?: boolean;
+	/** Sonarr: only episodes out in these versions (from the history); unset = air dates as before. MULTi counts as VF. */
+	languages?: ReleaseLanguage[];
+	/** Regexes (case-insensitive) matched on the release name, replacing the default ones. */
+	languagePatterns?: { vostfr?: string; vf?: string };
 }
+
+/** VO = original version, VOSTFR = French subtitles, VF = French dub (VFF, VFQ, TRUEFRENCH, FRENCH, MULTi). */
+export type ReleaseLanguage = 'VO' | 'VOSTFR' | 'VF';
 
 export interface ArrReleasesItem extends DashboardItemBase {
 	type: 'arr-releases';
@@ -470,6 +477,8 @@ export interface ArrCalendarEntry {
 	posterUrl?: string;
 	/** Deezer: album, ep, single or compile. */
 	kind?: string;
+	/** Sonarr with a language filter: the versions out for this episode. */
+	languages?: ReleaseLanguage[];
 }
 
 export interface ArrCalendarData {

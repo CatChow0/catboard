@@ -12,4 +12,10 @@ export const arr = {
 	'arr.released': 'Released {when} · {state}',
 	'arr.remove': 'Remove Arr Releases',
 	'arr.edit': 'Edit releases widget',
+	'arr.sub': 'SUB',
+	'arr.dub': 'DUB',
+	'arr.subTitle': 'French subtitles (VOSTFR) out',
+	'arr.dubTitle': 'French dub (VF / MULTi) out',
+	'arr.langCount': '{vostfr} VOSTFR · {vf} VF',
+	'arr.langCountTitle': 'Episodes that got a VOSTFR / VF release in the last {days} days',
 } satisfies Record<string, Entry>;

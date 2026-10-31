@@ -134,4 +134,11 @@ export const widgetSettings = {
 	'ws.location': 'Lieu',
 	'ws.includeFeatures': 'Inclure les featurings',
 	'ws.includeFeaturesHint': '(sorties où un artiste suivi n\'est qu\'invité)',
+	'ws.languages': 'Langues Sonarr',
+	'ws.languagesHint': 'Lues dans le nom des releases de l\'historique Sonarr ; MULTi compte comme VF. Aucune cochée : dates de diffusion seules, comme avant.',
+	'ws.languageVo': 'VO (originale)',
+	'ws.languageVostfr': 'VOSTFR (sous-titres français)',
+	'ws.languageVf': 'VF (doublage français, MULTi)',
+	'ws.languagePatterns': 'Motifs personnalisés',
+	'ws.languagePatternsHint': 'Regex insensibles à la casse, testées sur le nom de la release. Vide : motif par défaut.',
 } satisfies Partial<Dict>;

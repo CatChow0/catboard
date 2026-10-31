@@ -22,7 +22,7 @@ A self-hosted, customizable dashboard for managing and monitoring your homelab s
 - **Notes widget** -- Markdown notepad edited in place, with clickable checklists
 - **Spoolman integration** -- Recently used filament spools, and spools running low or empty, with colours and remaining weight
 - **Elegoo Centauri Carbon 2 integration** -- Live 3D print status (progress, time left, ETA, layers, temperatures, model preview), as a widget or in the navbar; admins can pause, resume or stop the print
-- **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status
+- **Arr Releases widget** -- Recently released movies, episodes, and albums from Radarr, Sonarr, and Lidarr with posters and downloaded/missing status; optional Sonarr language filter (VO / VOSTFR / VF) with SUB / DUB badges for animes
 - **Deezer to Navidrome integration** -- The release feed of the deezer-to-navidrome app (albums, EPs and singles of your favorite Deezer artists) in the Calendar and New releases widgets, with whether each one is already in the music library
 - **Uptime Kuma integration** -- Connect to your Uptime Kuma instance and display status page monitors with live uptime percentages
 - **Docker integration** -- Monitor Docker container status across multiple environments (local socket or remote TCP), with optional per-container CPU and RAM usage
@@ -196,7 +196,7 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **AdGuard Home Stats** | DNS queries, blocked requests, blocked domains, and latency |
 | **AdGuard Home Control** | Toggle protection and set temporary pauses with quick-duration buttons |
 | **Jellyfin Latest** | Recently added movies, TV shows, albums, and episodes from Jellyfin |
-| **New releases** (Arr) | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter. Posters are loaded through CatBoard, so the API keys never reach the browser |
+| **New releases** (Arr) | Recently released items from Radarr/Sonarr/Lidarr; configurable sources, look-back days, max items, and "downloaded only" filter. Optional Sonarr **languages** (VO / VOSTFR / VF) with SUB / DUB badges and a VOSTFR / VF count, see [Sonarr release languages](#sonarr-release-languages-animes). Posters are loaded through CatBoard, so the API keys never reach the browser |
 | **Deezer releases** | The Calendar and New releases widgets take **Deezer to Navidrome** as a source: albums, EPs and singles of your favorite Deezer artists (muted artists left out), with their type and "in library" status from the app. Releases where a followed artist is only a guest are hidden unless **Include features** is ticked |
 | **Stacker** | Live hardware monitor from a Stacker server; choose CPU, Memory, GPU, Disk and Network sections; adapts from one-line gauges to full graphs as the tile grows |
 | **Jellyfin Now Playing** | Active streams: title, user and device, progress, paused state, Direct/Transcode badge (codec and reason on hover); one line per stream on 1-row tiles |
@@ -212,6 +212,32 @@ Both group types have a **Content** option in their edit dialog: *Fixed size* (d
 | **Immich** | Photo, video and storage counts (the whole server with an admin key, else the key owner's library) and a grid of the latest photos linking to Immich; options: show the counts, number of photos (0 hides them). Refreshed every 5 min |
 | **Nextcloud** | Storage used and quota, server info (version, active users, files, free space; needs a Nextcloud admin and the Monitoring app) and the latest modified files linking to Nextcloud; options: show the quota, show server info, number of files. Refreshed every 2 min |
 | **Gitea / Forgejo** | Recently updated repositories (private ones marked, open issues + PRs per repository) and the open issues and pull requests of the repositories the token reads, last updated first, with the totals; links open Gitea |
+
+#### Sonarr release languages (animes)
+
+Episodes often come out in VO first, then in VOSTFR and VF weeks later. Tick languages under **Sonarr languages** in the New releases widget settings to follow those versions:
+
+- CatBoard also reads the last 100 events of the Sonarr history (`/api/v3/history`, grabbed and imported releases), groups them by episode and reads the version from the **release name**: `\bVOSTFR\b` → VOSTFR, `\b(VF|VFF|VFQ|TRUEFRENCH|FRENCH|MULTI)\b` → VF (MULTi counts as VF), anything else → VO. Air dates from the calendar count as VO.
+- An episode is listed when one of its versions is ticked, dated by the latest of them: an episode aired last month comes back on top the day its VF is grabbed.
+- Each episode gets a **SUB** badge (VOSTFR out) and/or a **DUB** badge (VF out); the top of the tile counts the episodes that got a VOSTFR / VF release over the period (e.g. *3 VOSTFR · 1 VF*).
+- **Custom patterns** replaces either regex (case-insensitive, tested on the release name; an invalid one falls back to the default).
+- No language ticked: the widget only reads the calendar, exactly as before. Calendar and history are cached 5 minutes on the server; if the history fails, the calendar entries stay and the error is reported.
+
+Saved widget config (in `layout.json`):
+
+```json
+{
+  "type": "arr-releases",
+  "config": {
+    "integrations": { "radarr": false, "sonarr": true, "lidarr": false, "deezer": false },
+    "days": 30,
+    "limit": 15,
+    "onlyDownloaded": false,
+    "languages": ["VOSTFR", "VF"],
+    "languagePatterns": { "vostfr": "\\b(VOSTFR|SUBFRENCH)\\b" }
+  }
+}
+```
 
 ### Integrations
 
@@ -307,7 +333,7 @@ After 5 failed logins on an account within 15 minutes, that account must wait 30
 | `GET` | `/api/integrations/adguard-home/heartbeat` | SSE stream for AdGuard Home stats and status |
 | `POST` | `/api/integrations/adguard-home/protection` | Toggle AdGuard Home protection (with optional pause duration) |
 | `GET` | `/api/integrations/arr/calendar` | Upcoming releases from Radarr/Sonarr/Lidarr/Deezer (`sources`, `start`, `end`, `includeFeatures`) |
-| `GET` | `/api/integrations/arr/releases` | Recently released items from Radarr/Sonarr/Lidarr/Deezer (`sources`, `days`, `limit`, `onlyDownloaded`, `includeFeatures`) |
+| `GET` | `/api/integrations/arr/releases` | Recently released items from Radarr/Sonarr/Lidarr/Deezer (`sources`, `days`, `limit`, `onlyDownloaded`, `includeFeatures`; Sonarr versions: `languages=VO,VOSTFR,VF`, optional `vostfr` / `vf` regexes, adds `languageCounts` to the answer) |
 | `GET` | `/api/integrations/jellyfin/latest` | Recently added items from Jellyfin |
 | `GET` | `/api/integrations/jellyfin/sessions` | Streams currently playing on Jellyfin |
 | `GET` | `/api/integrations/jellyfin/image` | Jellyfin artwork proxy (`item`, `type`, `tag`, `w`) |
